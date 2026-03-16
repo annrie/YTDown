@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { AppSettings } from '../types'
+import { invoke } from '@tauri-apps/api/core'
+import type { AppSettings, Setting } from '../types'
 
 const DEFAULTS: AppSettings = {
   download_dir: '~/Downloads/YTDown/',
@@ -22,16 +23,44 @@ const DEFAULTS: AppSettings = {
   auto_classify: false,
 }
 
+const BOOLEAN_KEYS: (keyof AppSettings)[] = [
+  'embed_thumbnail', 'embed_metadata', 'write_subs', 'embed_subs',
+  'embed_chapters', 'sponsorblock', 'auto_classify',
+]
+
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<AppSettings>({ ...DEFAULTS })
   const loaded = ref(false)
 
-  // Settings are loaded/saved via tauri-plugin-sql
-  // The SQL queries will be called from composables
-
-  function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
-    settings.value[key] = value
+  async function loadSettings() {
+    try {
+      const all = await invoke<Setting[]>('get_all_settings')
+      for (const { key, value } of all) {
+        if (key in settings.value) {
+          const k = key as keyof AppSettings
+          if (BOOLEAN_KEYS.includes(k)) {
+            (settings.value as Record<string, unknown>)[k] = value === 'true'
+          } else if (k === 'concurrent_downloads') {
+            settings.value.concurrent_downloads = parseInt(value) || 3
+          } else {
+            (settings.value as Record<string, unknown>)[k] = value
+          }
+        }
+      }
+      loaded.value = true
+    } catch (e) {
+      console.error('Failed to load settings:', e)
+    }
   }
 
-  return { settings, loaded, updateSetting }
+  async function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
+    settings.value[key] = value
+    try {
+      await invoke('set_setting', { key, value: String(value) })
+    } catch (e) {
+      console.error('Failed to save setting:', e)
+    }
+  }
+
+  return { settings, loaded, loadSettings, updateSetting }
 })

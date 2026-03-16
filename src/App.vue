@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { ViewMode, SidebarSection, DownloadOptions } from './types'
 import { useDownloadsStore } from './stores/downloads'
 import { useLibraryStore } from './stores/library'
+import { useSettingsStore } from './stores/settings'
 
 // Layout components
 import AppToolbar from './components/layout/AppToolbar.vue'
@@ -41,6 +42,7 @@ const selectedUrlListId = ref<number | null>(null)
 
 const downloadsStore = useDownloadsStore()
 const libraryStore = useLibraryStore()
+const settingsStore = useSettingsStore()
 
 // Computed: items to display in library views
 const displayItems = computed(() => {
@@ -117,6 +119,7 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
+  settingsStore.loadSettings()
   downloadsStore.setupProgressListener()
   document.addEventListener('keydown', handleKeydown)
 })

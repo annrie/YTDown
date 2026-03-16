@@ -35,12 +35,23 @@ pub async fn start_download(
     ).map_err(|e| format!("DB insert failed: {}", e))?;
     drop(db); // Release lock before spawning async work
 
+    // Expand ~ in output_dir
+    let output_dir = if options.output_dir.starts_with("~/") {
+        let home = dirs::home_dir().unwrap_or_default();
+        home.join(&options.output_dir[2..]).to_string_lossy().to_string()
+    } else {
+        options.output_dir
+    };
+    // Ensure output directory exists
+    std::fs::create_dir_all(&output_dir)
+        .map_err(|e| format!("Failed to create output dir: {}", e))?;
+
     let config = DownloadConfig {
         ytdlp_path: bin.path.to_string_lossy().to_string(),
         url,
         format: options.format,
         quality: options.quality,
-        output_dir: options.output_dir,
+        output_dir,
         output_template: "%(title)s.%(ext)s".to_string(),
         embed_thumbnail: options.embed_thumbnail,
         embed_metadata: options.embed_metadata,
@@ -144,7 +155,19 @@ pub async fn resume_download(
                     url: download.url.clone(),
                     format: download.format.unwrap_or("best".to_string()),
                     quality: download.quality.unwrap_or("best".to_string()),
-                    output_dir: "~/Downloads/YTDown".to_string(), // TODO: read from settings
+                    output_dir: {
+                        let db2 = state.db.lock().await;
+                        let dir = crate::db::queries::get_setting(&db2, "download_dir")
+                            .ok().flatten()
+                            .unwrap_or_else(|| "~/Downloads/YTDown/".to_string());
+                        drop(db2);
+                        if dir.starts_with("~/") {
+                            let home = dirs::home_dir().unwrap_or_default();
+                            home.join(&dir[2..]).to_string_lossy().to_string()
+                        } else {
+                            dir
+                        }
+                    },
                     output_template: "%(title)s.%(ext)s".to_string(),
                     embed_thumbnail: false, embed_metadata: false,
                     write_subs: false, embed_subs: false,
