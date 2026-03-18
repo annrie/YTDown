@@ -21,14 +21,14 @@ function isActive(section: SidebarSection) {
 
 function sidebarButtonClass(section: SidebarSection) {
   return [
-    'w-full text-left px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5',
-    isActive(section) ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : '',
+    'w-full text-left px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-neutral-800 dark:text-neutral-200',
+    isActive(section) ? 'bg-[var(--color-accent)]/10 !text-[var(--color-accent)]' : '',
   ]
 }
 </script>
 
 <template>
-  <aside class="w-[var(--sidebar-width)] bg-[var(--color-sidebar-bg)] backdrop-blur-xl border-r border-[var(--color-separator)] overflow-y-auto p-2 flex-shrink-0">
+  <aside class="sidebar">
     <nav class="text-sm space-y-4">
       <!-- Downloads section -->
       <div>
@@ -97,3 +97,15 @@ function sidebarButtonClass(section: SidebarSection) {
     </nav>
   </aside>
 </template>
+
+<style scoped>
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--color-sidebar-bg);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid var(--color-separator);
+  overflow-y: auto;
+  padding: 0.5rem;
+  flex-shrink: 0;
+}
+</style>

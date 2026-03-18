@@ -142,6 +142,31 @@ fn extract_speed(line: &str) -> u64 {
         .unwrap_or(0)
 }
 
+/// Parse playlist item lines like:
+/// `[download] Downloading item 3 of 15`
+/// `[download] Downloading video 3 of 15`
+#[allow(dead_code)]
+pub fn parse_playlist_progress(line: &str) -> Option<(u32, u32)> {
+    if !line.contains("[download]") || !line.contains(" of ") {
+        return None;
+    }
+    // Match "Downloading item N of M" or "Downloading video N of M"
+    let lower = line.to_lowercase();
+    if !lower.contains("downloading item") && !lower.contains("downloading video") {
+        return None;
+    }
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    // Find the index pattern: ... N of M
+    for (i, part) in parts.iter().enumerate() {
+        if *part == "of" && i > 0 && i + 1 < parts.len() {
+            let current = parts[i - 1].parse::<u32>().ok()?;
+            let total = parts[i + 1].parse::<u32>().ok()?;
+            return Some((current, total));
+        }
+    }
+    None
+}
+
 fn parse_eta(eta: &str) -> u64 {
     let parts: Vec<&str> = eta.split(':').collect();
     match parts.len() {

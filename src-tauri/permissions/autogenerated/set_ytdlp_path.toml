@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-ytdlp-path"
+description = "Enables the set_ytdlp_path command without any pre-configured scope."
+commands.allow = ["set_ytdlp_path"]
+
+[[permission]]
+identifier = "deny-set-ytdlp-path"
+description = "Denies the set_ytdlp_path command without any pre-configured scope."
+commands.deny = ["set_ytdlp_path"]

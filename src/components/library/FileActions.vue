@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { open } from '@tauri-apps/plugin-dialog'
 import { useFileManager } from '../../composables/useFileManager'
+import { useLibraryStore } from '../../stores/library'
 import type { Download } from '../../types'
 
 const props = defineProps<{
@@ -11,20 +13,31 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const { deleteFile, revealInFinder } = useFileManager()
+const { moveFile, deleteFile, revealInFinder } = useFileManager()
+const libraryStore = useLibraryStore()
 
 const showDeleteConfirm = ref(false)
+const menuRef = ref<HTMLElement | null>(null)
 
-function handleClickOutside(_e: MouseEvent) {
+function handleClickOutside(e: MouseEvent) {
+  // メニュー内のクリックなら閉じない
+  if (menuRef.value && menuRef.value.contains(e.target as Node)) {
+    return
+  }
   emit('close')
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  // nextTickで遅延させて、右クリックイベント自体で即閉じるのを防ぐ
+  nextTick(() => {
+    document.addEventListener('click', handleClickOutside, true)
+    document.addEventListener('contextmenu', handleClickOutside, true)
+  })
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('click', handleClickOutside, true)
+  document.removeEventListener('contextmenu', handleClickOutside, true)
 })
 
 async function handleReveal() {
@@ -35,19 +48,48 @@ async function handleReveal() {
 }
 
 async function handleDelete(toTrash: boolean) {
-  if (props.item.file_path) {
-    await deleteFile(props.item.file_path, toTrash)
+  await deleteFile(props.item.file_path ?? null, toTrash, props.item.id)
+  await libraryStore.loadItems()
+  emit('close')
+}
+
+async function handleMove() {
+  if (!props.item.file_path) {
+    const { message } = await import('@tauri-apps/plugin-dialog')
+    await message('ファイルパスが記録されていないため移動できません。', { title: 'エラー', kind: 'error' })
+    emit('close')
+    return
+  }
+
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    title: '移動先フォルダを選択',
+  })
+
+  if (selected) {
+    const sourcePath = props.item.file_path
+    const fileName = sourcePath.split('/').pop() ?? sourcePath
+    const destPath = `${selected}/${fileName}`
+    try {
+      await moveFile(sourcePath, destPath, props.item.id)
+      await libraryStore.loadItems()
+    } catch (e) {
+      const { message } = await import('@tauri-apps/plugin-dialog')
+      await message(`ファイルの移動に失敗しました: ${e}`, { title: 'エラー', kind: 'error' })
+    }
   }
   emit('close')
 }
 
-function handleMove() {
-  // TODO: Implement folder picker dialog via tauri-plugin-dialog
-  emit('close')
-}
-
-function handleFavorite() {
-  // TODO: Toggle favorite via store
+async function handleFavorite() {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    await invoke('toggle_favorite', { id: props.item.id })
+    await libraryStore.loadItems()
+  } catch (e) {
+    console.error('Failed to toggle favorite:', e)
+  }
   emit('close')
 }
 
@@ -58,23 +100,25 @@ function handleAddToPlaylist() {
 </script>
 
 <template>
-  <div class="fixed z-50 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-[var(--color-separator)] py-1 min-w-[180px] text-sm"
+  <div ref="menuRef"
+       class="fixed z-50 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-[var(--color-separator)] py-1 min-w-[180px] text-sm"
        :style="{ left: `${x}px`, top: `${y}px` }"
-       @click.stop>
-    <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+       @click.stop
+       @contextmenu.stop.prevent>
+    <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
             @click="handleReveal">
       Finderで表示
     </button>
-    <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+    <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
             @click="handleMove">
       移動...
     </button>
     <div class="border-t border-[var(--color-separator)] my-1" />
-    <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+    <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
             @click="handleFavorite">
       {{ item.is_favorite ? 'お気に入り解除' : 'お気に入りに追加' }}
     </button>
-    <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+    <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
             @click="handleAddToPlaylist">
       プレイリストに追加...
     </button>

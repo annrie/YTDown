@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useLibraryStore } from '../../stores/library'
 import { useFileManager } from '../../composables/useFileManager'
 import type { Download } from '../../types'
 import FileActions from './FileActions.vue'
+import SelectionBar from './SelectionBar.vue'
 
 const props = defineProps<{ items: Download[] }>()
 
+const libraryStore = useLibraryStore()
 const { revealInFinder } = useFileManager()
 
 const selectedSite = ref<string | null>(null)
@@ -80,7 +83,9 @@ function closeContextMenu() {
 </script>
 
 <template>
-  <div class="flex h-full" @click="closeContextMenu">
+  <div class="flex flex-col h-full">
+    <SelectionBar />
+    <div class="flex flex-1 min-h-0">
     <!-- Column 1: Sites -->
     <div class="w-1/3 border-r border-[var(--color-separator)] overflow-y-auto">
       <div class="px-2 py-1.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider border-b border-[var(--color-separator)]">
@@ -133,7 +138,12 @@ function closeContextMenu() {
            class="px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-default border-b border-[var(--color-separator)]"
            @contextmenu="handleContextMenu($event, item)"
            @dblclick="handleDoubleClick(item)">
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-start">
+          <input type="checkbox"
+                 :checked="libraryStore.selectedIds.has(item.id)"
+                 @change="libraryStore.toggleSelect(item.id)"
+                 @click.stop
+                 class="mt-1 rounded border-neutral-300 dark:border-neutral-600 accent-[var(--color-accent)] flex-shrink-0" />
           <img v-if="item.thumbnail_url" :src="item.thumbnail_url"
                class="w-16 h-10 object-cover rounded flex-shrink-0" />
           <div class="min-w-0">
@@ -141,6 +151,9 @@ function closeContextMenu() {
             <p class="text-[10px] text-neutral-500 mt-0.5">
               {{ item.format?.toUpperCase() ?? '' }}
               <span v-if="item.is_favorite" class="text-yellow-500 ml-1">★</span>
+            </p>
+            <p v-if="item.file_path" class="text-[10px] text-neutral-400 truncate" :title="item.file_path">
+              {{ item.file_path.split('/').pop() }}
             </p>
           </div>
         </div>
@@ -154,5 +167,6 @@ function closeContextMenu() {
       :y="contextMenu.y"
       @close="closeContextMenu"
     />
+    </div>
   </div>
 </template>

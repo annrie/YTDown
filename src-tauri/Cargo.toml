@@ -29,4 +29,5 @@ chrono = "0.4"
 dirs = "5"
 which = "6"
 reqwest = { version = "0.12", features = ["blocking"] }
+tauri-plugin-dialog = "2.6.0"
 

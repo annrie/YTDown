@@ -53,6 +53,7 @@ pub struct UrlList {
     pub updated_at: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UrlListItem {
     pub id: i64,
@@ -69,6 +70,7 @@ pub struct Setting {
     pub value: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoClassifyRule {
     pub id: i64,

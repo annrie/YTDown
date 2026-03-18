@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useSettingsStore } from '../../stores/settings'
+import { open } from '@tauri-apps/plugin-dialog'
 
 const settingsStore = useSettingsStore()
 
@@ -7,8 +8,27 @@ const browsers = [
   { value: 'none', label: '使用しない' },
   { value: 'safari', label: 'Safari' },
   { value: 'chrome', label: 'Google Chrome' },
+  { value: 'brave', label: 'Brave' },
+  { value: 'edge', label: 'Microsoft Edge' },
   { value: 'firefox', label: 'Firefox' },
+  { value: 'chromium', label: 'Chromium' },
+  { value: 'opera', label: 'Opera' },
+  { value: 'vivaldi', label: 'Vivaldi' },
 ]
+
+async function handleBrowseCookieFile() {
+  const selected = await open({
+    multiple: false,
+    title: 'Cookieファイルを選択',
+    filters: [
+      { name: 'Cookie files', extensions: ['txt', 'cookies'] },
+      { name: 'All files', extensions: ['*'] },
+    ],
+  })
+  if (selected && typeof selected === 'string') {
+    settingsStore.updateSetting('cookie_file', selected)
+  }
+}
 </script>
 
 <template>
@@ -40,7 +60,8 @@ const browsers = [
                @input="settingsStore.updateSetting('cookie_file', ($event.target as HTMLInputElement).value)"
                class="flex-1 h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
                placeholder="Cookieファイルのパス（空欄で無効）" />
-        <button class="px-3 h-8 rounded-md text-sm bg-neutral-200 dark:bg-neutral-700">
+        <button @click="handleBrowseCookieFile"
+                class="px-3 h-8 rounded-md text-sm bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors">
           参照...
         </button>
       </div>

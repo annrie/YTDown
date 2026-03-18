@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub struct ActiveDownload {
+    #[allow(dead_code)]
     pub download_id: i64,
     pub pid: u32,
     pub paused: bool,

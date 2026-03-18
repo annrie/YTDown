@@ -2,6 +2,7 @@
 import { useSettingsStore } from '../../stores/settings'
 import { useYtdlp } from '../../composables/useYtdlp'
 import { onMounted } from 'vue'
+import { open } from '@tauri-apps/plugin-dialog'
 
 const settingsStore = useSettingsStore()
 const { info: ytdlpInfo, loading: ytdlpLoading, loadInfo: loadYtdlpInfo } = useYtdlp()
@@ -17,8 +18,15 @@ const filenamePresets = [
   { label: '日付-タイトル', value: '%(upload_date)s-%(title)s.%(ext)s' },
 ]
 
-function handleBrowseDir() {
-  // TODO: Use tauri-plugin-dialog for folder picker
+async function handleBrowseDir() {
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    title: 'ダウンロードフォルダを選択',
+  })
+  if (selected && typeof selected === 'string') {
+    settingsStore.updateSetting('download_dir', selected)
+  }
 }
 </script>
 

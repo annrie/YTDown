@@ -3,6 +3,32 @@ use serde::Deserialize;
 use crate::state::{ActiveDownload, AppState};
 use crate::ytdlp::{binary, process::DownloadConfig};
 
+/// YouTube URL判定
+fn is_youtube_url(url: &str) -> bool {
+    url.contains("youtube.com/") || url.contains("youtu.be/") || url.contains("youtube.com/shorts/")
+}
+
+/// YouTube → チャンネル名フォルダ、その他 → フラット
+fn output_template_for(url: &str) -> String {
+    if is_youtube_url(url) {
+        "%(channel)s/%(title)s.%(ext)s".to_string()
+    } else {
+        "%(title)s.%(ext)s".to_string()
+    }
+}
+
+/// Read cookie settings from DB (scoped lock)
+async fn get_cookie_settings(state: &AppState) -> (Option<String>, Option<String>) {
+    let db = state.db.lock().await;
+    let cookie_browser = crate::db::queries::get_setting(&db, "cookie_browser")
+        .ok().flatten()
+        .filter(|v| v != "none" && !v.is_empty());
+    let cookie_file = crate::db::queries::get_setting(&db, "cookie_file")
+        .ok().flatten()
+        .filter(|v| !v.is_empty());
+    (cookie_browser, cookie_file)
+}
+
 #[derive(Deserialize)]
 pub struct DownloadOptions {
     pub format: String,
@@ -15,6 +41,45 @@ pub struct DownloadOptions {
     pub embed_chapters: bool,
     pub sponsorblock: bool,
     pub custom_format: Option<String>,
+    #[serde(default = "default_playlist_mode")]
+    pub playlist_mode: String,
+    // Advanced yt-dlp options
+    #[serde(default)]
+    pub restrict_filenames: bool,
+    #[serde(default)]
+    pub no_overwrites: bool,
+    #[serde(default)]
+    pub geo_bypass: bool,
+    #[serde(default)]
+    pub rate_limit: String,
+    #[serde(default)]
+    pub sub_lang: String,
+    #[serde(default)]
+    pub convert_subs: String,
+    #[serde(default)]
+    pub merge_output_format: String,
+    #[serde(default)]
+    pub recode_video: String,
+    #[serde(default = "default_retries")]
+    pub retries: u32,
+    #[serde(default)]
+    pub proxy: String,
+    #[serde(default)]
+    pub extra_args: String,
+}
+
+fn default_retries() -> u32 { 10 }
+
+fn non_empty(s: String) -> Option<String> {
+    if s.trim().is_empty() { None } else { Some(s) }
+}
+
+fn parse_extra_args(s: &str) -> Vec<String> {
+    s.split_whitespace().map(|s| s.to_string()).collect()
+}
+
+fn default_playlist_mode() -> String {
+    "single".to_string()
 }
 
 #[tauri::command]
@@ -24,16 +89,19 @@ pub async fn start_download(
     options: DownloadOptions,
     state: State<'_, AppState>,
 ) -> Result<i64, String> {
-    let ytdlp_path_lock = state.ytdlp_path.lock().await;
-    let bin = binary::detect_binary(ytdlp_path_lock.as_deref())?;
+    let bin = {
+        let ytdlp_path_lock = state.ytdlp_path.lock().await;
+        binary::detect_binary(ytdlp_path_lock.as_deref())?
+    }; // ytdlp_path_lock dropped here
 
     // Insert download record to DB
-    let db = state.db.lock().await;
-    let download_id = crate::db::queries::insert_download(
-        &db, &url, None, None, None, None, None, None,
-        Some(&options.format), Some(&options.quality), None,
-    ).map_err(|e| format!("DB insert failed: {}", e))?;
-    drop(db); // Release lock before spawning async work
+    let download_id = {
+        let db = state.db.lock().await;
+        crate::db::queries::insert_download(
+            &db, &url, None, None, None, None, None, None,
+            Some(&options.format), Some(&options.quality), None,
+        ).map_err(|e| format!("DB insert failed: {}", e))?
+    }; // db lock dropped here
 
     // Expand ~ in output_dir
     let output_dir = if options.output_dir.starts_with("~/") {
@@ -46,13 +114,18 @@ pub async fn start_download(
     std::fs::create_dir_all(&output_dir)
         .map_err(|e| format!("Failed to create output dir: {}", e))?;
 
+    let (cookie_browser, cookie_file) = get_cookie_settings(&state).await;
+    let output_template = output_template_for(&url);
+
+    let extra_args = parse_extra_args(&options.extra_args);
+
     let config = DownloadConfig {
         ytdlp_path: bin.path.to_string_lossy().to_string(),
         url,
         format: options.format,
         quality: options.quality,
         output_dir,
-        output_template: "%(title)s.%(ext)s".to_string(),
+        output_template,
         embed_thumbnail: options.embed_thumbnail,
         embed_metadata: options.embed_metadata,
         write_subs: options.write_subs,
@@ -60,19 +133,33 @@ pub async fn start_download(
         embed_chapters: options.embed_chapters,
         sponsorblock: options.sponsorblock,
         custom_format: options.custom_format,
-        cookie_browser: None,
-        cookie_file: None,
+        cookie_browser,
+        cookie_file,
+        playlist_mode: options.playlist_mode,
+        restrict_filenames: options.restrict_filenames,
+        no_overwrites: options.no_overwrites,
+        geo_bypass: options.geo_bypass,
+        rate_limit: non_empty(options.rate_limit),
+        sub_lang: non_empty(options.sub_lang),
+        convert_subs: non_empty(options.convert_subs),
+        merge_output_format: non_empty(options.merge_output_format),
+        recode_video: non_empty(options.recode_video),
+        retries: options.retries,
+        proxy: non_empty(options.proxy),
+        extra_args,
     };
 
     let pid = crate::ytdlp::process::start_download(app, download_id, config).await?;
 
-    // Track active download
-    let mut downloads = state.active_downloads.lock().await;
-    downloads.insert(download_id, ActiveDownload {
-        download_id,
-        pid,
-        paused: false,
-    });
+    // Track active download (scoped lock)
+    {
+        let mut downloads = state.active_downloads.lock().await;
+        downloads.insert(download_id, ActiveDownload {
+            download_id,
+            pid,
+            paused: false,
+        });
+    }
 
     Ok(download_id)
 }
@@ -168,11 +255,37 @@ pub async fn resume_download(
                             dir
                         }
                     },
-                    output_template: "%(title)s.%(ext)s".to_string(),
+                    output_template: output_template_for(&download.url),
                     embed_thumbnail: false, embed_metadata: false,
                     write_subs: false, embed_subs: false,
                     embed_chapters: false, sponsorblock: false,
-                    custom_format: None, cookie_browser: None, cookie_file: None,
+                    custom_format: None,
+                    cookie_browser: {
+                        let db3 = state.db.lock().await;
+                        let v = crate::db::queries::get_setting(&db3, "cookie_browser")
+                            .ok().flatten().filter(|v| v != "none" && !v.is_empty());
+                        drop(db3);
+                        v
+                    },
+                    cookie_file: {
+                        let db4 = state.db.lock().await;
+                        let v = crate::db::queries::get_setting(&db4, "cookie_file")
+                            .ok().flatten().filter(|v| !v.is_empty());
+                        drop(db4);
+                        v
+                    },
+                    playlist_mode: "single".to_string(),
+                    restrict_filenames: false,
+                    no_overwrites: false,
+                    geo_bypass: false,
+                    rate_limit: None,
+                    sub_lang: None,
+                    convert_subs: None,
+                    merge_output_format: None,
+                    recode_video: None,
+                    retries: 10,
+                    proxy: None,
+                    extra_args: Vec::new(),
                 };
 
                 let new_pid = crate::ytdlp::process::start_download(app, download_id, config).await?;
@@ -188,4 +301,25 @@ pub async fn resume_download(
     } else {
         Err("Download not found".to_string())
     }
+}
+
+/// Fetch playlist items without starting any downloads
+#[tauri::command]
+pub async fn fetch_playlist_items(
+    url: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<crate::ytdlp::process::PlaylistItemInfo>, String> {
+    let ytdlp_path_lock = state.ytdlp_path.lock().await;
+    let bin = binary::detect_binary(ytdlp_path_lock.as_deref())?;
+    let ytdlp_path = bin.path.to_string_lossy().to_string();
+    drop(ytdlp_path_lock);
+
+    let (cookie_browser, cookie_file) = get_cookie_settings(&state).await;
+    let items = crate::ytdlp::process::fetch_playlist_items(
+        &ytdlp_path, &url, cookie_browser.as_deref(), cookie_file.as_deref(),
+    ).await?;
+    if items.is_empty() {
+        return Err("プレイリストにアイテムが見つかりません".to_string());
+    }
+    Ok(items)
 }

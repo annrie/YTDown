@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-cookie-file"
+description = "Enables the set_cookie_file command without any pre-configured scope."
+commands.allow = ["set_cookie_file"]
+
+[[permission]]
+identifier = "deny-set-cookie-file"
+description = "Denies the set_cookie_file command without any pre-configured scope."
+commands.deny = ["set_cookie_file"]

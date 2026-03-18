@@ -32,6 +32,7 @@ export type DownloadStatus =
   | 'completed'
   | 'failed'
   | 'cancelled'
+  | 'error'
 
 export interface Playlist {
   id: number
@@ -103,6 +104,8 @@ export interface FormatInfo {
   quality_label: string | null
 }
 
+export type PlaylistMode = 'single' | 'all'
+
 export interface DownloadOptions {
   format: string
   quality: string
@@ -114,6 +117,19 @@ export interface DownloadOptions {
   embed_chapters: boolean
   sponsorblock: boolean
   custom_format: string | null
+  playlist_mode: PlaylistMode
+  // Advanced yt-dlp options
+  restrict_filenames: boolean
+  no_overwrites: boolean
+  geo_bypass: boolean
+  rate_limit: string
+  sub_lang: string
+  convert_subs: string
+  merge_output_format: string
+  recode_video: string
+  retries: number
+  proxy: string
+  extra_args: string
 }
 
 export interface DownloadProgress {
@@ -126,6 +142,8 @@ export interface DownloadProgress {
   downloaded_bytes: number
   total_bytes: number | null
   status: 'downloading' | 'paused' | 'post_processing' | 'completed' | 'error'
+  playlist_index?: number
+  playlist_count?: number
 }
 
 export interface YtdlpInfo {
@@ -166,4 +184,16 @@ export interface AppSettings {
   ytdlp_path: string
   theme: 'system' | 'light' | 'dark'
   auto_classify: boolean
+  // Advanced yt-dlp options
+  restrict_filenames: boolean
+  no_overwrites: boolean
+  geo_bypass: boolean
+  rate_limit: string
+  sub_lang: string
+  convert_subs: string
+  merge_output_format: string
+  recode_video: string
+  retries: number
+  proxy: string
+  extra_args: string
 }

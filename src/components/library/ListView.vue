@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useLibraryStore } from '../../stores/library'
 import { useFileManager } from '../../composables/useFileManager'
 import type { Download } from '../../types'
 import FileActions from './FileActions.vue'
+import SelectionBar from './SelectionBar.vue'
 
 const props = defineProps<{ items: Download[] }>()
 
 const libraryStore = useLibraryStore()
 const { revealInFinder } = useFileManager()
+const selectAllCheckbox = ref<HTMLInputElement | null>(null)
+
+watch([() => libraryStore.hasSelection, () => libraryStore.isAllSelected], () => {
+  if (selectAllCheckbox.value) {
+    selectAllCheckbox.value.indeterminate = libraryStore.hasSelection && !libraryStore.isAllSelected
+  }
+})
 
 const contextMenu = ref<{ show: boolean; x: number; y: number; item: Download | null }>({
   show: false, x: 0, y: 0, item: null
@@ -70,13 +78,26 @@ function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
   return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
+
+function extractFileName(filePath: string | null): string {
+  if (!filePath) return '—'
+  const parts = filePath.split('/')
+  return parts[parts.length - 1] ?? '—'
+}
 </script>
 
 <template>
-  <div @click="closeContextMenu">
+  <div>
+    <SelectionBar />
     <table class="w-full text-sm">
       <thead>
         <tr class="text-left text-xs text-neutral-500 border-b border-[var(--color-separator)]">
+          <th class="px-3 py-2 w-8">
+            <input ref="selectAllCheckbox" type="checkbox"
+                   :checked="libraryStore.isAllSelected"
+                   @change="libraryStore.toggleSelectAll"
+                   class="rounded border-neutral-300 dark:border-neutral-600 accent-[var(--color-accent)]" />
+          </th>
           <th class="px-3 py-2 w-8"></th>
           <th class="px-3 py-2 cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-300"
               @click="toggleSort('title')">
@@ -87,6 +108,7 @@ function formatDate(dateStr: string): string {
             サイト{{ sortIndicator('site') }}
           </th>
           <th class="px-3 py-2 w-24">フォーマット</th>
+          <th class="px-3 py-2 w-48">ファイル名</th>
           <th class="px-3 py-2 w-24">サイズ</th>
           <th class="px-3 py-2 cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-300 w-28"
               @click="toggleSort('created_at')">
@@ -99,6 +121,13 @@ function formatDate(dateStr: string): string {
             class="border-b border-[var(--color-separator)] hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-default"
             @contextmenu="handleContextMenu($event, item)"
             @dblclick="handleDoubleClick(item)">
+          <td class="px-3 py-2 text-center">
+            <input type="checkbox"
+                   :checked="libraryStore.selectedIds.has(item.id)"
+                   @change="libraryStore.toggleSelect(item.id)"
+                   @click.stop
+                   class="rounded border-neutral-300 dark:border-neutral-600 accent-[var(--color-accent)]" />
+          </td>
           <td class="px-3 py-2 text-center">
             <button class="text-sm" :class="item.is_favorite ? 'text-yellow-500' : 'text-neutral-300 hover:text-yellow-400'"
                     @click.stop>
@@ -119,6 +148,7 @@ function formatDate(dateStr: string): string {
               {{ item.format?.toUpperCase() ?? '—' }}
             </span>
           </td>
+          <td class="px-3 py-2 text-neutral-500 truncate max-w-[12rem]" :title="item.file_path ?? ''">{{ extractFileName(item.file_path) }}</td>
           <td class="px-3 py-2 text-neutral-500">{{ formatFileSize(item.file_size) }}</td>
           <td class="px-3 py-2 text-neutral-500">{{ formatDate(item.created_at) }}</td>
         </tr>

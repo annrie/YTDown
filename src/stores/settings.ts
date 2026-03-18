@@ -21,11 +21,27 @@ const DEFAULTS: AppSettings = {
   ytdlp_path: 'auto',
   theme: 'system',
   auto_classify: false,
+  restrict_filenames: false,
+  no_overwrites: false,
+  geo_bypass: false,
+  rate_limit: '',
+  sub_lang: '',
+  convert_subs: '',
+  merge_output_format: '',
+  recode_video: '',
+  retries: 10,
+  proxy: '',
+  extra_args: '',
 }
 
 const BOOLEAN_KEYS: (keyof AppSettings)[] = [
   'embed_thumbnail', 'embed_metadata', 'write_subs', 'embed_subs',
   'embed_chapters', 'sponsorblock', 'auto_classify',
+  'restrict_filenames', 'no_overwrites', 'geo_bypass',
+]
+
+const INTEGER_KEYS: (keyof AppSettings)[] = [
+  'concurrent_downloads', 'retries',
 ]
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -39,11 +55,11 @@ export const useSettingsStore = defineStore('settings', () => {
         if (key in settings.value) {
           const k = key as keyof AppSettings
           if (BOOLEAN_KEYS.includes(k)) {
-            (settings.value as Record<string, unknown>)[k] = value === 'true'
-          } else if (k === 'concurrent_downloads') {
-            settings.value.concurrent_downloads = parseInt(value) || 3
+            ;(settings.value as unknown as Record<string, unknown>)[k] = value === 'true'
+          } else if (INTEGER_KEYS.includes(k)) {
+            ;(settings.value as unknown as Record<string, unknown>)[k] = parseInt(value) || (DEFAULTS as unknown as Record<string, unknown>)[k]
           } else {
-            (settings.value as Record<string, unknown>)[k] = value
+            ;(settings.value as unknown as Record<string, unknown>)[k] = value
           }
         }
       }

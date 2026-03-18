@@ -10,6 +10,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()
                 .expect("Failed to get app data dir");
@@ -27,6 +28,7 @@ pub fn run() {
             commands::formats::fetch_formats,
             // Download engine
             commands::download::start_download,
+            commands::download::fetch_playlist_items,
             commands::download::cancel_download,
             commands::download::pause_download,
             commands::download::resume_download,
@@ -58,6 +60,8 @@ pub fn run() {
             commands::settings::get_all_settings,
             commands::settings::get_setting,
             commands::settings::set_setting,
+            // Browser
+            commands::browser::get_browser_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

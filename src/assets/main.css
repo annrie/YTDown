@@ -7,4 +7,24 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  color: #1d1d1f;
+  background-color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #f5f5f7;
+    background-color: #1c1c1e;
+  }
+}
+
+/* Form elements in dark mode */
+@media (prefers-color-scheme: dark) {
+  select, input {
+    color: #f5f5f7;
+  }
+  select option {
+    background-color: #2c2c2e;
+    color: #f5f5f7;
+  }
 }

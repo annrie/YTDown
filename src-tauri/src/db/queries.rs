@@ -45,6 +45,7 @@ pub fn update_download_status(conn: &Connection, id: i64, status: &str) -> SqlRe
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn update_download_progress(conn: &Connection, id: i64, progress: f64, bytes_downloaded: i64) -> SqlResult<()> {
     conn.execute(
         "UPDATE downloads SET progress = ?1, bytes_downloaded = ?2 WHERE id = ?3",
@@ -53,11 +54,17 @@ pub fn update_download_progress(conn: &Connection, id: i64, progress: f64, bytes
     Ok(())
 }
 
+pub fn update_download_title(conn: &Connection, id: i64, title: &str) -> SqlResult<()> {
+    conn.execute("UPDATE downloads SET title = ?1 WHERE id = ?2", params![title, id])?;
+    Ok(())
+}
+
 pub fn update_download_pid(conn: &Connection, id: i64, pid: Option<i64>) -> SqlResult<()> {
     conn.execute("UPDATE downloads SET pid = ?1 WHERE id = ?2", params![pid, id])?;
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn update_download_file_path(conn: &Connection, id: i64, path: &str, size: Option<i64>) -> SqlResult<()> {
     conn.execute(
         "UPDATE downloads SET file_path = ?1, file_size = ?2 WHERE id = ?3",
@@ -234,6 +241,7 @@ pub fn import_url_list_from_file(conn: &Connection, list_id: i64, file_path: &st
 
 // === Auto-Classify Rules ===
 
+#[allow(dead_code)]
 pub fn list_rules(conn: &Connection) -> SqlResult<Vec<AutoClassifyRule>> {
     let mut stmt = conn.prepare(
         "SELECT id, rule_type, pattern, target_dir, priority, enabled FROM auto_classify_rules ORDER BY priority DESC"
@@ -245,6 +253,7 @@ pub fn list_rules(conn: &Connection) -> SqlResult<Vec<AutoClassifyRule>> {
     rows.collect()
 }
 
+#[allow(dead_code)]
 pub fn create_rule(conn: &Connection, rule_type: &str, pattern: &str, target_dir: &str, priority: i64) -> SqlResult<i64> {
     conn.execute(
         "INSERT INTO auto_classify_rules (rule_type, pattern, target_dir, priority) VALUES (?1, ?2, ?3, ?4)",

@@ -1,12 +1,12 @@
 import { invoke } from '@tauri-apps/api/core'
 
 export function useFileManager() {
-  async function moveFile(source: string, destination: string) {
-    return invoke('move_file', { source, destination })
+  async function moveFile(source: string, destination: string, downloadId?: number) {
+    return invoke('move_file', { source, destination, downloadId: downloadId ?? null })
   }
 
-  async function deleteFile(path: string, toTrash: boolean = true) {
-    return invoke('delete_file', { path, toTrash })
+  async function deleteFile(path: string | null, toTrash: boolean = true, downloadId?: number) {
+    return invoke('delete_file', { path, toTrash, downloadId: downloadId ?? null })
   }
 
   async function revealInFinder(path: string) {

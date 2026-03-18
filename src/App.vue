@@ -13,6 +13,7 @@ import AppStatusBar from './components/layout/AppStatusBar.vue'
 // Download components
 import DownloadDialog from './components/download/DownloadDialog.vue'
 import DownloadQueue from './components/download/DownloadQueue.vue'
+import BatchUrlDialog from './components/download/BatchUrlDialog.vue'
 
 // Library view components
 import ListView from './components/library/ListView.vue'
@@ -26,6 +27,7 @@ import PlaylistDetail from './components/playlist/PlaylistDetail.vue'
 import GeneralSettings from './components/settings/GeneralSettings.vue'
 import FormatSettings from './components/settings/FormatSettings.vue'
 import AuthSettings from './components/settings/AuthSettings.vue'
+import AdvancedSettings from './components/settings/AdvancedSettings.vue'
 import RuleSettings from './components/settings/RuleSettings.vue'
 
 const currentView = ref<ViewMode>('list')
@@ -34,6 +36,7 @@ const searchQuery = ref('')
 
 // Download dialog state
 const showDownloadDialog = ref(false)
+const showBatchDialog = ref(false)
 const downloadUrl = ref('')
 
 // Playlist state
@@ -87,6 +90,7 @@ function handleSubmitUrl(url: string) {
 }
 
 async function handleStartDownload(url: string, options: DownloadOptions) {
+  currentSection.value = 'downloads-active'
   await downloadsStore.startDownload(url, options)
 }
 
@@ -101,6 +105,40 @@ function handleSelectUrlList(id: number) {
 function handleDownloadFromPlaylist(url: string) {
   downloadUrl.value = url
   showDownloadDialog.value = true
+}
+
+async function handleBatchDownload(urls: string[]) {
+  const s = settingsStore.settings
+  const defaultOptions: DownloadOptions = {
+    format: s.default_video_format,
+    quality: s.default_video_quality,
+    output_dir: s.download_dir,
+    embed_thumbnail: s.embed_thumbnail,
+    embed_metadata: s.embed_metadata,
+    write_subs: s.write_subs,
+    embed_subs: s.embed_subs,
+    embed_chapters: s.embed_chapters,
+    sponsorblock: s.sponsorblock,
+    custom_format: null,
+    playlist_mode: 'single',
+    restrict_filenames: s.restrict_filenames,
+    no_overwrites: s.no_overwrites,
+    geo_bypass: s.geo_bypass,
+    rate_limit: s.rate_limit,
+    sub_lang: s.sub_lang,
+    convert_subs: s.convert_subs,
+    merge_output_format: s.merge_output_format,
+    recode_video: s.recode_video,
+    retries: s.retries,
+    proxy: s.proxy,
+    extra_args: s.extra_args,
+  }
+  // Switch to active downloads immediately so user sees items appear
+  currentSection.value = 'downloads-active'
+  // Start all downloads in parallel (each runs as an independent yt-dlp process)
+  await Promise.allSettled(
+    urls.map(url => downloadsStore.startDownload(url, defaultOptions))
+  )
 }
 
 // Keyboard shortcuts
@@ -118,9 +156,13 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.metaKey && e.key === '3') { e.preventDefault(); currentView.value = 'column' }
 }
 
-onMounted(() => {
+onMounted(async () => {
   settingsStore.loadSettings()
-  downloadsStore.setupProgressListener()
+  await downloadsStore.setupProgressListener(() => {
+    // Reload library when a download completes
+    libraryStore.loadItems()
+  })
+  await libraryStore.loadItems()
   document.addEventListener('keydown', handleKeydown)
 })
 
@@ -139,6 +181,7 @@ onUnmounted(() => {
       @update:currentView="currentView = $event"
       @update:searchQuery="searchQuery = $event; libraryStore.searchQuery = $event"
       @submit-url="handleSubmitUrl"
+      @open-batch="showBatchDialog = true"
     />
 
     <div class="flex flex-1 overflow-hidden">
@@ -195,6 +238,8 @@ onUnmounted(() => {
               <hr class="border-[var(--color-separator)]" />
               <AuthSettings />
               <hr class="border-[var(--color-separator)]" />
+              <AdvancedSettings />
+              <hr class="border-[var(--color-separator)]" />
               <RuleSettings />
             </div>
           </template>
@@ -211,6 +256,13 @@ onUnmounted(() => {
       :open="showDownloadDialog"
       @close="showDownloadDialog = false"
       @start="handleStartDownload"
+    />
+
+    <!-- Batch URL Dialog -->
+    <BatchUrlDialog
+      :open="showBatchDialog"
+      @close="showBatchDialog = false"
+      @start-batch="handleBatchDownload"
     />
   </div>
 </template>

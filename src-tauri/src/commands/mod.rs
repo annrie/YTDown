@@ -1,3 +1,4 @@
+pub mod browser;
 pub mod ytdlp_mgmt;
 pub mod download;
 pub mod formats;
