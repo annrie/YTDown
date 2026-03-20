@@ -1,7 +1,184 @@
-# Tauri + Vue + TypeScript
+<p align="center">
+  <img src="src-tauri/icons/icon.png" width="128" alt="YTDown icon" />
+</p>
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+<h1 align="center">YTDown</h1>
 
-## Recommended IDE Setup
+<p align="center">
+  A native desktop app for downloading videos and audio from YouTube and other sites.<br/>
+  Built with <strong>Tauri v2</strong> + <strong>Vue 3</strong> + <strong>yt-dlp</strong>.
+</p>
 
-- [VS Code](https://code.visualstudio.com/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+<p align="center">
+  <a href="#features">Features</a> · <a href="#installation">Installation</a> · <a href="#build-from-source">Build</a> · <a href="#日本語">日本語</a>
+</p>
+
+---
+
+## Features
+
+### 🌐 One-Click Browser Capture <sup>macOS only</sup>
+
+> **Grab the URL directly from your browser — no copy-paste needed.**
+
+Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?color=%23007aff" width="18" align="center" /> ) next to the URL bar to instantly capture the URL from the frontmost tab of your browser.
+
+**Supported browsers:** Safari, Chrome, Brave, Arc, Edge, Vivaldi, Opera, Firefox, Biscuit
+
+> [!NOTE]
+> This feature uses macOS-native APIs (AppleScript / CoreGraphics) and is **available on macOS only**. On Windows and Linux, please enter URLs manually or paste from the clipboard.
+
+### Core Features
+
+- **Multi-site support** — YouTube, Vimeo, Twitter/X, and [1000+ sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) via yt-dlp
+- **Video & Audio** — Download as MP4, MKV, WebM, MP3, FLAC, M4A, WAV, and more
+- **Quality selection** — Choose from Best, 4K, 1080p, 720p, 480p
+- **Playlist support** — Download entire playlists with parallel processing
+- **Batch download** — Paste multiple URLs at once
+- **Cookie authentication** — Access private/age-restricted content via browser cookies
+- **Post-processing** — Embed thumbnails, metadata, subtitles, chapters; SponsorBlock integration
+- **Library management** — Browse, search, filter, and organize downloaded media
+- **Custom background** — Set separate wallpapers for light and dark mode
+- **YouTube channel folders** — Automatically organizes downloads into channel-name subfolders
+- **Auto yt-dlp install** — If yt-dlp is not found, install it directly from the app
+
+### Platform Support
+
+| Feature | macOS | Windows | Linux |
+|---------|:-----:|:-------:|:-----:|
+| Download & convert | ✅ | ✅ | ✅ |
+| Browser URL capture | ✅ | — | — |
+| Pause / Resume download | ✅ | — | ✅ |
+| Move to Trash | ✅ | ✅ | ✅ |
+| Reveal in file manager | ✅ | ✅ | ✅ |
+
+## Installation
+
+### Requirements
+
+- **yt-dlp** — If not installed, YTDown will offer to download and install it automatically. Or install manually:
+  - macOS: `brew install yt-dlp`
+  - Windows: `winget install yt-dlp` or `scoop install yt-dlp`
+  - Linux: `sudo apt install yt-dlp` or download from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases)
+
+### Download
+
+Download the latest release from the [Releases](../../releases) page.
+
+| Platform | File |
+|----------|------|
+| macOS (Universal) | `YTDown_x.x.x_universal.dmg` |
+| Windows (64-bit) | `YTDown_x.x.x_x64-setup.exe` |
+| Linux (Debian/Ubuntu) | `YTDown_x.x.x_amd64.deb` |
+| Linux (AppImage) | `YTDown_x.x.x_amd64.AppImage` |
+
+## Build from Source
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 18+
+- [pnpm](https://pnpm.io/)
+- [Rust](https://rustup.rs/) toolchain
+- [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/)
+
+### Steps
+
+```bash
+git clone https://github.com/annrie/YTDown.git
+cd YTDown
+pnpm install
+
+# Development
+pnpm tauri dev
+
+# Production build
+pnpm tauri build
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Rust, Tauri v2, SQLite (rusqlite) |
+| Frontend | Vue 3 (Composition API), TypeScript, Pinia |
+| Styling | Tailwind CSS v4 |
+| Media engine | yt-dlp |
+
+## License
+
+MIT
+
+---
+
+<a id="日本語"></a>
+
+<p align="center">
+  <img src="src-tauri/icons/icon.png" width="128" alt="YTDown アイコン" />
+</p>
+
+<h2 align="center">YTDown — 日本語ドキュメント</h2>
+
+<p align="center">
+  YouTube をはじめとする動画サイトから映像・音声をダウンロードするネイティブデスクトップアプリ<br/>
+  <strong>Tauri v2</strong> + <strong>Vue 3</strong> + <strong>yt-dlp</strong> で構築
+</p>
+
+---
+
+### 主な機能
+
+#### 🌐 ブラウザから URL をワンクリック取得 <sup>macOS 限定</sup>
+
+> **コピー＆ペースト不要。ブラウザの URL をそのまま取得します。**
+
+URL 入力欄の横にある **地球アイコン**（ <img src="https://api.iconify.design/mdi/web.svg?color=%23007aff" width="18" align="center" /> ）をクリックすると、最前面のブラウザタブから URL を自動的に取得してセットします。
+
+**対応ブラウザ:** Safari, Chrome, Brave, Arc, Edge, Vivaldi, Opera, Firefox, Biscuit
+
+> [!NOTE]
+> この機能は macOS 固有の API（AppleScript / CoreGraphics）を使用しているため、**macOS でのみ利用可能**です。Windows・Linux では URL を手動で入力するか、クリップボードから貼り付けてください。
+
+#### その他の機能
+
+- **マルチサイト対応** — YouTube, Vimeo, Twitter/X ほか yt-dlp が対応する [1000 以上のサイト](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
+- **映像 & 音声** — MP4, MKV, WebM, MP3, FLAC, M4A, WAV など多数のフォーマットに対応
+- **画質選択** — 最高画質, 4K, 1080p, 720p, 480p から選択
+- **プレイリスト対応** — プレイリスト全体を並列ダウンロード
+- **一括ダウンロード** — 複数の URL をまとめて入力可能
+- **Cookie 認証** — ブラウザの Cookie を利用して限定公開・年齢制限コンテンツにアクセス
+- **ポストプロセス** — サムネイル・メタデータ・字幕・チャプターの埋め込み、SponsorBlock 対応
+- **ライブラリ管理** — ダウンロード済みメディアの一覧・検索・フィルタリング
+- **背景画像のカスタマイズ** — ライトモード・ダークモードそれぞれに壁紙を設定可能
+- **YouTube チャンネルフォルダ** — チャンネル名のサブフォルダに自動整理
+- **yt-dlp 自動インストール** — yt-dlp 未検出時、アプリ内からワンクリックでインストール
+
+### プラットフォーム対応状況
+
+| 機能 | macOS | Windows | Linux |
+|------|:-----:|:-------:|:-----:|
+| ダウンロード & 変換 | ✅ | ✅ | ✅ |
+| ブラウザ URL 取得 | ✅ | — | — |
+| 一時停止 / 再開 | ✅ | — | ✅ |
+| ゴミ箱へ移動 | ✅ | ✅ | ✅ |
+| ファイルマネージャで表示 | ✅ | ✅ | ✅ |
+
+### インストール
+
+#### 必要なもの
+
+- **yt-dlp** — 未インストールの場合、アプリ内から自動でダウンロード・インストールできます。手動の場合:
+  - macOS: `brew install yt-dlp`
+  - Windows: `winget install yt-dlp` または `scoop install yt-dlp`
+  - Linux: `sudo apt install yt-dlp` または [yt-dlp リリースページ](https://github.com/yt-dlp/yt-dlp/releases)からダウンロード
+
+[Releases](../../releases) ページから最新版をダウンロードしてください。
+
+### ソースからビルド
+
+```bash
+git clone https://github.com/annrie/YTDown.git
+cd YTDown
+pnpm install
+pnpm tauri dev      # 開発モード
+pnpm tauri build    # プロダクションビルド
+```
