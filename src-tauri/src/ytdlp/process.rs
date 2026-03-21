@@ -220,7 +220,12 @@ pub async fn start_download(
     args.extend(["-o".to_string(), output_path]);
 
     // Post-process options
-    if config.embed_thumbnail { args.push("--embed-thumbnail".to_string()); }
+    if config.embed_thumbnail {
+        args.push("--write-thumbnail".to_string());
+        args.push("--convert-thumbnails".to_string());
+        args.push("jpg".to_string());
+        args.push("--embed-thumbnail".to_string());
+    }
     if config.embed_metadata { args.push("--embed-metadata".to_string()); }
     if config.write_subs { args.extend(["--write-subs".to_string(), "--write-auto-subs".to_string()]); }
     if config.embed_subs { args.push("--embed-subs".to_string()); }
@@ -269,8 +274,22 @@ pub async fn start_download(
 
     args.push(config.url);
 
+    // GUI apps on macOS don't inherit shell PATH; ensure yt-dlp can find ffmpeg
+    let path_env = {
+        let current = std::env::var("PATH").unwrap_or_default();
+        let extra = ["/usr/local/bin", "/opt/homebrew/bin", "/usr/bin"];
+        let mut parts: Vec<&str> = current.split(':').collect();
+        for p in &extra {
+            if !parts.contains(p) {
+                parts.push(p);
+            }
+        }
+        parts.join(":")
+    };
+
     let mut child = Command::new(&config.ytdlp_path)
         .args(&args)
+        .env("PATH", &path_env)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -376,16 +395,11 @@ pub async fn start_download(
         // Wait for the child process to finish
         if let Ok(status) = child.wait().await {
             let final_status = if status.success() { "completed" } else { "error" };
-            let event = serde_json::json!({
-                "download_id": download_id,
-                "percent": if status.success() { 100.0 } else { 0.0 },
-                "status": final_status,
-            });
-            let _ = app_clone.emit("download-progress", event);
 
-            // Update DB status and file_path
+            // Update DB status and file_path BEFORE emitting event
             if let Some(state) = app_clone.try_state::<crate::state::AppState>() {
-                if let Ok(db) = state.db.try_lock() {
+                {
+                    let db = state.db.lock().await;
                     let _ = crate::db::queries::update_download_status(&db, download_id, final_status);
 
                     // Save file_path if detected and download succeeded
@@ -401,8 +415,19 @@ pub async fn start_download(
                             }
                         }
                     }
-                }
+
+                    // Force WAL checkpoint so readers see the update immediately
+                    let _ = db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
+                } // db lock released here
             }
+
+            // Emit event AFTER DB is updated so frontend reads correct status
+            let event = serde_json::json!({
+                "download_id": download_id,
+                "percent": if status.success() { 100.0 } else { 0.0 },
+                "status": final_status,
+            });
+            let _ = app_clone.emit("download-progress", event);
         }
     });
 

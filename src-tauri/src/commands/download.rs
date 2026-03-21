@@ -322,7 +322,20 @@ pub async fn resume_download(
                         }
                     },
                     output_template: output_template_for(&download.url),
-                    embed_thumbnail: false, embed_metadata: false,
+                    embed_thumbnail: {
+                        let db_t = state.db.lock().await;
+                        let v = crate::db::queries::get_setting(&db_t, "embed_thumbnail")
+                            .ok().flatten().map(|v| v == "true").unwrap_or(true);
+                        drop(db_t);
+                        v
+                    },
+                    embed_metadata: {
+                        let db_t = state.db.lock().await;
+                        let v = crate::db::queries::get_setting(&db_t, "embed_metadata")
+                            .ok().flatten().map(|v| v == "true").unwrap_or(true);
+                        drop(db_t);
+                        v
+                    },
                     write_subs: false, embed_subs: false,
                     embed_chapters: false, sponsorblock: false,
                     custom_format: None,
