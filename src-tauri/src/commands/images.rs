@@ -50,6 +50,13 @@ pub async fn download_images(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<i64, String> {
+    // Expand ~ in output_dir
+    let output_dir = if output_dir.starts_with("~/") {
+        let home = dirs::home_dir().unwrap_or_default();
+        home.join(&output_dir[2..]).to_string_lossy().to_string()
+    } else {
+        output_dir
+    };
     let output_path = Path::new(&output_dir);
 
     // Extract site name from URL

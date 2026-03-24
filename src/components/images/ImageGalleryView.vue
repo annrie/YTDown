@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { convertFileSrc } from '@tauri-apps/api/core'
+import { ask } from '@tauri-apps/plugin-dialog'
 import { useImagesStore } from '../../stores/images'
 import type { ImageRecord } from '../../types'
 import ImageSlideshow from './ImageSlideshow.vue'
@@ -46,7 +47,11 @@ function openSlideshow(sessionId: number, startIndex = 0) {
 }
 
 async function handleDeleteSession(sessionId: number) {
-  if (confirm('このセッションを削除しますか？\n\n「OK」でファイルも削除します。')) {
+  const confirmed = await ask('このセッションを削除しますか？\n\nファイルも削除されます。', {
+    title: 'セッション削除',
+    kind: 'warning',
+  })
+  if (confirmed) {
     await imagesStore.deleteSession(sessionId, true)
     sessionImagesMap.value.delete(sessionId)
     if (expandedSessionId.value === sessionId) {

@@ -86,6 +86,10 @@ pub async fn download_and_save(
         }
     };
 
+    fs::create_dir_all(output_dir)
+        .await
+        .map_err(|e| format!("Cannot create directory: {e}"))?;
+
     let full_filename = format!("{filename}.{format_str}");
     let file_path = output_dir.join(&full_filename);
     let file_path = ensure_unique_path(file_path);
@@ -94,10 +98,6 @@ pub async fn download_and_save(
         .unwrap()
         .to_string_lossy()
         .to_string();
-
-    fs::create_dir_all(output_dir)
-        .await
-        .map_err(|e| format!("Cannot create directory: {e}"))?;
 
     let file_size = final_bytes.len() as u64;
     fs::write(&file_path, &final_bytes)

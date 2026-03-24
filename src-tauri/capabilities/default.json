@@ -48,6 +48,11 @@
     "allow-toggle-favorite",
     "allow-update-ytdlp",
     "allow-get-browser-url",
-    "allow-check-safari-access"
+    "allow-check-safari-access",
+    "allow-scrape-images",
+    "allow-download-images",
+    "allow-list-image-sessions",
+    "allow-list-session-images",
+    "allow-delete-image-session"
   ]
 }

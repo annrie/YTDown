@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-download-images"
+description = "Enables the download_images command without any pre-configured scope."
+commands.allow = ["download_images"]
+
+[[permission]]
+identifier = "deny-download-images"
+description = "Denies the download_images command without any pre-configured scope."
+commands.deny = ["download_images"]
