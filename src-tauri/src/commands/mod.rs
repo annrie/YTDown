@@ -8,3 +8,4 @@ pub mod library;
 pub mod playlists;
 pub mod url_lists;
 pub mod settings;
+pub mod images;

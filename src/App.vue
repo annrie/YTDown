@@ -24,6 +24,10 @@ import ColumnView from './components/library/ColumnView.vue'
 // Playlist components
 import PlaylistDetail from './components/playlist/PlaylistDetail.vue'
 
+// Image components
+import ImageDownloadView from './components/images/ImageDownloadView.vue'
+import ImageGalleryView from './components/images/ImageGalleryView.vue'
+
 // Settings components
 import GeneralSettings from './components/settings/GeneralSettings.vue'
 import FormatSettings from './components/settings/FormatSettings.vue'
@@ -75,6 +79,8 @@ const sectionLabel = computed(() => {
     'library-audio': '音声',
     'playlist': 'プレイリスト',
     'settings': '設定',
+    'images-download': '画像ダウンロード',
+    'images-gallery': '画像ギャラリー',
   }
   return labels[currentSection.value] ?? currentSection.value
 })
@@ -229,6 +235,7 @@ onUnmounted(() => {
     <AppToolbar
       :currentView="currentView"
       :searchQuery="searchQuery"
+      :currentSection="currentSection"
       @update:currentView="currentView = $event"
       @update:searchQuery="searchQuery = $event; libraryStore.searchQuery = $event"
       @submit-url="handleSubmitUrl"
@@ -282,6 +289,16 @@ onUnmounted(() => {
               :playlist="selectedPlaylist"
               @download-url="handleDownloadFromPlaylist"
             />
+          </template>
+
+          <!-- Image download -->
+          <template v-else-if="currentSection === 'images-download'">
+            <ImageDownloadView />
+          </template>
+
+          <!-- Image gallery -->
+          <template v-else-if="currentSection === 'images-gallery'">
+            <ImageGalleryView />
           </template>
 
           <!-- Settings -->

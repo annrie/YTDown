@@ -165,6 +165,8 @@ export type SidebarSection =
   | 'library-audio'
   | 'playlist'
   | 'settings'
+  | 'images-download'
+  | 'images-gallery'
 
 export interface AppSettings {
   download_dir: string
@@ -200,4 +202,50 @@ export interface AppSettings {
   retries: number
   proxy: string
   extra_args: string
+}
+
+// Image Download Feature
+export interface ScrapedImage {
+  url: string
+  width: number | null
+  height: number | null
+  alt: string | null
+}
+
+export interface ImageToDownload {
+  url: string
+  filename_hint: string | null
+}
+
+export interface ImageSession {
+  id: number
+  source_url: string
+  site_name: string | null
+  image_count: number
+  output_dir: string
+  created_at: string
+}
+
+export interface ImageRecord {
+  id: number
+  session_id: number
+  original_url: string
+  file_path: string | null
+  filename: string | null
+  width: number | null
+  height: number | null
+  file_size: number | null
+  format: string | null
+  status: 'pending' | 'downloading' | 'completed' | 'failed'
+  created_at: string
+}
+
+export interface ImageDownloadProgress {
+  session_id: number
+  image_index: number
+  total_images: number
+  current_url: string
+  percent: number
+  status: 'downloading' | 'completed' | 'failed'
+  error_message: string | null
 }

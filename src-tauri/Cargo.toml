@@ -1,6 +1,6 @@
 [package]
 name = "ytdown"
-version = "0.2.0"
+version = "0.3.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -30,4 +30,7 @@ dirs = "5"
 which = "6"
 reqwest = { version = "0.12", features = ["blocking"] }
 tauri-plugin-dialog = "2.6.0"
+scraper = "0.20"
+image = { version = "0.25", features = ["webp"] }
+url = "2"
 

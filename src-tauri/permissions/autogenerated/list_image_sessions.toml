@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-image-sessions"
+description = "Enables the list_image_sessions command without any pre-configured scope."
+commands.allow = ["list_image_sessions"]
+
+[[permission]]
+identifier = "deny-list-image-sessions"
+description = "Denies the list_image_sessions command without any pre-configured scope."
+commands.deny = ["list_image_sessions"]

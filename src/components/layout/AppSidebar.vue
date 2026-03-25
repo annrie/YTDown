@@ -30,9 +30,9 @@ function sidebarButtonClass(section: SidebarSection) {
 <template>
   <aside class="sidebar">
     <nav class="text-sm space-y-4">
-      <!-- Downloads section -->
+      <!-- 動画 section -->
       <div>
-        <h3 class="px-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">ダウンロード</h3>
+        <h3 class="px-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">動画</h3>
         <ul class="space-y-0.5">
           <li>
             <button :class="sidebarButtonClass('downloads-active')"
@@ -50,35 +50,49 @@ function sidebarButtonClass(section: SidebarSection) {
               完了
             </button>
           </li>
-        </ul>
-      </div>
-
-      <!-- Library section -->
-      <div>
-        <h3 class="px-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">ライブラリ</h3>
-        <ul class="space-y-0.5">
           <li>
             <button :class="sidebarButtonClass('library-all')"
                     @click="emit('update:currentSection', 'library-all')">
-              すべて
+              ライブラリ
+            </button>
+            <ul v-if="isActive('library-all') || isActive('library-video') || isActive('library-audio')" class="ml-3 mt-0.5 space-y-0.5">
+              <li>
+                <button :class="sidebarButtonClass('library-video')"
+                        @click="emit('update:currentSection', 'library-video')">
+                  映像
+                </button>
+              </li>
+              <li>
+                <button :class="sidebarButtonClass('library-audio')"
+                        @click="emit('update:currentSection', 'library-audio')">
+                  音声
+                </button>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 画像 section -->
+      <div>
+        <h3 class="px-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">画像</h3>
+        <ul class="space-y-0.5">
+          <li>
+            <button :class="sidebarButtonClass('images-download')"
+                    @click="emit('update:currentSection', 'images-download')">
+              取得
             </button>
           </li>
           <li>
-            <button :class="sidebarButtonClass('library-video')"
-                    @click="emit('update:currentSection', 'library-video')">
-              映像
-            </button>
-          </li>
-          <li>
-            <button :class="sidebarButtonClass('library-audio')"
-                    @click="emit('update:currentSection', 'library-audio')">
-              音声
+            <button :class="sidebarButtonClass('images-gallery')"
+                    @click="emit('update:currentSection', 'images-gallery')">
+              ギャラリー
             </button>
           </li>
         </ul>
       </div>
 
-      <!-- Playlists section -->
+      <!-- プレイリスト section -->
       <div>
         <h3 class="px-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">プレイリスト</h3>
         <PlaylistList
@@ -87,7 +101,7 @@ function sidebarButtonClass(section: SidebarSection) {
         />
       </div>
 
-      <!-- Settings -->
+      <!-- 設定 -->
       <div>
         <button :class="sidebarButtonClass('settings')"
                 @click="emit('update:currentSection', 'settings')">

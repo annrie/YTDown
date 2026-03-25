@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod state;
 mod ytdlp;
+mod images;
 
 use state::AppState;
 use tauri::Manager;
@@ -64,6 +65,12 @@ pub fn run() {
             commands::settings::set_setting,
             // Browser
             commands::browser::get_browser_url,
+            // Images
+            commands::images::scrape_images,
+            commands::images::download_images,
+            commands::images::list_image_sessions,
+            commands::images::list_session_images,
+            commands::images::delete_image_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

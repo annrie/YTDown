@@ -5,7 +5,7 @@
 <h1 align="center">YTDown</h1>
 
 <p align="center">
-  A native desktop app for downloading videos and audio from YouTube and other sites.<br/>
+  A native desktop app for downloading videos, audio, and images from the web.<br/>
   Built with <strong>Tauri v2</strong> + <strong>Vue 3</strong> + <strong>yt-dlp</strong>.
 </p>
 
@@ -28,7 +28,7 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
 > [!NOTE]
 > This feature uses macOS-native APIs (AppleScript / CoreGraphics) and is **available on macOS only**. On Windows and Linux, please enter URLs manually or paste from the clipboard.
 
-### Core Features
+### Video & Audio
 
 - **Multi-site support** — YouTube, Vimeo, Twitter/X, and [1000+ sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) via yt-dlp
 - **Video & Audio** — Download as MP4, MKV, WebM, MP3, FLAC, M4A, WAV, and more
@@ -38,15 +38,29 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
 - **Cookie authentication** — Access private/age-restricted content via browser cookies
 - **Post-processing** — Embed thumbnails, metadata, subtitles, chapters; SponsorBlock integration
 - **Library management** — Browse, search, filter, and organize downloaded media
-- **Custom background** — Set separate wallpapers for light and dark mode
 - **YouTube channel folders** — Automatically organizes downloads into channel-name subfolders
 - **Auto yt-dlp install** — If yt-dlp is not found, install it directly from the app
+
+### 🖼 Image Download
+
+> **Scrape and download images from any web page.**
+
+- **Page scraping** — Enter a URL to scan for images with size filtering (min width/height)
+- **Preview & select** — Browse scraped images in a thumbnail grid, select which ones to download
+- **WebP conversion** — Optionally convert images to WebP format on download
+- **Gallery view** — Browse downloaded images organized by session with adjustable thumbnail sizes
+- **Slideshow** — Fullscreen slideshow with keyboard navigation, auto-play, and speed controls
+
+### General
+
+- **Custom background** — Set separate wallpapers for light and dark mode
 
 ### Platform Support
 
 | Feature | macOS | Windows | Linux |
 |---------|:-----:|:-------:|:-----:|
-| Download & convert | ✅ | ✅ | ✅ |
+| Video/audio download | ✅ | ✅ | ✅ |
+| Image scraping & download | ✅ | ✅ | ✅ |
 | Browser URL capture | ✅ | — | — |
 | Pause / Resume download | ✅ | — | ✅ |
 | Move to Trash | ✅ | ✅ | ✅ |
@@ -102,7 +116,8 @@ pnpm tauri build
 | Backend | Rust, Tauri v2, SQLite (rusqlite) |
 | Frontend | Vue 3 (Composition API), TypeScript, Pinia |
 | Styling | Tailwind CSS v4 |
-| Media engine | yt-dlp |
+| Video engine | yt-dlp |
+| Image processing | Rust image crate (scraping, WebP conversion) |
 
 ## License
 
@@ -119,7 +134,7 @@ MIT
 <h2 align="center">YTDown — 日本語ドキュメント</h2>
 
 <p align="center">
-  YouTube をはじめとする動画サイトから映像・音声をダウンロードするネイティブデスクトップアプリ<br/>
+  動画・音声・画像をウェブからダウンロードするネイティブデスクトップアプリ<br/>
   <strong>Tauri v2</strong> + <strong>Vue 3</strong> + <strong>yt-dlp</strong> で構築
 </p>
 
@@ -138,7 +153,7 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
 > [!NOTE]
 > この機能は macOS 固有の API（AppleScript / CoreGraphics）を使用しているため、**macOS でのみ利用可能**です。Windows・Linux では URL を手動で入力するか、クリップボードから貼り付けてください。
 
-#### その他の機能
+#### 動画・音声
 
 - **マルチサイト対応** — YouTube, Vimeo, Twitter/X ほか yt-dlp が対応する [1000 以上のサイト](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 - **映像 & 音声** — MP4, MKV, WebM, MP3, FLAC, M4A, WAV など多数のフォーマットに対応
@@ -148,15 +163,29 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
 - **Cookie 認証** — ブラウザの Cookie を利用して限定公開・年齢制限コンテンツにアクセス
 - **ポストプロセス** — サムネイル・メタデータ・字幕・チャプターの埋め込み、SponsorBlock 対応
 - **ライブラリ管理** — ダウンロード済みメディアの一覧・検索・フィルタリング
-- **背景画像のカスタマイズ** — ライトモード・ダークモードそれぞれに壁紙を設定可能
 - **YouTube チャンネルフォルダ** — チャンネル名のサブフォルダに自動整理
 - **yt-dlp 自動インストール** — yt-dlp 未検出時、アプリ内からワンクリックでインストール
+
+#### 🖼 画像ダウンロード
+
+> **ウェブページから画像をスクレイピングしてダウンロード**
+
+- **ページスクレイピング** — URL を入力してページ内の画像を取得（最小幅・最小高さでフィルタリング可能）
+- **プレビュー & 選択** — サムネイルグリッドで画像を確認し、ダウンロードする画像を選択
+- **WebP 変換** — ダウンロード時に WebP 形式への変換が可能
+- **ギャラリー表示** — セッション別にダウンロード済み画像を一覧表示（サムネイルサイズ調整可能）
+- **スライドショー** — フルスクリーン表示、キーボード操作、自動再生（速度調整付き）
+
+#### 全般
+
+- **背景画像のカスタマイズ** — ライトモード・ダークモードそれぞれに壁紙を設定可能
 
 ### プラットフォーム対応状況
 
 | 機能 | macOS | Windows | Linux |
 |------|:-----:|:-------:|:-----:|
-| ダウンロード & 変換 | ✅ | ✅ | ✅ |
+| 動画・音声ダウンロード | ✅ | ✅ | ✅ |
+| 画像スクレイピング & ダウンロード | ✅ | ✅ | ✅ |
 | ブラウザ URL 取得 | ✅ | — | — |
 | 一時停止 / 再開 | ✅ | — | ✅ |
 | ゴミ箱へ移動 | ✅ | ✅ | ✅ |
