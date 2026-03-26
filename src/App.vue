@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { convertFileSrc } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import type { ViewMode, SidebarSection, DownloadOptions } from './types'
 import { useDownloadsStore } from './stores/downloads'
 import { useLibraryStore } from './stores/library'
@@ -128,6 +128,7 @@ function handleSubmitUrl(url: string) {
 
 async function handleStartDownload(url: string, options: DownloadOptions) {
   currentSection.value = 'downloads-active'
+  invoke('save_url_history', { historyType: 'video', url }).catch(() => {})
   await downloadsStore.startDownload(url, options)
 }
 

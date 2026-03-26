@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { useImagesStore } from '../../stores/images'
 import { useSettingsStore } from '../../stores/settings'
 import ImagePreviewGrid from './ImagePreviewGrid.vue'
+import UrlHistoryDropdown from '../common/UrlHistoryDropdown.vue'
 
 const imagesStore = useImagesStore()
 const settingsStore = useSettingsStore()
@@ -25,6 +27,7 @@ onUnmounted(() => {
 
 async function handleScrape() {
   if (!url.value.trim()) return
+  invoke('save_url_history', { historyType: 'image', url: url.value.trim() }).catch(() => {})
   await imagesStore.scrapeUrl(url.value.trim(), minWidth.value, minHeight.value)
 }
 
@@ -54,6 +57,10 @@ function handleKeydown(e: KeyboardEvent) {
           class="flex-1 px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           :disabled="imagesStore.scraping"
           @keydown="handleKeydown"
+        />
+        <UrlHistoryDropdown
+          type="image"
+          @select="(u: string) => url = u"
         />
         <button
           class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
