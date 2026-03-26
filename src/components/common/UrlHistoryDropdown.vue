@@ -15,6 +15,7 @@ const open = ref(false)
 const items = ref<UrlHistoryEntry[]>([])
 const dropdownRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 
 async function toggle() {
   if (open.value) {
@@ -26,6 +27,13 @@ async function toggle() {
   } catch (e) {
     console.error('Failed to fetch URL history:', e)
     items.value = []
+  }
+  if (buttonRef.value) {
+    const rect = buttonRef.value.getBoundingClientRect()
+    dropdownStyle.value = {
+      top: `${rect.bottom + 4}px`,
+      right: `${window.innerWidth - rect.right}px`,
+    }
   }
   open.value = true
 }
@@ -47,10 +55,10 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
 
 <template>
-  <div class="relative">
+  <div>
     <button
       ref="buttonRef"
-      @click="toggle"
+      @click.stop="toggle"
       class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-500 hover:text-[var(--color-accent)]"
       title="URL履歴"
     >
@@ -60,23 +68,26 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
       </svg>
     </button>
 
-    <div
-      v-if="open"
-      ref="dropdownRef"
-      class="absolute top-full mt-1 right-0 w-80 max-h-64 overflow-y-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-[var(--color-separator)] z-50"
-    >
-      <div v-if="items.length === 0" class="px-3 py-4 text-center text-xs text-neutral-400">
-        履歴がありません
-      </div>
-      <button
-        v-for="item in items"
-        :key="item.id"
-        class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors border-b border-[var(--color-separator)] last:border-b-0"
-        @click="selectItem(item.url)"
+    <Teleport to="body">
+      <div
+        v-if="open"
+        ref="dropdownRef"
+        :style="dropdownStyle"
+        class="fixed w-80 max-h-64 overflow-y-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-[var(--color-separator)] z-[9999]"
       >
-        <span class="block truncate font-mono">{{ item.url }}</span>
-        <span class="block text-[10px] text-neutral-400 mt-0.5">{{ item.created_at }}</span>
-      </button>
-    </div>
+        <div v-if="items.length === 0" class="px-3 py-4 text-center text-xs text-neutral-400">
+          履歴がありません
+        </div>
+        <button
+          v-for="item in items"
+          :key="item.id"
+          class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors border-b border-[var(--color-separator)] last:border-b-0"
+          @click="selectItem(item.url)"
+        >
+          <span class="block truncate font-mono">{{ item.url }}</span>
+          <span class="block text-[10px] text-neutral-400 mt-0.5">{{ item.created_at }}</span>
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
