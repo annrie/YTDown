@@ -54,6 +54,10 @@ pub fn run() {
             commands::settings::set_setting,
             // Browser
             commands::browser::get_browser_url,
+            // URL History
+            commands::history::save_url_history,
+            commands::history::get_url_history,
+            commands::history::clear_url_history,
             // Images
             commands::images::scrape_images,
             commands::images::download_images,

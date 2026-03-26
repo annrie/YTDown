@@ -6,4 +6,5 @@ pub mod file_ops;
 pub mod cookies;
 pub mod library;
 pub mod settings;
+pub mod history;
 pub mod images;

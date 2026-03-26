@@ -82,6 +82,14 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('theme', 'system'),
   ('auto_classify', 'false');
 
+CREATE TABLE IF NOT EXISTS url_history (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  type       TEXT NOT NULL CHECK(type IN ('video', 'image')),
+  url        TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(type, url)
+);
+
 -- Image download feature
 CREATE TABLE IF NOT EXISTS image_sessions (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,

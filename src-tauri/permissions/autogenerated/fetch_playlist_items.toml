@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fetch-playlist-items"
+description = "Enables the fetch_playlist_items command without any pre-configured scope."
+commands.allow = ["fetch_playlist_items"]
+
+[[permission]]
+identifier = "deny-fetch-playlist-items"
+description = "Denies the fetch_playlist_items command without any pre-configured scope."
+commands.deny = ["fetch_playlist_items"]

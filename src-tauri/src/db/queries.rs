@@ -183,3 +183,39 @@ pub fn create_rule(conn: &Connection, rule_type: &str, pattern: &str, target_dir
     )?;
     Ok(conn.last_insert_rowid())
 }
+
+// === URL History ===
+
+pub fn save_url_history(conn: &Connection, history_type: &str, url: &str) -> SqlResult<()> {
+    conn.execute(
+        "INSERT INTO url_history (type, url, created_at) VALUES (?1, ?2, datetime('now'))
+         ON CONFLICT(type, url) DO UPDATE SET created_at = datetime('now')",
+        params![history_type, url],
+    )?;
+    conn.execute(
+        "DELETE FROM url_history WHERE type = ?1 AND id NOT IN (
+           SELECT id FROM url_history WHERE type = ?1 ORDER BY created_at DESC LIMIT 10
+         )",
+        params![history_type],
+    )?;
+    Ok(())
+}
+
+pub fn get_url_history(conn: &Connection, history_type: &str) -> SqlResult<Vec<UrlHistoryEntry>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, url, created_at FROM url_history WHERE type = ?1 ORDER BY created_at DESC LIMIT 10"
+    )?;
+    let rows = stmt.query_map(params![history_type], |row| {
+        Ok(UrlHistoryEntry {
+            id: row.get(0)?,
+            url: row.get(1)?,
+            created_at: row.get(2)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn clear_url_history(conn: &Connection, history_type: &str) -> SqlResult<()> {
+    conn.execute("DELETE FROM url_history WHERE type = ?1", params![history_type])?;
+    Ok(())
+}

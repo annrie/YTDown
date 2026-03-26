@@ -32,6 +32,13 @@ pub struct Setting {
     pub value: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UrlHistoryEntry {
+    pub id: i64,
+    pub url: String,
+    pub created_at: String,
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoClassifyRule {
