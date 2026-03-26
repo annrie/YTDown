@@ -215,3 +215,9 @@ export interface ImageDownloadProgress {
   status: 'downloading' | 'completed' | 'failed'
   error_message: string | null
 }
+
+export interface UrlHistoryEntry {
+  id: number
+  url: string
+  created_at: string
+}
