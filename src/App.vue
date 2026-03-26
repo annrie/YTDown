@@ -21,9 +21,6 @@ import ListView from './components/library/ListView.vue'
 import GridView from './components/library/GridView.vue'
 import ColumnView from './components/library/ColumnView.vue'
 
-// Playlist components
-import PlaylistDetail from './components/playlist/PlaylistDetail.vue'
-
 // Image components
 import ImageDownloadView from './components/images/ImageDownloadView.vue'
 import ImageGalleryView from './components/images/ImageGalleryView.vue'
@@ -44,10 +41,6 @@ const showDownloadDialog = ref(false)
 const showBatchDialog = ref(false)
 const downloadUrl = ref('')
 
-// Playlist state
-const selectedPlaylistId = ref<number | null>(null)
-const selectedUrlListId = ref<number | null>(null)
-
 const downloadsStore = useDownloadsStore()
 const libraryStore = useLibraryStore()
 const settingsStore = useSettingsStore()
@@ -63,12 +56,6 @@ const displayItems = computed(() => {
   return items
 })
 
-const selectedPlaylist = computed(() =>
-  libraryStore.items.length >= 0 // always true, just to make computed reactive
-    ? null // TODO: Find playlist from playlists store by selectedPlaylistId
-    : null
-)
-
 // Section label for display
 const sectionLabel = computed(() => {
   const labels: Record<SidebarSection, string> = {
@@ -77,7 +64,6 @@ const sectionLabel = computed(() => {
     'library-all': 'すべてのメディア',
     'library-video': '映像',
     'library-audio': '音声',
-    'playlist': 'プレイリスト',
     'settings': '設定',
     'images-download': '画像ダウンロード',
     'images-gallery': '画像ギャラリー',
@@ -143,19 +129,6 @@ function handleSubmitUrl(url: string) {
 async function handleStartDownload(url: string, options: DownloadOptions) {
   currentSection.value = 'downloads-active'
   await downloadsStore.startDownload(url, options)
-}
-
-function handleSelectPlaylist(id: number) {
-  selectedPlaylistId.value = id
-}
-
-function handleSelectUrlList(id: number) {
-  selectedUrlListId.value = id
-}
-
-function handleDownloadFromPlaylist(url: string) {
-  downloadUrl.value = url
-  showDownloadDialog.value = true
 }
 
 async function handleBatchDownload(urls: string[]) {
@@ -247,8 +220,6 @@ onUnmounted(() => {
       <AppSidebar
         :currentSection="currentSection"
         @update:currentSection="currentSection = $event"
-        @select-playlist="handleSelectPlaylist"
-        @select-url-list="handleSelectUrlList"
       />
 
       <!-- Main Content -->
@@ -281,14 +252,6 @@ onUnmounted(() => {
               <GridView v-else-if="currentView === 'grid'" :items="displayItems" />
               <ColumnView v-else :items="displayItems" />
             </div>
-          </template>
-
-          <!-- Playlist -->
-          <template v-else-if="currentSection === 'playlist'">
-            <PlaylistDetail
-              :playlist="selectedPlaylist"
-              @download-url="handleDownloadFromPlaylist"
-            />
           </template>
 
           <!-- Image download -->
