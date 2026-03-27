@@ -34,39 +34,6 @@ export type DownloadStatus =
   | 'cancelled'
   | 'error'
 
-export interface Playlist {
-  id: number
-  name: string
-  description: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface PlaylistItem {
-  id: number
-  playlist_id: number
-  download_id: number | null
-  url: string | null
-  sort_order: number
-  added_at: string
-}
-
-export interface UrlList {
-  id: number
-  name: string
-  created_at: string
-  updated_at: string
-}
-
-export interface UrlListItem {
-  id: number
-  list_id: number
-  url: string
-  title: string | null
-  sort_order: number
-  added_at: string
-}
-
 export interface Setting {
   key: string
   value: string
@@ -163,7 +130,6 @@ export type SidebarSection =
   | 'library-all'
   | 'library-video'
   | 'library-audio'
-  | 'playlist'
   | 'settings'
   | 'images-download'
   | 'images-gallery'
@@ -248,4 +214,10 @@ export interface ImageDownloadProgress {
   percent: number
   status: 'downloading' | 'completed' | 'failed'
   error_message: string | null
+}
+
+export interface UrlHistoryEntry {
+  id: number
+  url: string
+  created_at: string
 }

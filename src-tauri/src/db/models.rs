@@ -27,47 +27,16 @@ pub struct Download {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Playlist {
-    pub id: i64,
-    pub name: String,
-    pub description: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlaylistItem {
-    pub id: i64,
-    pub playlist_id: i64,
-    pub download_id: Option<i64>,
-    pub url: Option<String>,
-    pub sort_order: i64,
-    pub added_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UrlList {
-    pub id: i64,
-    pub name: String,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UrlListItem {
-    pub id: i64,
-    pub list_id: i64,
-    pub url: String,
-    pub title: Option<String>,
-    pub sort_order: i64,
-    pub added_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Setting {
     pub key: String,
     pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UrlHistoryEntry {
+    pub id: i64,
+    pub url: String,
+    pub created_at: String,
 }
 
 #[allow(dead_code)]

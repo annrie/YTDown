@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { useImagesStore } from '../../stores/images'
 import { useSettingsStore } from '../../stores/settings'
 import ImagePreviewGrid from './ImagePreviewGrid.vue'
+import UrlHistoryDropdown from '../common/UrlHistoryDropdown.vue'
 
 const imagesStore = useImagesStore()
 const settingsStore = useSettingsStore()
@@ -11,6 +13,8 @@ const url = ref('')
 const minWidth = ref(100)
 const minHeight = ref(100)
 const format = ref<string | undefined>(undefined)
+const fetchingBrowserUrl = ref(false)
+const browserUrlError = ref('')
 
 let unlistenProgress: (() => void) | null = null
 
@@ -25,6 +29,7 @@ onUnmounted(() => {
 
 async function handleScrape() {
   if (!url.value.trim()) return
+  invoke('save_url_history', { historyType: 'image', url: url.value.trim() }).catch(() => {})
   await imagesStore.scrapeUrl(url.value.trim(), minWidth.value, minHeight.value)
 }
 
@@ -32,6 +37,20 @@ async function handleDownload() {
   if (!imagesStore.hasSelection) return
   const outputDir = settingsStore.settings.download_dir || `~/Downloads/YTDown`
   await imagesStore.startDownload(outputDir, format.value)
+}
+
+async function fetchBrowserUrl() {
+  fetchingBrowserUrl.value = true
+  browserUrlError.value = ''
+  try {
+    const result = await invoke<string>('get_browser_url')
+    if (result) url.value = result
+  } catch (e) {
+    browserUrlError.value = String(e)
+    setTimeout(() => { browserUrlError.value = '' }, 3000)
+  } finally {
+    fetchingBrowserUrl.value = false
+  }
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -55,6 +74,23 @@ function handleKeydown(e: KeyboardEvent) {
           :disabled="imagesStore.scraping"
           @keydown="handleKeydown"
         />
+        <UrlHistoryDropdown
+          type="image"
+          @select="(u: string) => url = u"
+        />
+        <!-- ブラウザからURL取得ボタン -->
+        <button
+          @click="fetchBrowserUrl"
+          :disabled="fetchingBrowserUrl || imagesStore.scraping"
+          class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40"
+          :class="browserUrlError ? 'text-red-500' : 'text-neutral-500 hover:text-[var(--color-accent)]'"
+          title="ブラウザから取得"
+        >
+          <svg class="w-5 h-5" :class="{ 'animate-spin': fetchingBrowserUrl }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path v-if="!fetchingBrowserUrl" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-18v18m-9-9h18M3.6 9h16.8M3.6 15h16.8" />
+            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8" />
+          </svg>
+        </button>
         <button
           class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="imagesStore.scraping || !url.trim()"

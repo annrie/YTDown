@@ -161,92 +161,6 @@ pub fn get_all_settings(conn: &Connection) -> SqlResult<Vec<Setting>> {
     rows.collect()
 }
 
-// === Playlists ===
-
-pub fn list_playlists(conn: &Connection) -> SqlResult<Vec<Playlist>> {
-    let mut stmt = conn.prepare("SELECT id, name, description, created_at, updated_at FROM playlists ORDER BY name")?;
-    let rows = stmt.query_map([], |row| Ok(Playlist {
-        id: row.get(0)?, name: row.get(1)?, description: row.get(2)?,
-        created_at: row.get(3)?, updated_at: row.get(4)?,
-    }))?;
-    rows.collect()
-}
-
-pub fn create_playlist(conn: &Connection, name: &str) -> SqlResult<i64> {
-    conn.execute("INSERT INTO playlists (name) VALUES (?1)", params![name])?;
-    Ok(conn.last_insert_rowid())
-}
-
-pub fn delete_playlist(conn: &Connection, id: i64) -> SqlResult<()> {
-    conn.execute("DELETE FROM playlists WHERE id = ?1", params![id])?;
-    Ok(())
-}
-
-pub fn add_playlist_item(conn: &Connection, playlist_id: i64, download_id: Option<i64>, url: Option<&str>) -> SqlResult<i64> {
-    let max_order: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(sort_order), 0) FROM playlist_items WHERE playlist_id = ?1",
-        params![playlist_id], |r| r.get(0)
-    ).unwrap_or(0);
-    conn.execute(
-        "INSERT INTO playlist_items (playlist_id, download_id, url, sort_order) VALUES (?1, ?2, ?3, ?4)",
-        params![playlist_id, download_id, url, max_order + 1],
-    )?;
-    Ok(conn.last_insert_rowid())
-}
-
-pub fn get_playlist_items(conn: &Connection, playlist_id: i64) -> SqlResult<Vec<PlaylistItem>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, playlist_id, download_id, url, sort_order, added_at
-         FROM playlist_items WHERE playlist_id = ?1 ORDER BY sort_order"
-    )?;
-    let rows = stmt.query_map(params![playlist_id], |row| Ok(PlaylistItem {
-        id: row.get(0)?, playlist_id: row.get(1)?, download_id: row.get(2)?,
-        url: row.get(3)?, sort_order: row.get(4)?, added_at: row.get(5)?,
-    }))?;
-    rows.collect()
-}
-
-// === URL Lists ===
-
-pub fn list_url_lists(conn: &Connection) -> SqlResult<Vec<UrlList>> {
-    let mut stmt = conn.prepare("SELECT id, name, created_at, updated_at FROM url_lists ORDER BY name")?;
-    let rows = stmt.query_map([], |row| Ok(UrlList {
-        id: row.get(0)?, name: row.get(1)?, created_at: row.get(2)?, updated_at: row.get(3)?,
-    }))?;
-    rows.collect()
-}
-
-pub fn create_url_list(conn: &Connection, name: &str) -> SqlResult<i64> {
-    conn.execute("INSERT INTO url_lists (name) VALUES (?1)", params![name])?;
-    Ok(conn.last_insert_rowid())
-}
-
-pub fn add_url_to_list(conn: &Connection, list_id: i64, url: &str) -> SqlResult<i64> {
-    let max_order: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(sort_order), 0) FROM url_list_items WHERE list_id = ?1",
-        params![list_id], |r| r.get(0)
-    ).unwrap_or(0);
-    conn.execute(
-        "INSERT INTO url_list_items (list_id, url, sort_order) VALUES (?1, ?2, ?3)",
-        params![list_id, url, max_order + 1],
-    )?;
-    Ok(conn.last_insert_rowid())
-}
-
-pub fn import_url_list_from_file(conn: &Connection, list_id: i64, file_path: &str) -> SqlResult<usize> {
-    let content = std::fs::read_to_string(file_path)
-        .map_err(|e| rusqlite::Error::InvalidParameterName(format!("File read error: {}", e)))?;
-    let mut count = 0;
-    for line in content.lines() {
-        let url = line.trim();
-        if !url.is_empty() && !url.starts_with('#') {
-            add_url_to_list(conn, list_id, url)?;
-            count += 1;
-        }
-    }
-    Ok(count)
-}
-
 // === Auto-Classify Rules ===
 
 #[allow(dead_code)]
@@ -268,4 +182,40 @@ pub fn create_rule(conn: &Connection, rule_type: &str, pattern: &str, target_dir
         params![rule_type, pattern, target_dir, priority],
     )?;
     Ok(conn.last_insert_rowid())
+}
+
+// === URL History ===
+
+pub fn save_url_history(conn: &Connection, history_type: &str, url: &str) -> SqlResult<()> {
+    conn.execute(
+        "INSERT INTO url_history (type, url, created_at) VALUES (?1, ?2, datetime('now'))
+         ON CONFLICT(type, url) DO UPDATE SET created_at = datetime('now')",
+        params![history_type, url],
+    )?;
+    conn.execute(
+        "DELETE FROM url_history WHERE type = ?1 AND id NOT IN (
+           SELECT id FROM url_history WHERE type = ?1 ORDER BY created_at DESC LIMIT 10
+         )",
+        params![history_type],
+    )?;
+    Ok(())
+}
+
+pub fn get_url_history(conn: &Connection, history_type: &str) -> SqlResult<Vec<UrlHistoryEntry>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, url, created_at FROM url_history WHERE type = ?1 ORDER BY created_at DESC LIMIT 10"
+    )?;
+    let rows = stmt.query_map(params![history_type], |row| {
+        Ok(UrlHistoryEntry {
+            id: row.get(0)?,
+            url: row.get(1)?,
+            created_at: row.get(2)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn clear_url_history(conn: &Connection, history_type: &str) -> SqlResult<()> {
+    conn.execute("DELETE FROM url_history WHERE type = ?1", params![history_type])?;
+    Ok(())
 }

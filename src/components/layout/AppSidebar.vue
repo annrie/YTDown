@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import type { SidebarSection } from '../../types'
 import { useDownloadsStore } from '../../stores/downloads'
-import PlaylistList from '../playlist/PlaylistList.vue'
-
 const props = defineProps<{
   currentSection: SidebarSection
 }>()
 
 const emit = defineEmits<{
   'update:currentSection': [section: SidebarSection]
-  'select-playlist': [id: number]
-  'select-url-list': [id: number]
 }>()
 
 const downloadsStore = useDownloadsStore()
@@ -90,15 +86,6 @@ function sidebarButtonClass(section: SidebarSection) {
             </button>
           </li>
         </ul>
-      </div>
-
-      <!-- プレイリスト section -->
-      <div>
-        <h3 class="px-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">プレイリスト</h3>
-        <PlaylistList
-          @select="(id) => { emit('select-playlist', id); emit('update:currentSection', 'playlist') }"
-          @select-url-list="(id) => emit('select-url-list', id)"
-        />
       </div>
 
       <!-- 設定 -->

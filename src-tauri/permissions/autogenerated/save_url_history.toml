@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-url-history"
+description = "Enables the save_url_history command without any pre-configured scope."
+commands.allow = ["save_url_history"]
+
+[[permission]]
+identifier = "deny-save-url-history"
+description = "Denies the save_url_history command without any pre-configured scope."
+commands.deny = ["save_url_history"]
