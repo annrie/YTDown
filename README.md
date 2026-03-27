@@ -39,6 +39,7 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
 - **Post-processing** — Embed thumbnails, metadata, subtitles, chapters; SponsorBlock integration
 - **Library management** — Browse, search, filter, and organize downloaded media
 - **YouTube channel folders** — Automatically organizes downloads into channel-name subfolders
+- **URL history** — Recent URLs are saved automatically and accessible via the clock icon
 - **Auto yt-dlp install** — If yt-dlp is not found, install it directly from the app
 
 ### 🖼 Image Download
@@ -46,6 +47,7 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
 > **Scrape and download images from any web page.**
 
 - **Page scraping** — Enter a URL to scan for images with size filtering (min width/height)
+- **Browser URL capture** — Grab the current page URL from your browser directly in the image download view
 - **Preview & select** — Browse scraped images in a thumbnail grid, select which ones to download
 - **WebP conversion** — Optionally convert images to WebP format on download
 - **Gallery view** — Browse downloaded images organized by session with adjustable thumbnail sizes
@@ -164,6 +166,7 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
 - **ポストプロセス** — サムネイル・メタデータ・字幕・チャプターの埋め込み、SponsorBlock 対応
 - **ライブラリ管理** — ダウンロード済みメディアの一覧・検索・フィルタリング
 - **YouTube チャンネルフォルダ** — チャンネル名のサブフォルダに自動整理
+- **URL 履歴** — 直近の URL を自動保存、時計アイコンからすぐに呼び出し可能
 - **yt-dlp 自動インストール** — yt-dlp 未検出時、アプリ内からワンクリックでインストール
 
 #### 🖼 画像ダウンロード
@@ -171,6 +174,7 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
 > **ウェブページから画像をスクレイピングしてダウンロード**
 
 - **ページスクレイピング** — URL を入力してページ内の画像を取得（最小幅・最小高さでフィルタリング可能）
+- **ブラウザ URL 取得** — 画像ダウンロード画面からもブラウザの URL をワンクリックで取得可能
 - **プレビュー & 選択** — サムネイルグリッドで画像を確認し、ダウンロードする画像を選択
 - **WebP 変換** — ダウンロード時に WebP 形式への変換が可能
 - **ギャラリー表示** — セッション別にダウンロード済み画像を一覧表示（サムネイルサイズ調整可能）
