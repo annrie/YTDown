@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import type { ViewMode, SidebarSection } from '../../types'
+import UrlHistoryDropdown from '../common/UrlHistoryDropdown.vue'
 
 const props = defineProps<{
   currentView: ViewMode
@@ -107,6 +108,11 @@ function handleToolbarMousedown(e: MouseEvent) {
           class="flex-1 h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
           :disabled="isImageSection"
           @keydown="handleUrlKeydown"
+        />
+        <UrlHistoryDropdown
+          v-if="!isImageSection"
+          type="video"
+          @select="(url: string) => urlInput = url"
         />
         <!-- ブラウザからURL取得ボタン -->
         <button

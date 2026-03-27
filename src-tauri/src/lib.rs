@@ -47,17 +47,6 @@ pub fn run() {
             commands::library::search_library,
             commands::library::toggle_favorite,
             commands::library::get_download,
-            // Playlists
-            commands::playlists::list_playlists,
-            commands::playlists::create_playlist,
-            commands::playlists::delete_playlist,
-            commands::playlists::add_playlist_item,
-            commands::playlists::get_playlist_items,
-            // URL Lists
-            commands::url_lists::list_url_lists,
-            commands::url_lists::create_url_list,
-            commands::url_lists::add_url_to_list,
-            commands::url_lists::import_url_list,
             // Settings
             commands::settings::set_ytdlp_path,
             commands::settings::get_all_settings,
@@ -65,6 +54,10 @@ pub fn run() {
             commands::settings::set_setting,
             // Browser
             commands::browser::get_browser_url,
+            // URL History
+            commands::history::save_url_history,
+            commands::history::get_url_history,
+            commands::history::clear_url_history,
             // Images
             commands::images::scrape_images,
             commands::images::download_images,
