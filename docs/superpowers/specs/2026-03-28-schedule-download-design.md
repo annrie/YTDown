@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   is_channel   INTEGER NOT NULL DEFAULT 0,
   last_error   TEXT,
   fail_count   INTEGER NOT NULL DEFAULT 0,
+  is_running   INTEGER NOT NULL DEFAULT 0,  -- duplicate execution guard
   last_run_at  TEXT,                -- ISO8601; used as --dateafter for channel mode
   next_run_at  TEXT,                -- ISO8601; used for skip detection on launch
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS schedules (
 ```
 
 **Field notes**:
-- `options_json`: `DownloadOptions` struct serialized as JSON string. Stored as TEXT in DB; deserialized in Rust with `serde_json::from_str()`.
+- `options_json`: `DownloadOptions` struct serialized as JSON string. Stored as TEXT in DB; deserialized in Rust with `serde_json::from_str()`. `DownloadOptions` uses `#[serde(default)]` on all fields (existing pattern) for forward/backward compatibility. If deserialization fails for a record, that schedule is skipped and the error is logged — `list_schedules` does not fail entirely.
 - `is_channel`: when true, uses `--dateafter` (derived from `last_run_at`) to download only new videos. No per-video ID tracking needed.
 - `last_run_at`: doubles as the `--dateafter` value for channel monitoring (YYYYMMDD format for yt-dlp).
 - `last_error` + `fail_count`: auto-disable schedule after 3 consecutive failures.
@@ -107,14 +108,14 @@ pub async fn update_schedule(
 #[tauri::command]
 pub async fn delete_schedule(
     id: i64,
-    state: State<'_, AppState>,
+    state: State<'_, AppState>,  // accesses scheduler via state.scheduler (Arc<Mutex<JobScheduler>>)
 ) -> Result<(), String>
 
 #[tauri::command]
 pub async fn toggle_schedule(
     id: i64,
     is_active: bool,
-    state: State<'_, AppState>,
+    state: State<'_, AppState>,  // accesses scheduler via state.scheduler
 ) -> Result<(), String>
 
 #[tauri::command]
@@ -147,7 +148,7 @@ All commands registered in `src-tauri/src/lib.rs` and declared in `src-tauri/cap
 3. **Sleep/wake handling**: listen for Tauri `window:focus` event (fires on macOS wake + app foreground); re-run the same skip detection logic
 4. **On cron execution**: call internal download logic (same as `start_download`); for channel mode, append `--dateafter <last_run_at as YYYYMMDD>` to yt-dlp args; update `last_run_at` and `next_run_at` in DB; emit `schedule-fired` Tauri event
 5. **Frontend notification via event**: emit `app.emit("schedule-fired", schedule_id)` so the downloads store can refresh the queue in real-time even when `ScheduleView` is not visible
-6. **Duplicate execution guard**: check `last_run_at`; if within current cron window, skip
+6. **Duplicate execution guard**: add `is_running INTEGER NOT NULL DEFAULT 0` column to `schedules` table; set to 1 at execution start, 0 at end (including on error). If `is_running = 1` when a job fires, skip the run.
 7. **Schedule mutation**: on create/update/delete/toggle, cancel the affected Tokio job by UUID and re-register (or not, if toggled off)
 8. **Failure handling**: increment `fail_count`, store `last_error`; auto-disable and notify after 3 consecutive failures
 
@@ -255,9 +256,12 @@ tauri-plugin-notification = "2"
 ```
 
 ```json
-// src-tauri/tauri.conf.json — bundle.macOS section
-"NSUserNotificationsUsageDescription": "スケジュールダウンロードの通知に使用します"
+// src-tauri/tauri.conf.json — bundle.macOS.infoPlist section
+// (macOS does not use NSUserNotificationsUsageDescription; notification permission
+//  is handled by the OS dialog on first use. No Info.plist key required for
+//  tauri-plugin-notification on macOS.)
 ```
+> macOS notification permission is requested automatically by the OS at runtime (first notification sent). No `Info.plist` entry is needed. Verify against `tauri-plugin-notification` v2 docs before implementation.
 
 | Event | Message |
 |---|---|
