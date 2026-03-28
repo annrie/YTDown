@@ -18,7 +18,13 @@ export const useSchedulesStore = defineStore('schedules', () => {
     options_json: string
     is_channel: boolean
   }): Promise<number> {
-    const id = await invoke<number>('create_schedule', payload)
+    const id = await invoke<number>('create_schedule', {
+      name: payload.name,
+      url: payload.url,
+      cronExpr: payload.cron_expr,
+      optionsJson: payload.options_json,
+      isChannel: payload.is_channel,
+    })
     await fetchSchedules()
     return id
   }
@@ -31,7 +37,14 @@ export const useSchedulesStore = defineStore('schedules', () => {
     options_json: string
     is_channel: boolean
   }) {
-    await invoke('update_schedule', payload)
+    await invoke('update_schedule', {
+      id: payload.id,
+      name: payload.name,
+      url: payload.url,
+      cronExpr: payload.cron_expr,
+      optionsJson: payload.options_json,
+      isChannel: payload.is_channel,
+    })
     await fetchSchedules()
   }
 
@@ -41,7 +54,7 @@ export const useSchedulesStore = defineStore('schedules', () => {
   }
 
   async function toggleSchedule(id: number, is_active: boolean) {
-    await invoke('toggle_schedule', { id, is_active })
+    await invoke('toggle_schedule', { id, isActive: is_active })
     await fetchSchedules()
   }
 
