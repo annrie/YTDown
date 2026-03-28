@@ -125,7 +125,7 @@ function isLibraryExpanded() {
 
       <!-- スケジュール section -->
       <div class="sidebar-section">
-        <h3 class="section-header">スケジュール</h3>
+        <h3 class="section-header">スケジュール（動画のみ）</h3>
         <ul class="section-list">
           <li>
             <button
