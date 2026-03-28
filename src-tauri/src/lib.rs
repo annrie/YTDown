@@ -19,22 +19,20 @@ pub fn run() {
             let conn = db::init_db(&app_data_dir)
                 .expect("Failed to initialize database");
 
-            let sched = tauri::async_runtime::block_on(
+            let mut sched = tauri::async_runtime::block_on(
                 tokio_cron_scheduler::JobScheduler::new()
             )
             .expect("Failed to create job scheduler");
 
+            // スケジューラをセットアップ完了前に起動して競合を防ぐ
+            tauri::async_runtime::block_on(sched.start())
+                .expect("Failed to start scheduler");
+
             app.manage(AppState::new(conn, sched));
 
-            // スケジューラ起動・ジョブ登録・スキップ判定
+            // 既存ジョブ登録・スキップ判定
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                // スケジューラ開始
-                {
-                    let state = app_handle.state::<AppState>();
-                    let mut sched = state.scheduler.lock().await;
-                    sched.start().await.expect("Failed to start scheduler");
-                }
                 // 全ジョブ登録
                 scheduler::register_all_jobs(&app_handle).await;
                 // 起動時スキップ判定
