@@ -19,6 +19,7 @@ const settingsStore = useSettingsStore()
 const schedulesStore = useSchedulesStore()
 
 const showScheduleMode = ref(false)
+const scheduleError = ref('')
 
 // Inline schedule form state
 const scheduleName = ref('')
@@ -79,7 +80,10 @@ function handleScheduleRegister() {
     cron_expr: scheduleCronExpr.value.trim(),
     options_json: JSON.stringify(options),
     is_channel: scheduleIsChannel.value,
-  }).catch(e => console.error('スケジュール登録失敗:', e))
+  }).catch(e => {
+    scheduleError.value = `登録失敗: ${e}`
+    console.error('スケジュール登録失敗:', e)
+  })
 }
 
 const installing = ref(false)

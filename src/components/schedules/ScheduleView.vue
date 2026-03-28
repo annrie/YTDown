@@ -8,9 +8,14 @@ import ScheduleDialog from './ScheduleDialog.vue'
 const store = useSchedulesStore()
 const showDialog = ref(false)
 const editTarget = ref<Schedule | null>(null)
+const errorMsg = ref('')
 
 onMounted(async () => {
-  await store.fetchSchedules()
+  try {
+    await store.fetchSchedules()
+  } catch (e) {
+    errorMsg.value = `リスト取得失敗: ${e}`
+  }
   await store.setupScheduleListener()
 })
 
@@ -36,7 +41,7 @@ async function onSave(payload: {
       await store.createSchedule(payload)
     }
   } catch (e) {
-    console.error('スケジュール保存失敗:', e)
+    errorMsg.value = `保存失敗: ${e}`
   }
 }
 
@@ -58,6 +63,8 @@ async function onDelete(id: number) {
         新規スケジュール
       </button>
     </div>
+
+    <div v-if="errorMsg" class="error-banner">{{ errorMsg }}</div>
 
     <div v-if="store.schedules.length === 0" class="empty-state">
       <p>スケジュールはありません</p>
@@ -94,4 +101,5 @@ async function onDelete(id: number) {
 .empty-state { text-align: center; padding: 3rem; color: rgba(120,120,128,0.7); }
 .btn-add-empty { margin-top: 1rem; background: rgba(0,122,255,0.1); color: var(--color-accent, #007aff); border: 1px solid var(--color-accent, #007aff); padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; }
 .cards-grid { display: grid; gap: 0.75rem; }
+.error-banner { background: rgba(255,59,48,0.1); color: #ff3b30; border: 1px solid #ff3b30; border-radius: 0.5rem; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.875rem; word-break: break-all; }
 </style>
