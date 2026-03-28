@@ -54,6 +54,7 @@ pub async fn register_job(
     let app_clone = app.clone();
     let cron = cron_expr.to_string();
 
+    let cron = normalize_cron(&cron);
     let job = Job::new_async(cron.as_str(), move |_uuid, _lock| {
         let app = app_clone.clone();
         Box::pin(async move {
@@ -68,7 +69,7 @@ pub async fn register_job(
         let _ = queries::update_schedule_next_run(&db, schedule_id, next.as_deref());
     }
 
-    let mut sched = state.scheduler.lock().await;
+    let sched = state.scheduler.lock().await;
     sched.add(job).await.map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -156,12 +157,24 @@ async fn run_download(
     .await
 }
 
+/// フロントエンドの5フィールドcron式を Rust crate が要求する6フィールドに正規化
+/// 例: "0 9 * * *" → "0 0 9 * * *" (先頭に秒フィールド 0 を追加)
+fn normalize_cron(expr: &str) -> String {
+    let fields: Vec<&str> = expr.split_whitespace().collect();
+    if fields.len() == 5 {
+        format!("0 {}", expr)
+    } else {
+        expr.to_string()
+    }
+}
+
 /// cron式から次回発火時刻を計算 (ISO8601)
 pub fn compute_next_run(cron_expr: &str) -> Option<String> {
     use cron::Schedule;
     use std::str::FromStr;
 
-    let schedule = Schedule::from_str(cron_expr).ok()?;
+    let normalized = normalize_cron(cron_expr);
+    let schedule = Schedule::from_str(&normalized).ok()?;
     let next = schedule.upcoming(Utc).next()?;
     Some(next.to_rfc3339())
 }
