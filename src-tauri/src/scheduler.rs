@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use chrono::Utc;
 
@@ -165,7 +165,7 @@ pub async fn cancel_job(_app: &AppHandle, _schedule_id: i64) {
 }
 
 /// macOS 通知を送信
-fn send_notification(app: &AppHandle, title: &str, body: &str) {
-    use tauri_plugin_notification::NotificationExt;
-    let _ = app.notification().builder().title(title).body(body).show();
+/// TODO: mac-notification-sys の macOS 15 SDK 互換性修正後に tauri-plugin-notification を使用する
+fn send_notification(_app: &AppHandle, title: &str, body: &str) {
+    eprintln!("[YTDown Notification] {}: {}", title, body);
 }

@@ -18,9 +18,10 @@ pub fn run() {
                 .expect("Failed to get app data dir");
             let conn = db::init_db(&app_data_dir)
                 .expect("Failed to initialize database");
-            let sched = tokio::runtime::Handle::current()
-                .block_on(tokio_cron_scheduler::JobScheduler::new())
-                .expect("Failed to create job scheduler");
+            let sched = tauri::async_runtime::block_on(
+                tokio_cron_scheduler::JobScheduler::new()
+            )
+            .expect("Failed to create job scheduler");
             app.manage(AppState::new(conn, sched));
             Ok(())
         })
