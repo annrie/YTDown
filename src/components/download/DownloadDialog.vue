@@ -3,6 +3,8 @@ import { ref, computed, watch } from 'vue'
 import { useDownload } from '../../composables/useDownload'
 import { useDownloadsStore, type PlaylistItemInfo } from '../../stores/downloads'
 import { useSettingsStore } from '../../stores/settings'
+import { useSchedulesStore } from '../../stores/schedules'
+import ScheduleDialog from '../schedules/ScheduleDialog.vue'
 import type { DownloadOptions, PlaylistMode } from '../../types'
 
 const props = defineProps<{ url: string; open: boolean }>()
@@ -14,6 +16,23 @@ const emit = defineEmits<{
 const { videoInfo, loading, error, fetchFormats } = useDownload()
 const downloadsStore = useDownloadsStore()
 const settingsStore = useSettingsStore()
+const schedulesStore = useSchedulesStore()
+
+const showScheduleMode = ref(false)
+const showScheduleDialog = ref(false)
+
+async function onScheduleSave(payload: {
+  name: string
+  url: string
+  cron_expr: string
+  options_json: string
+  is_channel: boolean
+}) {
+  await schedulesStore.createSchedule(payload)
+  showScheduleDialog.value = false
+  showScheduleMode.value = false
+  emit('close')
+}
 
 const installing = ref(false)
 
@@ -327,16 +346,37 @@ function handleStart() {
       </div>
 
       <!-- Footer (fixed) -->
-      <div class="flex justify-end gap-2 p-4 border-t border-[var(--color-separator)] flex-shrink-0">
-        <button @click="emit('close')" class="px-4 py-1.5 rounded-md text-sm bg-neutral-100 dark:bg-neutral-700">
-          キャンセル
-        </button>
-        <button @click="handleStart"
-                :disabled="loading || !!error || needsPlaylistConfirmation || (playlistMode === 'all' && downloadsStore.playlistFetching)"
-                class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
-          ダウンロード開始
-        </button>
+      <div class="flex flex-col gap-2 p-4 border-t border-[var(--color-separator)] flex-shrink-0">
+        <!-- スケジュール実行トグル -->
+        <div class="schedule-toggle-row">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+            <input type="checkbox" v-model="showScheduleMode" />
+            <span>スケジュール実行</span>
+          </label>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button @click="emit('close')" class="px-4 py-1.5 rounded-md text-sm bg-neutral-100 dark:bg-neutral-700">
+            キャンセル
+          </button>
+          <button v-if="!showScheduleMode" @click="handleStart"
+                  :disabled="loading || !!error || needsPlaylistConfirmation || (playlistMode === 'all' && downloadsStore.playlistFetching)"
+                  class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
+            ダウンロード開始
+          </button>
+          <button v-else @click="showScheduleDialog = true"
+                  :disabled="loading || !!error"
+                  class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
+            スケジュール登録
+          </button>
+        </div>
       </div>
     </div>
   </div>
+
+  <ScheduleDialog
+    v-if="showScheduleDialog"
+    :initial-url="props.url"
+    @save="onScheduleSave"
+    @cancel="showScheduleDialog = false"
+  />
 </template>
