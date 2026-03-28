@@ -165,16 +165,26 @@ async fn run_download(
     .await?;
 
     // ライブラリDBへ記録
+    let title = file_path.as_deref().and_then(|p| {
+        std::path::Path::new(p)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_string())
+    });
+    let file_size = file_path.as_deref().and_then(|p| {
+        std::fs::metadata(p).ok().map(|m| m.len() as i64)
+    });
+
     let state = app.state::<AppState>();
     let db = state.db.lock().await;
     let dl_id = queries::insert_download(
-        &db, &schedule.url, None, None, None, None, None, None,
+        &db, &schedule.url, title.as_deref(), None, None, None, None, None,
         Some(&format), Some(&quality), None,
     ).unwrap_or(-1);
     if dl_id > 0 {
         let _ = queries::update_download_status(&db, dl_id, "completed");
         if let Some(ref path) = file_path {
-            let _ = queries::update_download_file_path(&db, dl_id, path, None);
+            let _ = queries::update_download_file_path(&db, dl_id, path, file_size);
         }
     }
 
