@@ -4,7 +4,7 @@ import { useDownload } from '../../composables/useDownload'
 import { useDownloadsStore, type PlaylistItemInfo } from '../../stores/downloads'
 import { useSettingsStore } from '../../stores/settings'
 import { useSchedulesStore } from '../../stores/schedules'
-import ScheduleDialog from '../schedules/ScheduleDialog.vue'
+import { Cron } from 'croner'
 import type { DownloadOptions, PlaylistMode } from '../../types'
 
 const props = defineProps<{ url: string; open: boolean }>()
@@ -19,23 +19,67 @@ const settingsStore = useSettingsStore()
 const schedulesStore = useSchedulesStore()
 
 const showScheduleMode = ref(false)
-const showScheduleDialog = ref(false)
 
-async function onScheduleSave(payload: {
-  name: string
-  url: string
-  cron_expr: string
-  options_json: string
-  is_channel: boolean
-}) {
-  showScheduleDialog.value = false
-  showScheduleMode.value = false
-  emit('close')
+// Inline schedule form state
+const scheduleName = ref('')
+const scheduleCronExpr = ref('0 9 * * *')
+const scheduleIsChannel = ref(false)
+
+const scheduleCronError = computed(() => {
+  try { new Cron(scheduleCronExpr.value); return '' } catch { return '無効なcron式です' }
+})
+
+const scheduleNextRun = computed(() => {
   try {
-    await schedulesStore.createSchedule(payload)
-  } catch (e) {
-    console.error('スケジュール登録失敗:', e)
+    const job = new Cron(scheduleCronExpr.value)
+    return job.nextRun()?.toLocaleString('ja-JP') ?? ''
+  } catch { return '' }
+})
+
+const isScheduleValid = computed(() =>
+  scheduleName.value.trim() !== '' && scheduleCronError.value === ''
+)
+
+watch(showScheduleMode, (enabled) => {
+  if (enabled && !scheduleName.value) {
+    try { scheduleName.value = new URL(props.url).hostname } catch { scheduleName.value = props.url }
   }
+})
+
+function handleScheduleRegister() {
+  const s = settingsStore.settings
+  const options: DownloadOptions = {
+    format: selectedFormat.value,
+    quality: selectedQuality.value,
+    output_dir: s.download_dir,
+    embed_thumbnail: embedThumbnail.value,
+    embed_metadata: embedMetadata.value,
+    write_subs: writeSubs.value,
+    embed_subs: embedSubs.value,
+    embed_chapters: embedChapters.value,
+    sponsorblock: sponsorblock.value,
+    custom_format: useCustomFormat.value ? customFormat.value : null,
+    playlist_mode: isPlaylistUrl.value ? playlistMode.value : 'single',
+    restrict_filenames: s.restrict_filenames,
+    no_overwrites: s.no_overwrites,
+    geo_bypass: s.geo_bypass,
+    rate_limit: s.rate_limit,
+    sub_lang: s.sub_lang,
+    convert_subs: s.convert_subs,
+    merge_output_format: s.merge_output_format,
+    recode_video: s.recode_video,
+    retries: s.retries,
+    proxy: s.proxy,
+    extra_args: s.extra_args,
+  }
+  emit('close')
+  schedulesStore.createSchedule({
+    name: scheduleName.value.trim(),
+    url: props.url,
+    cron_expr: scheduleCronExpr.value.trim(),
+    options_json: JSON.stringify(options),
+    is_channel: scheduleIsChannel.value,
+  }).catch(e => console.error('スケジュール登録失敗:', e))
 }
 
 const installing = ref(false)
@@ -352,12 +396,31 @@ function handleStart() {
       <!-- Footer (fixed) -->
       <div class="flex flex-col gap-2 p-4 border-t border-[var(--color-separator)] flex-shrink-0">
         <!-- スケジュール実行トグル -->
-        <div class="schedule-toggle-row">
-          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+        <div>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" v-model="showScheduleMode" />
             <span>スケジュール実行</span>
           </label>
         </div>
+
+        <!-- インラインスケジュールフォーム -->
+        <div v-if="showScheduleMode" class="flex flex-col gap-2 pt-2 border-t border-[var(--color-separator)]">
+          <div>
+            <label class="block text-xs text-neutral-500 mb-1">スケジュール名</label>
+            <input v-model="scheduleName" class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm" placeholder="例: 毎朝ダウンロード" />
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-500 mb-1">cron式</label>
+            <input v-model="scheduleCronExpr" class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm font-mono" placeholder="0 9 * * *" />
+            <p v-if="scheduleCronError" class="text-xs text-red-500 mt-0.5">{{ scheduleCronError }}</p>
+            <p v-else-if="scheduleNextRun" class="text-xs text-neutral-400 mt-0.5">次回: {{ scheduleNextRun }}</p>
+          </div>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" v-model="scheduleIsChannel" />
+            <span>チャンネル監視（新着のみ）</span>
+          </label>
+        </div>
+
         <div class="flex justify-end gap-2">
           <button @click="emit('close')" class="px-4 py-1.5 rounded-md text-sm bg-neutral-100 dark:bg-neutral-700">
             キャンセル
@@ -367,8 +430,8 @@ function handleStart() {
                   class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
             ダウンロード開始
           </button>
-          <button v-else @click="showScheduleDialog = true"
-                  :disabled="loading || !!error"
+          <button v-else @click="handleScheduleRegister"
+                  :disabled="!isScheduleValid"
                   class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
             スケジュール登録
           </button>
@@ -376,11 +439,4 @@ function handleStart() {
       </div>
     </div>
   </div>
-
-  <ScheduleDialog
-    v-if="showScheduleDialog"
-    :initial-url="props.url"
-    @save="onScheduleSave"
-    @cancel="showScheduleDialog = false"
-  />
 </template>
