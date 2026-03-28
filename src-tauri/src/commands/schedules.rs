@@ -18,7 +18,13 @@ pub async fn create_schedule(
         queries::insert_schedule(&db, &name, &url, &cron_expr, &options_json, is_channel)
             .map_err(|e| e.to_string())?
     };
-    scheduler::register_job(&app, id, &cron_expr).await?;
+    let app2 = app.clone();
+    let cron = cron_expr.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = scheduler::register_job(&app2, id, &cron).await {
+            eprintln!("[YTDown] register_job failed for id={id}: {e}");
+        }
+    });
     Ok(id)
 }
 
@@ -38,7 +44,13 @@ pub async fn update_schedule(
         queries::update_schedule(&db, id, &name, &url, &cron_expr, &options_json, is_channel)
             .map_err(|e| e.to_string())?;
     }
-    scheduler::register_job(&app, id, &cron_expr).await?;
+    let app2 = app.clone();
+    let cron = cron_expr.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = scheduler::register_job(&app2, id, &cron).await {
+            eprintln!("[YTDown] register_job failed for id={id}: {e}");
+        }
+    });
     Ok(())
 }
 
