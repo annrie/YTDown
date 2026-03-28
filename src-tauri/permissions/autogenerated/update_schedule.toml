@@ -1,0 +1,6 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-schedule"
+description = "Enables the update_schedule command without any pre-configured scope."
+commands.allow = ["update_schedule"]

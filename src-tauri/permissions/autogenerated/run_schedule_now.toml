@@ -1,0 +1,6 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-run-schedule-now"
+description = "Enables the run_schedule_now command without any pre-configured scope."
+commands.allow = ["run_schedule_now"]

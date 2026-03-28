@@ -47,6 +47,13 @@
     "allow-download-images",
     "allow-list-image-sessions",
     "allow-list-session-images",
-    "allow-delete-image-session"
+    "allow-delete-image-session",
+    "allow-create-schedule",
+    "allow-update-schedule",
+    "allow-delete-schedule",
+    "allow-toggle-schedule",
+    "allow-list-schedules",
+    "allow-get-schedule",
+    "allow-run-schedule-now"
   ]
 }
