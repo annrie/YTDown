@@ -142,7 +142,7 @@ pub async fn execute_schedule(app: &AppHandle, schedule_id: i64) -> Result<(), S
     result.map(|_| ())
 }
 
-/// yt-dlp ダウンロード実行
+/// yt-dlp ダウンロード実行・完了後にライブラリDBへ記録
 async fn run_download(
     app: &AppHandle,
     schedule: &crate::db::models::Schedule,
@@ -152,14 +152,33 @@ async fn run_download(
     let options: DownloadOptions = serde_json::from_str(&schedule.options_json)
         .map_err(|e| format!("オプションのパースに失敗: {}", e))?;
 
-    crate::commands::download::run_download_internal(
+    let format = options.format.clone();
+    let quality = options.quality.clone();
+
+    let file_path = crate::commands::download::run_download_internal(
         app,
         schedule.url.clone(),
         options,
         schedule.is_channel,
         schedule.last_run_at.clone(),
     )
-    .await
+    .await?;
+
+    // ライブラリDBへ記録
+    let state = app.state::<AppState>();
+    let db = state.db.lock().await;
+    let dl_id = queries::insert_download(
+        &db, &schedule.url, None, None, None, None, None, None,
+        Some(&format), Some(&quality), None,
+    ).unwrap_or(-1);
+    if dl_id > 0 {
+        let _ = queries::update_download_status(&db, dl_id, "completed");
+        if let Some(ref path) = file_path {
+            let _ = queries::update_download_file_path(&db, dl_id, path, None);
+        }
+    }
+
+    Ok(())
 }
 
 /// フロントエンドの5フィールドcron式を Rust crate が要求する6フィールドに正規化

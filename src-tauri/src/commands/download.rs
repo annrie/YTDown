@@ -385,13 +385,14 @@ pub async fn resume_download(
 /// Internal download runner for scheduled downloads.
 /// Runs yt-dlp to completion without progress tracking.
 /// If `is_channel` is true and `last_run_at` is Some, adds --dateafter filter.
+/// Returns the output file path on success (first line of yt-dlp --print output)
 pub async fn run_download_internal(
     app: &AppHandle,
     url: String,
     options: DownloadOptions,
     is_channel: bool,
     last_run_at: Option<String>,
-) -> Result<(), String> {
+) -> Result<Option<String>, String> {
     let state = app.state::<AppState>();
 
     let bin = {
@@ -506,6 +507,9 @@ pub async fn run_download_internal(
 
     args.push(url.clone());
 
+    // Capture output file path via --print
+    args.extend(["--print".to_string(), "after_move:filepath".to_string()]);
+
     // Ensure ffmpeg is on PATH
     let path_env = {
         let current = std::env::var("PATH").unwrap_or_default();
@@ -527,7 +531,11 @@ pub async fn run_download_internal(
         .map_err(|e| format!("Failed to spawn yt-dlp: {}", e))?;
 
     if output.status.success() {
-        Ok(())
+        let file_path = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .find(|l| !l.trim().is_empty())
+            .map(|l| l.trim().to_string());
+        Ok(file_path)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("yt-dlp failed: {}", stderr.trim()))
