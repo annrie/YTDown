@@ -136,16 +136,24 @@ pub async fn execute_schedule(app: &AppHandle, schedule_id: i64) {
     let _ = app.emit("schedule-fired", schedule_id);
 }
 
-/// yt-dlp ダウンロード実行（Task 5 で run_download_internal に配線予定）
+/// yt-dlp ダウンロード実行
 async fn run_download(
-    _app: &AppHandle,
+    app: &AppHandle,
     schedule: &crate::db::models::Schedule,
 ) -> Result<(), String> {
     use crate::commands::download::DownloadOptions;
-    let _options: DownloadOptions = serde_json::from_str(&schedule.options_json)
+
+    let options: DownloadOptions = serde_json::from_str(&schedule.options_json)
         .map_err(|e| format!("オプションのパースに失敗: {}", e))?;
-    // run_download_internal will be wired in Task 5
-    Err("not yet implemented".to_string())
+
+    crate::commands::download::run_download_internal(
+        app,
+        schedule.url.clone(),
+        options,
+        schedule.is_channel,
+        schedule.last_run_at.clone(),
+    )
+    .await
 }
 
 /// cron式から次回発火時刻を計算 (ISO8601)

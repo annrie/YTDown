@@ -1,4 +1,4 @@
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use serde::Deserialize;
 use crate::state::{ActiveDownload, AppState};
 use crate::ytdlp::{binary, process::DownloadConfig};
@@ -379,6 +379,158 @@ pub async fn resume_download(
         Ok(())
     } else {
         Err("Download not found".to_string())
+    }
+}
+
+/// Internal download runner for scheduled downloads.
+/// Runs yt-dlp to completion without progress tracking.
+/// If `is_channel` is true and `last_run_at` is Some, adds --dateafter filter.
+pub async fn run_download_internal(
+    app: &AppHandle,
+    url: String,
+    options: DownloadOptions,
+    is_channel: bool,
+    last_run_at: Option<String>,
+) -> Result<(), String> {
+    let state = app.state::<AppState>();
+
+    let bin = {
+        let ytdlp_path_lock = state.ytdlp_path.lock().await;
+        crate::ytdlp::binary::detect_binary(ytdlp_path_lock.as_deref())?
+    };
+    let ytdlp_path = bin.path.to_string_lossy().to_string();
+
+    // Expand ~ in output_dir
+    let output_dir = if options.output_dir.starts_with("~/") {
+        let home = dirs::home_dir().unwrap_or_default();
+        home.join(&options.output_dir[2..]).to_string_lossy().to_string()
+    } else {
+        options.output_dir.clone()
+    };
+    std::fs::create_dir_all(&output_dir)
+        .map_err(|e| format!("Failed to create output dir: {}", e))?;
+
+    let (cookie_browser, cookie_file) = get_cookie_settings(&state).await;
+    let output_template = output_template_for(&url);
+    let extra_args = parse_extra_args(&options.extra_args);
+
+    // Build args (no progress/newline flags — just run to completion)
+    let mut args: Vec<String> = Vec::new();
+
+    // Format selection
+    if let Some(ref custom) = options.custom_format {
+        args.extend(["-f".to_string(), custom.clone()]);
+    } else {
+        let format_str = match options.format.as_str() {
+            "mp3" | "m4a" | "flac" | "wav" | "opus" => "bestaudio/best".to_string(),
+            _ => match options.quality.as_str() {
+                "4k" | "2160" => "bestvideo[height<=2160]+bestaudio/best".to_string(),
+                "1080" => "bestvideo[height<=1080]+bestaudio/best".to_string(),
+                "720"  => "bestvideo[height<=720]+bestaudio/best".to_string(),
+                "480"  => "bestvideo[height<=480]+bestaudio/best".to_string(),
+                _      => "bestvideo+bestaudio/best".to_string(),
+            },
+        };
+        args.extend(["-f".to_string(), format_str]);
+    }
+
+    // Output path
+    let output_path = std::path::PathBuf::from(&output_dir)
+        .join(&output_template)
+        .to_string_lossy()
+        .to_string();
+    args.extend(["-o".to_string(), output_path]);
+
+    // Post-process options
+    if options.embed_thumbnail {
+        args.push("--write-thumbnail".to_string());
+        args.push("--convert-thumbnails".to_string());
+        args.push("jpg".to_string());
+        args.push("--embed-thumbnail".to_string());
+    }
+    if options.embed_metadata { args.push("--embed-metadata".to_string()); }
+    if options.write_subs { args.extend(["--write-subs".to_string(), "--write-auto-subs".to_string()]); }
+    if options.embed_subs { args.push("--embed-subs".to_string()); }
+    if options.embed_chapters { args.push("--embed-chapters".to_string()); }
+    if options.sponsorblock { args.push("--sponsorblock-remove".to_string()); }
+
+    // Cookies
+    if let Some(ref browser) = cookie_browser {
+        if browser != "none" {
+            args.extend(["--cookies-from-browser".to_string(), browser.clone()]);
+        }
+    }
+    if let Some(ref file) = cookie_file {
+        if !file.is_empty() {
+            args.extend(["--cookies".to_string(), file.clone()]);
+        }
+    }
+
+    // Advanced options
+    if options.restrict_filenames { args.push("--restrict-filenames".to_string()); }
+    if options.no_overwrites { args.push("--no-overwrites".to_string()); }
+    if options.geo_bypass { args.push("--geo-bypass".to_string()); }
+    if let Some(ref limit) = non_empty(options.rate_limit.clone()) {
+        args.extend(["-r".to_string(), limit.clone()]);
+    }
+    if let Some(ref lang) = non_empty(options.sub_lang.clone()) {
+        args.extend(["--sub-lang".to_string(), lang.clone()]);
+    }
+    if let Some(ref fmt) = non_empty(options.convert_subs.clone()) {
+        args.extend(["--convert-subs".to_string(), fmt.clone()]);
+    }
+    if let Some(ref fmt) = non_empty(options.merge_output_format.clone()) {
+        args.extend(["--merge-output-format".to_string(), fmt.clone()]);
+    }
+    if let Some(ref fmt) = non_empty(options.recode_video.clone()) {
+        args.extend(["--recode-video".to_string(), fmt.clone()]);
+    }
+    if options.retries != 10 {
+        args.extend(["--retries".to_string(), options.retries.to_string()]);
+    }
+    if let Some(ref proxy) = non_empty(options.proxy.clone()) {
+        args.extend(["--proxy".to_string(), proxy.clone()]);
+    }
+    args.extend(extra_args.iter().cloned());
+
+    // Channel incremental: add --dateafter if last_run_at is set
+    if is_channel {
+        if let Some(ref last_run) = last_run_at {
+            // Convert ISO8601 (e.g. "2025-01-15T10:30:00+00:00") to YYYYMMDD
+            let date_str = last_run.chars().take(10).collect::<String>().replace('-', "");
+            if date_str.len() == 8 {
+                args.extend(["--dateafter".to_string(), date_str]);
+            }
+        }
+    }
+
+    args.push(url.clone());
+
+    // Ensure ffmpeg is on PATH
+    let path_env = {
+        let current = std::env::var("PATH").unwrap_or_default();
+        let extra = ["/usr/local/bin", "/opt/homebrew/bin", "/usr/bin"];
+        let mut parts: Vec<&str> = current.split(':').collect();
+        for p in &extra {
+            if !parts.contains(p) {
+                parts.push(p);
+            }
+        }
+        parts.join(":")
+    };
+
+    let output = tokio::process::Command::new(&ytdlp_path)
+        .args(&args)
+        .env("PATH", &path_env)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to spawn yt-dlp: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("yt-dlp failed: {}", stderr.trim()))
     }
 }
 
