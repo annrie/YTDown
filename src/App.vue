@@ -25,6 +25,9 @@ import ColumnView from './components/library/ColumnView.vue'
 import ImageDownloadView from './components/images/ImageDownloadView.vue'
 import ImageGalleryView from './components/images/ImageGalleryView.vue'
 
+// Schedule components
+import ScheduleView from './components/schedules/ScheduleView.vue'
+
 // Settings components
 import GeneralSettings from './components/settings/GeneralSettings.vue'
 import FormatSettings from './components/settings/FormatSettings.vue'
@@ -264,6 +267,11 @@ onUnmounted(() => {
           <!-- Image gallery -->
           <template v-else-if="currentSection === 'images-gallery'">
             <ImageGalleryView />
+          </template>
+
+          <!-- Schedules -->
+          <template v-else-if="currentSection === 'schedules'">
+            <ScheduleView />
           </template>
 
           <!-- Settings -->
