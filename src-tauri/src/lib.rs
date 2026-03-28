@@ -3,6 +3,7 @@ mod db;
 mod state;
 mod ytdlp;
 mod images;
+mod scheduler;
 
 use state::AppState;
 use tauri::Manager;
@@ -17,7 +18,10 @@ pub fn run() {
                 .expect("Failed to get app data dir");
             let conn = db::init_db(&app_data_dir)
                 .expect("Failed to initialize database");
-            app.manage(AppState::new(conn));
+            let sched = tokio::runtime::Handle::current()
+                .block_on(tokio_cron_scheduler::JobScheduler::new())
+                .expect("Failed to create job scheduler");
+            app.manage(AppState::new(conn, sched));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
