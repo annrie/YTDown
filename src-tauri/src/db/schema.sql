@@ -113,3 +113,19 @@ CREATE TABLE IF NOT EXISTS images (
   status        TEXT DEFAULT 'pending',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS schedules (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  name         TEXT NOT NULL,
+  url          TEXT NOT NULL,
+  cron_expr    TEXT NOT NULL,
+  options_json TEXT NOT NULL,
+  is_active    INTEGER NOT NULL DEFAULT 1,
+  is_channel   INTEGER NOT NULL DEFAULT 0,
+  last_error   TEXT,
+  fail_count   INTEGER NOT NULL DEFAULT 0,
+  is_running   INTEGER NOT NULL DEFAULT 0,
+  last_run_at  TEXT,
+  next_run_at  TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);

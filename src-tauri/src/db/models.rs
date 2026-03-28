@@ -49,3 +49,20 @@ pub struct AutoClassifyRule {
     pub priority: i64,
     pub enabled: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Schedule {
+    pub id: i64,
+    pub name: String,
+    pub url: String,
+    pub cron_expr: String,
+    pub options_json: String,
+    pub is_active: bool,
+    pub is_channel: bool,
+    pub last_error: Option<String>,
+    pub fail_count: i64,
+    pub is_running: bool,
+    pub last_run_at: Option<String>,
+    pub next_run_at: Option<String>,
+    pub created_at: String,
+}
