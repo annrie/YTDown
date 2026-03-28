@@ -130,9 +130,10 @@ export type SidebarSection =
   | 'library-all'
   | 'library-video'
   | 'library-audio'
-  | 'settings'
   | 'images-download'
   | 'images-gallery'
+  | 'schedules'
+  | 'settings'
 
 export interface AppSettings {
   download_dir: string
@@ -219,5 +220,21 @@ export interface ImageDownloadProgress {
 export interface UrlHistoryEntry {
   id: number
   url: string
+  created_at: string
+}
+
+export interface Schedule {
+  id: number
+  name: string
+  url: string
+  cron_expr: string
+  options_json: string
+  is_active: boolean
+  is_channel: boolean
+  last_error: string | null
+  fail_count: number
+  is_running: boolean
+  last_run_at: string | null
+  next_run_at: string | null
   created_at: string
 }
