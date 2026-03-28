@@ -28,14 +28,14 @@ async function onScheduleSave(payload: {
   options_json: string
   is_channel: boolean
 }) {
+  showScheduleDialog.value = false
+  showScheduleMode.value = false
+  emit('close')
   try {
     await schedulesStore.createSchedule(payload)
   } catch (e) {
     console.error('スケジュール登録失敗:', e)
   }
-  showScheduleDialog.value = false
-  showScheduleMode.value = false
-  emit('close')
 }
 
 const installing = ref(false)

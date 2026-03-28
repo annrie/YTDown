@@ -19,7 +19,10 @@ const emit = defineEmits<{
 
 const settingsStore = useSettingsStore()
 
-const name = ref(props.schedule?.name ?? '')
+function defaultName(url: string): string {
+  try { return new URL(url).hostname } catch { return url }
+}
+const name = ref(props.schedule?.name ?? defaultName(props.initialUrl ?? ''))
 const url = ref(props.schedule?.url ?? props.initialUrl ?? '')
 const cronExpr = ref(props.schedule?.cron_expr ?? '0 9 * * *')
 const isChannel = ref(props.schedule?.is_channel ?? false)
