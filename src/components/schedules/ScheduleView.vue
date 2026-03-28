@@ -28,12 +28,16 @@ async function onSave(payload: {
   name: string; url: string; cron_expr: string
   options_json: string; is_channel: boolean
 }) {
-  if (editTarget.value) {
-    await store.updateSchedule({ id: editTarget.value.id, ...payload })
-  } else {
-    await store.createSchedule(payload)
-  }
   showDialog.value = false
+  try {
+    if (editTarget.value) {
+      await store.updateSchedule({ id: editTarget.value.id, ...payload })
+    } else {
+      await store.createSchedule(payload)
+    }
+  } catch (e) {
+    console.error('スケジュール保存失敗:', e)
+  }
 }
 
 async function onDelete(id: number) {
