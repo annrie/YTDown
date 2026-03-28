@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-add-url-to-list"
+description = "Enables the add_url_to_list command without any pre-configured scope."
+commands.allow = ["add_url_to_list"]
+
+[[permission]]
+identifier = "deny-add-url-to-list"
+description = "Denies the add_url_to_list command without any pre-configured scope."
+commands.deny = ["add_url_to_list"]

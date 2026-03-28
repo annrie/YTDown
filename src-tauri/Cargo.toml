@@ -30,6 +30,8 @@ dirs = "5"
 which = "6"
 reqwest = { version = "0.12", features = ["blocking"] }
 tauri-plugin-dialog = "2.6.0"
+tokio-cron-scheduler = "0.13"
+cron = "0.12"
 scraper = "0.20"
 image = { version = "0.25", features = ["webp"] }
 url = "2"

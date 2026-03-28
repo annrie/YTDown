@@ -219,3 +219,205 @@ pub fn clear_url_history(conn: &Connection, history_type: &str) -> SqlResult<()>
     conn.execute("DELETE FROM url_history WHERE type = ?1", params![history_type])?;
     Ok(())
 }
+
+// === Schedules ===
+
+pub fn insert_schedule(
+    conn: &Connection,
+    name: &str,
+    url: &str,
+    cron_expr: &str,
+    options_json: &str,
+    is_channel: bool,
+) -> SqlResult<i64> {
+    conn.execute(
+        "INSERT INTO schedules (name, url, cron_expr, options_json, is_channel)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![name, url, cron_expr, options_json, is_channel as i64],
+    )?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn get_schedule(conn: &Connection, id: i64) -> SqlResult<Schedule> {
+    conn.query_row(
+        "SELECT id, name, url, cron_expr, options_json, is_active, is_channel,
+                last_error, fail_count, is_running, last_run_at, next_run_at, created_at
+         FROM schedules WHERE id = ?1",
+        params![id],
+        |row| Ok(Schedule {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            url: row.get(2)?,
+            cron_expr: row.get(3)?,
+            options_json: row.get(4)?,
+            is_active: row.get::<_, i64>(5)? != 0,
+            is_channel: row.get::<_, i64>(6)? != 0,
+            last_error: row.get(7)?,
+            fail_count: row.get(8)?,
+            is_running: row.get::<_, i64>(9)? != 0,
+            last_run_at: row.get(10)?,
+            next_run_at: row.get(11)?,
+            created_at: row.get(12)?,
+        }),
+    )
+}
+
+pub fn list_schedules(conn: &Connection) -> SqlResult<Vec<Schedule>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, url, cron_expr, options_json, is_active, is_channel,
+                last_error, fail_count, is_running, last_run_at, next_run_at, created_at
+         FROM schedules ORDER BY created_at DESC",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(Schedule {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            url: row.get(2)?,
+            cron_expr: row.get(3)?,
+            options_json: row.get(4)?,
+            is_active: row.get::<_, i64>(5)? != 0,
+            is_channel: row.get::<_, i64>(6)? != 0,
+            last_error: row.get(7)?,
+            fail_count: row.get(8)?,
+            is_running: row.get::<_, i64>(9)? != 0,
+            last_run_at: row.get(10)?,
+            next_run_at: row.get(11)?,
+            created_at: row.get(12)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn list_active_schedules(conn: &Connection) -> SqlResult<Vec<Schedule>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, url, cron_expr, options_json, is_active, is_channel,
+                last_error, fail_count, is_running, last_run_at, next_run_at, created_at
+         FROM schedules WHERE is_active = 1 ORDER BY created_at DESC",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(Schedule {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            url: row.get(2)?,
+            cron_expr: row.get(3)?,
+            options_json: row.get(4)?,
+            is_active: row.get::<_, i64>(5)? != 0,
+            is_channel: row.get::<_, i64>(6)? != 0,
+            last_error: row.get(7)?,
+            fail_count: row.get(8)?,
+            is_running: row.get::<_, i64>(9)? != 0,
+            last_run_at: row.get(10)?,
+            next_run_at: row.get(11)?,
+            created_at: row.get(12)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn update_schedule(
+    conn: &Connection,
+    id: i64,
+    name: &str,
+    url: &str,
+    cron_expr: &str,
+    options_json: &str,
+    is_channel: bool,
+) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE schedules SET name=?1, url=?2, cron_expr=?3, options_json=?4, is_channel=?5
+         WHERE id=?6",
+        params![name, url, cron_expr, options_json, is_channel as i64, id],
+    )?;
+    Ok(())
+}
+
+pub fn delete_schedule(conn: &Connection, id: i64) -> SqlResult<()> {
+    conn.execute("DELETE FROM schedules WHERE id = ?1", params![id])?;
+    Ok(())
+}
+
+pub fn toggle_schedule(conn: &Connection, id: i64, is_active: bool) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE schedules SET is_active = ?1 WHERE id = ?2",
+        params![is_active as i64, id],
+    )?;
+    Ok(())
+}
+
+pub fn set_schedule_running(conn: &Connection, id: i64, is_running: bool) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE schedules SET is_running = ?1 WHERE id = ?2",
+        params![is_running as i64, id],
+    )?;
+    Ok(())
+}
+
+pub fn record_schedule_success(
+    conn: &Connection,
+    id: i64,
+    last_run_at: &str,
+    next_run_at: Option<&str>,
+) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE schedules SET fail_count=0, last_error=NULL, is_running=0,
+                              last_run_at=?1, next_run_at=?2 WHERE id=?3",
+        params![last_run_at, next_run_at, id],
+    )?;
+    Ok(())
+}
+
+pub fn record_schedule_failure(
+    conn: &Connection,
+    id: i64,
+    error: &str,
+    next_run_at: Option<&str>,
+) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE schedules SET fail_count = fail_count + 1, last_error=?1,
+                              is_running=0, next_run_at=?2 WHERE id=?3",
+        params![error, next_run_at, id],
+    )?;
+    Ok(())
+}
+
+pub fn disable_schedule(conn: &Connection, id: i64) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE schedules SET is_active=0 WHERE id=?1",
+        params![id],
+    )?;
+    Ok(())
+}
+
+pub fn list_overdue_schedules(conn: &Connection, now: &str) -> SqlResult<Vec<Schedule>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, url, cron_expr, options_json, is_active, is_channel,
+                last_error, fail_count, is_running, last_run_at, next_run_at, created_at
+         FROM schedules WHERE is_active=1 AND next_run_at IS NOT NULL AND next_run_at < ?1",
+    )?;
+    let rows = stmt.query_map(params![now], |row| {
+        Ok(Schedule {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            url: row.get(2)?,
+            cron_expr: row.get(3)?,
+            options_json: row.get(4)?,
+            is_active: row.get::<_, i64>(5)? != 0,
+            is_channel: row.get::<_, i64>(6)? != 0,
+            last_error: row.get(7)?,
+            fail_count: row.get(8)?,
+            is_running: row.get::<_, i64>(9)? != 0,
+            last_run_at: row.get(10)?,
+            next_run_at: row.get(11)?,
+            created_at: row.get(12)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn update_schedule_next_run(conn: &Connection, id: i64, next_run_at: Option<&str>) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE schedules SET next_run_at=?1 WHERE id=?2",
+        params![next_run_at, id],
+    )?;
+    Ok(())
+}

@@ -25,6 +25,9 @@ import ColumnView from './components/library/ColumnView.vue'
 import ImageDownloadView from './components/images/ImageDownloadView.vue'
 import ImageGalleryView from './components/images/ImageGalleryView.vue'
 
+// Schedule components
+import ScheduleView from './components/schedules/ScheduleView.vue'
+
 // Settings components
 import GeneralSettings from './components/settings/GeneralSettings.vue'
 import FormatSettings from './components/settings/FormatSettings.vue'
@@ -64,9 +67,10 @@ const sectionLabel = computed(() => {
     'library-all': 'すべてのメディア',
     'library-video': '映像',
     'library-audio': '音声',
-    'settings': '設定',
     'images-download': '画像ダウンロード',
     'images-gallery': '画像ギャラリー',
+    'schedules': 'スケジュール',
+    'settings': '設定',
   }
   return labels[currentSection.value] ?? currentSection.value
 })
@@ -263,6 +267,11 @@ onUnmounted(() => {
           <!-- Image gallery -->
           <template v-else-if="currentSection === 'images-gallery'">
             <ImageGalleryView />
+          </template>
+
+          <!-- Schedules -->
+          <template v-else-if="currentSection === 'schedules'">
+            <ScheduleView />
           </template>
 
           <!-- Settings -->
