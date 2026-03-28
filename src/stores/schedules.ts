@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type { Schedule } from '../types'
+import { useLibraryStore } from './library'
 
 export const useSchedulesStore = defineStore('schedules', () => {
   const schedules = ref<Schedule[]>([])
@@ -65,6 +66,7 @@ export const useSchedulesStore = defineStore('schedules', () => {
   async function setupScheduleListener() {
     await listen('schedule-fired', () => {
       fetchSchedules()
+      useLibraryStore().loadItems()
     })
   }
 

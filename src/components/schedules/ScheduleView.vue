@@ -50,6 +50,14 @@ async function onDelete(id: number) {
     await store.deleteSchedule(id)
   }
 }
+
+async function onRunNow(id: number) {
+  try {
+    await store.runNow(id)
+  } catch (e) {
+    errorMsg.value = `実行失敗: ${e}`
+  }
+}
 </script>
 
 <template>
@@ -79,7 +87,7 @@ async function onDelete(id: number) {
         @toggle="(id, isActive) => store.toggleSchedule(id, isActive)"
         @edit="openEdit"
         @delete="onDelete"
-        @run-now="(id) => store.runNow(id)"
+        @run-now="onRunNow"
       />
     </div>
 

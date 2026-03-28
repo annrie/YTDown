@@ -106,6 +106,5 @@ pub async fn run_schedule_now(
     app: AppHandle,
     _state: State<'_, AppState>,
 ) -> Result<(), String> {
-    scheduler::execute_schedule(&app, id).await;
-    Ok(())
+    scheduler::execute_schedule(&app, id).await
 }

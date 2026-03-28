@@ -1,5 +1,5 @@
 use tauri::{AppHandle, Emitter, Manager};
-use tokio_cron_scheduler::{Job, JobScheduler};
+use tokio_cron_scheduler::Job;
 use chrono::Utc;
 
 use crate::state::AppState;
@@ -36,6 +36,8 @@ pub async fn register_all_jobs(app: &AppHandle) {
     let state = app.state::<AppState>();
     let schedules = {
         let db = state.db.lock().await;
+        // クラッシュ時に残った is_running フラグをリセット
+        let _ = queries::reset_all_running_schedules(&db);
         queries::list_active_schedules(&db).unwrap_or_default()
     };
 
@@ -58,7 +60,9 @@ pub async fn register_job(
     let job = Job::new_async(cron.as_str(), move |_uuid, _lock| {
         let app = app_clone.clone();
         Box::pin(async move {
-            execute_schedule(&app, schedule_id).await;
+            if let Err(e) = execute_schedule(&app, schedule_id).await {
+                eprintln!("[YTDown] execute_schedule failed for id={schedule_id}: {e}");
+            }
         })
     })
     .map_err(|e| e.to_string())?;
@@ -75,19 +79,19 @@ pub async fn register_job(
 }
 
 /// スケジュール実行本体
-pub async fn execute_schedule(app: &AppHandle, schedule_id: i64) {
+pub async fn execute_schedule(app: &AppHandle, schedule_id: i64) -> Result<(), String> {
     let state = app.state::<AppState>();
 
     let schedule = {
         let db = state.db.lock().await;
-        match queries::get_schedule(&db, schedule_id) {
-            Ok(s) => s,
-            Err(_) => return,
-        }
+        queries::get_schedule(&db, schedule_id).map_err(|e| e.to_string())?
     };
 
-    if schedule.is_running || !schedule.is_active {
-        return;
+    if schedule.is_running {
+        return Err(format!("スケジュール {} は実行中です", schedule_id));
+    }
+    if !schedule.is_active {
+        return Err(format!("スケジュール {} は無効化されています", schedule_id));
     }
 
     {
@@ -135,6 +139,7 @@ pub async fn execute_schedule(app: &AppHandle, schedule_id: i64) {
     }
 
     let _ = app.emit("schedule-fired", schedule_id);
+    result.map(|_| ())
 }
 
 /// yt-dlp ダウンロード実行

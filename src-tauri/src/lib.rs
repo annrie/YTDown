@@ -19,7 +19,7 @@ pub fn run() {
             let conn = db::init_db(&app_data_dir)
                 .expect("Failed to initialize database");
 
-            let mut sched = tauri::async_runtime::block_on(
+            let sched = tauri::async_runtime::block_on(
                 tokio_cron_scheduler::JobScheduler::new()
             )
             .expect("Failed to create job scheduler");

@@ -9,8 +9,8 @@ const emit = defineEmits<{
   runNow: [id: number]
 }>()
 
-function formatNextRun(iso: string | null): string {
-  if (!iso) return '未設定'
+function formatDate(iso: string | null): string {
+  if (!iso) return 'なし'
   return new Date(iso).toLocaleString('ja-JP')
 }
 </script>
@@ -34,7 +34,8 @@ function formatNextRun(iso: string | null): string {
         </svg>
         {{ schedule.cron_expr }}
       </span>
-      <span class="meta-item">次回: {{ formatNextRun(schedule.next_run_at) }}</span>
+      <span class="meta-item">次回: {{ formatDate(schedule.next_run_at) }}</span>
+      <span v-if="schedule.last_run_at" class="meta-item">前回: {{ formatDate(schedule.last_run_at) }}</span>
       <span v-if="schedule.is_channel" class="badge-channel">チャンネル監視</span>
     </div>
 
