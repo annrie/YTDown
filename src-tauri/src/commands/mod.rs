@@ -9,3 +9,4 @@ pub mod settings;
 pub mod history;
 pub mod images;
 pub mod schedules;
+pub mod presets;

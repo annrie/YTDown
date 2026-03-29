@@ -54,6 +54,10 @@
     "allow-toggle-schedule",
     "allow-list-schedules",
     "allow-get-schedule",
-    "allow-run-schedule-now"
+    "allow-run-schedule-now",
+    "allow-list-presets",
+    "allow-create-preset",
+    "allow-update-preset",
+    "allow-delete-preset"
   ]
 }

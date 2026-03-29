@@ -102,6 +102,11 @@ pub fn run() {
             commands::schedules::list_schedules,
             commands::schedules::get_schedule,
             commands::schedules::run_schedule_now,
+            // Presets
+            commands::presets::list_presets,
+            commands::presets::create_preset,
+            commands::presets::update_preset,
+            commands::presets::delete_preset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
