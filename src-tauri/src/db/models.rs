@@ -66,3 +66,19 @@ pub struct Schedule {
     pub next_run_at: Option<String>,
     pub created_at: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Preset {
+    pub id: i64,
+    pub name: String,
+    pub format: String,
+    pub quality: String,
+    pub output_dir: String,
+    pub embed_thumbnail: bool,
+    pub embed_metadata: bool,
+    pub write_subs: bool,
+    pub embed_subs: bool,
+    pub embed_chapters: bool,
+    pub sponsorblock: bool,
+    pub created_at: String,
+}
