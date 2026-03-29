@@ -79,7 +79,11 @@ async function saveForm() {
 
 async function onDelete(id: number) {
   if (!confirm('このプリセットを削除しますか？')) return
-  await store.deletePreset(id)
+  try {
+    await store.deletePreset(id)
+  } catch (e) {
+    errorMsg.value = `削除失敗: ${e}`
+  }
 }
 </script>
 
@@ -94,8 +98,6 @@ async function onDelete(id: number) {
         ＋ 新規作成
       </button>
     </div>
-
-    <div v-if="errorMsg" class="text-sm text-red-400 mb-2">{{ errorMsg }}</div>
 
     <!-- Create form (inline) -->
     <div v-if="showCreateForm" class="rounded border border-[var(--color-separator)] p-3 mb-4 space-y-2">
@@ -129,11 +131,12 @@ async function onDelete(id: number) {
         <label><input type="checkbox" v-model="form.embed_chapters" class="mr-1">チャプター埋め込み</label>
         <label><input type="checkbox" v-model="form.sponsorblock" class="mr-1">SponsorBlock</label>
       </div>
-      <div class="flex gap-2 mt-2">
+      <div class="flex items-center gap-2 mt-2">
         <button class="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
                 :disabled="!form.name.trim()" @click="saveForm">保存</button>
         <button class="text-sm px-3 py-1 rounded border border-[var(--color-separator)] hover:bg-white/10"
                 @click="cancelForm">キャンセル</button>
+        <span v-if="errorMsg" class="text-xs text-red-400">{{ errorMsg }}</span>
       </div>
     </div>
 
@@ -177,11 +180,12 @@ async function onDelete(id: number) {
             <label><input type="checkbox" v-model="form.embed_chapters" class="mr-1">チャプター埋め込み</label>
             <label><input type="checkbox" v-model="form.sponsorblock" class="mr-1">SponsorBlock</label>
           </div>
-          <div class="flex gap-2 mt-2">
+          <div class="flex items-center gap-2 mt-2">
             <button class="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
                     :disabled="!form.name.trim()" @click="saveForm">保存</button>
             <button class="text-sm px-3 py-1 rounded border border-[var(--color-separator)] hover:bg-white/10"
                     @click="cancelForm">キャンセル</button>
+            <span v-if="errorMsg" class="text-xs text-red-400">{{ errorMsg }}</span>
           </div>
         </div>
         <!-- Card display -->
