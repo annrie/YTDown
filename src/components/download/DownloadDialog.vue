@@ -102,6 +102,7 @@ function applyPreset(e: Event) {
   const preset = presetsStore.presets.find(p => p.id === id)
   if (!preset) return
   selectedFormat.value = preset.format
+  mediaType.value = audioFormats.includes(preset.format) ? 'audio' : 'video'
   selectedQuality.value = preset.quality
   embedThumbnail.value = preset.embed_thumbnail
   embedMetadata.value = preset.embed_metadata
@@ -211,6 +212,9 @@ watch(() => props.open, (isOpen) => {
     embedSubs.value = settingsStore.settings.embed_subs
     embedChapters.value = settingsStore.settings.embed_chapters
     sponsorblock.value = settingsStore.settings.sponsorblock
+    showSavePreset.value = false
+    savePresetName.value = ''
+    savePresetError.value = ''
   }
 })
 
