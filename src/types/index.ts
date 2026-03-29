@@ -238,3 +238,18 @@ export interface Schedule {
   next_run_at: string | null
   created_at: string
 }
+
+export interface Preset {
+  id: number
+  name: string
+  format: string
+  quality: string
+  output_dir: string       // snake_case: matches Rust serde output
+  embed_thumbnail: boolean
+  embed_metadata: boolean
+  write_subs: boolean
+  embed_subs: boolean
+  embed_chapters: boolean
+  sponsorblock: boolean
+  created_at: string
+}
