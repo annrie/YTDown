@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useDownload } from '../../composables/useDownload'
 import { useDownloadsStore, type PlaylistItemInfo } from '../../stores/downloads'
 import { useSettingsStore } from '../../stores/settings'
 import { useSchedulesStore } from '../../stores/schedules'
+import { usePresetsStore } from '../../stores/presets'
 import { Cron } from 'croner'
 import type { DownloadOptions, PlaylistMode } from '../../types'
 
@@ -17,6 +18,15 @@ const { videoInfo, loading, error, fetchFormats } = useDownload()
 const downloadsStore = useDownloadsStore()
 const settingsStore = useSettingsStore()
 const schedulesStore = useSchedulesStore()
+const presetsStore = usePresetsStore()
+
+const showSavePreset = ref(false)
+const savePresetName = ref('')
+const savePresetError = ref('')
+
+onMounted(() => {
+  presetsStore.fetchPresets()
+})
 
 const showScheduleMode = ref(false)
 const scheduleError = ref('')
@@ -84,6 +94,46 @@ function handleScheduleRegister() {
     scheduleError.value = `登録失敗: ${e}`
     console.error('スケジュール登録失敗:', e)
   })
+}
+
+function applyPreset(e: Event) {
+  const id = Number((e.target as HTMLSelectElement).value)
+  if (!id) return
+  const preset = presetsStore.presets.find(p => p.id === id)
+  if (!preset) return
+  selectedFormat.value = preset.format
+  selectedQuality.value = preset.quality
+  embedThumbnail.value = preset.embed_thumbnail
+  embedMetadata.value = preset.embed_metadata
+  writeSubs.value = preset.write_subs
+  embedSubs.value = preset.embed_subs
+  embedChapters.value = preset.embed_chapters
+  sponsorblock.value = preset.sponsorblock
+  ;(e.target as HTMLSelectElement).value = ''
+}
+
+async function handleSavePreset() {
+  savePresetError.value = ''
+  const name = savePresetName.value.trim()
+  if (!name) return
+  try {
+    await presetsStore.createPreset({
+      name,
+      format: selectedFormat.value,
+      quality: selectedQuality.value,
+      output_dir: settingsStore.settings.download_dir,
+      embed_thumbnail: embedThumbnail.value,
+      embed_metadata: embedMetadata.value,
+      write_subs: writeSubs.value,
+      embed_subs: embedSubs.value,
+      embed_chapters: embedChapters.value,
+      sponsorblock: sponsorblock.value,
+    })
+    showSavePreset.value = false
+    savePresetName.value = ''
+  } catch (e) {
+    savePresetError.value = `保存失敗: ${e}`
+  }
 }
 
 const installing = ref(false)
@@ -342,6 +392,43 @@ function handleStart() {
                     @click="mediaType = type_; selectedFormat = type_ === 'video' ? 'mp4' : 'mp3'">
               {{ type_ === 'video' ? '映像' : '音声' }}
             </button>
+          </div>
+
+          <!-- Preset row -->
+          <div class="flex items-center gap-2 mb-3">
+            <select
+              class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm"
+              @change="applyPreset"
+            >
+              <option value="">プリセットを選択…</option>
+              <option v-for="p in presetsStore.presets" :key="p.id" :value="p.id">
+                {{ p.name }}
+              </option>
+            </select>
+            <button
+              class="text-xs px-2 py-1 rounded border border-[var(--color-separator)] hover:bg-white/10"
+              @click="showSavePreset = !showSavePreset"
+            >
+              保存
+            </button>
+          </div>
+          <!-- Save preset inline form -->
+          <div v-if="showSavePreset" class="flex items-center gap-2 mb-3">
+            <input
+              v-model="savePresetName"
+              type="text"
+              placeholder="プリセット名"
+              class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm"
+              @keyup.enter="handleSavePreset"
+            />
+            <button
+              class="text-xs px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+              :disabled="!savePresetName.trim()"
+              @click="handleSavePreset"
+            >
+              OK
+            </button>
+            <span v-if="savePresetError" class="text-xs text-red-400">{{ savePresetError }}</span>
           </div>
 
           <!-- Format & Quality -->
