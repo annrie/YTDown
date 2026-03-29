@@ -344,6 +344,12 @@ pub fn toggle_schedule(conn: &Connection, id: i64, is_active: bool) -> SqlResult
     Ok(())
 }
 
+/// アプリ起動時に全スケジュールの is_running をリセット（クラッシュ対策）
+pub fn reset_all_running_schedules(conn: &Connection) -> SqlResult<()> {
+    conn.execute("UPDATE schedules SET is_running = 0 WHERE is_running = 1", [])?;
+    Ok(())
+}
+
 pub fn set_schedule_running(conn: &Connection, id: i64, is_running: bool) -> SqlResult<()> {
     conn.execute(
         "UPDATE schedules SET is_running = ?1 WHERE id = ?2",
@@ -419,5 +425,97 @@ pub fn update_schedule_next_run(conn: &Connection, id: i64, next_run_at: Option<
         "UPDATE schedules SET next_run_at=?1 WHERE id=?2",
         params![next_run_at, id],
     )?;
+    Ok(())
+}
+
+// ── Presets ──────────────────────────────────────────────────────────────
+
+pub fn list_presets(conn: &Connection) -> SqlResult<Vec<crate::db::models::Preset>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, format, quality, output_dir,
+                embed_thumbnail, embed_metadata, write_subs, embed_subs,
+                embed_chapters, sponsorblock, created_at
+         FROM download_presets ORDER BY created_at DESC",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(crate::db::models::Preset {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            format: row.get(2)?,
+            quality: row.get(3)?,
+            output_dir: row.get(4)?,
+            embed_thumbnail: row.get::<_, i64>(5)? != 0,
+            embed_metadata: row.get::<_, i64>(6)? != 0,
+            write_subs: row.get::<_, i64>(7)? != 0,
+            embed_subs: row.get::<_, i64>(8)? != 0,
+            embed_chapters: row.get::<_, i64>(9)? != 0,
+            sponsorblock: row.get::<_, i64>(10)? != 0,
+            created_at: row.get(11)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn insert_preset(
+    conn: &Connection,
+    name: &str,
+    format: &str,
+    quality: &str,
+    output_dir: &str,
+    embed_thumbnail: bool,
+    embed_metadata: bool,
+    write_subs: bool,
+    embed_subs: bool,
+    embed_chapters: bool,
+    sponsorblock: bool,
+) -> SqlResult<i64> {
+    conn.execute(
+        "INSERT INTO download_presets
+         (name, format, quality, output_dir, embed_thumbnail, embed_metadata,
+          write_subs, embed_subs, embed_chapters, sponsorblock)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![
+            name, format, quality, output_dir,
+            embed_thumbnail as i64, embed_metadata as i64,
+            write_subs as i64, embed_subs as i64,
+            embed_chapters as i64, sponsorblock as i64,
+        ],
+    )?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn update_preset(
+    conn: &Connection,
+    id: i64,
+    name: &str,
+    format: &str,
+    quality: &str,
+    output_dir: &str,
+    embed_thumbnail: bool,
+    embed_metadata: bool,
+    write_subs: bool,
+    embed_subs: bool,
+    embed_chapters: bool,
+    sponsorblock: bool,
+) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE download_presets SET
+         name=?1, format=?2, quality=?3, output_dir=?4,
+         embed_thumbnail=?5, embed_metadata=?6, write_subs=?7,
+         embed_subs=?8, embed_chapters=?9, sponsorblock=?10
+         WHERE id=?11",
+        params![
+            name, format, quality, output_dir,
+            embed_thumbnail as i64, embed_metadata as i64,
+            write_subs as i64, embed_subs as i64,
+            embed_chapters as i64, sponsorblock as i64,
+            id,
+        ],
+    )?;
+    Ok(())
+}
+
+pub fn delete_preset(conn: &Connection, id: i64) -> SqlResult<()> {
+    conn.execute("DELETE FROM download_presets WHERE id = ?1", params![id])?;
     Ok(())
 }
