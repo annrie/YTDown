@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useDownload } from '../../composables/useDownload'
 import { useDownloadsStore, type PlaylistItemInfo } from '../../stores/downloads'
 import { useSettingsStore } from '../../stores/settings'
@@ -23,7 +23,6 @@ const presetsStore = usePresetsStore()
 const showSavePreset = ref(false)
 const savePresetName = ref('')
 const savePresetError = ref('')
-const selectedPresetId = ref<number | ''>('')
 
 onMounted(() => {
   presetsStore.fetchPresets()
@@ -179,9 +178,11 @@ const availableFormats = computed(() =>
   mediaType.value === 'video' ? videoFormats : audioFormats
 )
 
-watch(selectedPresetId, (id) => {
-  if (!id) return
-  const preset = presetsStore.presets.find(p => p.id === id)
+function applyPreset(e: Event) {
+  const select = e.target as HTMLSelectElement
+  const idx = select.selectedIndex - 1  // offset by 1 for the placeholder option
+  if (idx < 0) return
+  const preset = presetsStore.presets[idx]
   if (!preset) return
   selectedFormat.value = preset.format
   mediaType.value = audioFormats.includes(preset.format) ? 'audio' : 'video'
@@ -192,8 +193,8 @@ watch(selectedPresetId, (id) => {
   embedSubs.value = preset.embed_subs
   embedChapters.value = preset.embed_chapters
   sponsorblock.value = preset.sponsorblock
-  nextTick(() => { selectedPresetId.value = '' })
-})
+  select.selectedIndex = 0
+}
 
 const LARGE_PLAYLIST_THRESHOLD = 50
 
@@ -216,7 +217,6 @@ watch(() => props.open, (isOpen) => {
     showSavePreset.value = false
     savePresetName.value = ''
     savePresetError.value = ''
-    selectedPresetId.value = ''
   }
 })
 
@@ -404,7 +404,7 @@ function handleStart() {
           <div class="flex items-center gap-2 mb-3">
             <select
               class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm"
-              v-model="selectedPresetId"
+              @change="applyPreset"
             >
               <option value="">プリセットを選択…</option>
               <option v-for="p in presetsStore.presets" :key="p.id" :value="p.id">
