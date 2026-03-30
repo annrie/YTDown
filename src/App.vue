@@ -34,6 +34,7 @@ import FormatSettings from './components/settings/FormatSettings.vue'
 import AuthSettings from './components/settings/AuthSettings.vue'
 import AdvancedSettings from './components/settings/AdvancedSettings.vue'
 import RuleSettings from './components/settings/RuleSettings.vue'
+import PresetSettings from './components/settings/PresetSettings.vue'
 
 const currentView = ref<ViewMode>('list')
 const currentSection = ref<SidebarSection>('library-all')
@@ -286,6 +287,8 @@ onUnmounted(() => {
               <AdvancedSettings />
               <hr class="border-[var(--color-separator)]" />
               <RuleSettings />
+              <hr class="border-[var(--color-separator)]" />
+              <PresetSettings />
             </div>
           </template>
         </div>
