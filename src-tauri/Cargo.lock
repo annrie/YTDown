@@ -6764,6 +6764,7 @@ dependencies = [
  "tokio",
  "tokio-cron-scheduler",
  "url",
+ "uuid",
  "which",
 ]
 

@@ -93,11 +93,7 @@ pub async fn download_and_save(
     let full_filename = format!("{filename}.{format_str}");
     let file_path = output_dir.join(&full_filename);
     let file_path = ensure_unique_path(file_path);
-    let final_filename = file_path
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
+    let final_filename = file_path.file_name().unwrap().to_string_lossy().to_string();
 
     let file_size = final_bytes.len() as u64;
     fs::write(&file_path, &final_bytes)

@@ -1,0 +1,6 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-stop-schedule-run"
+description = "Enables the stop_schedule_run command without any pre-configured scope."
+commands.allow = ["stop_schedule_run"]

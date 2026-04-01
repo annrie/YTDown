@@ -17,12 +17,17 @@ pub struct YtdlpBinary {
 
 /// Binary name varies by platform
 fn binary_name() -> &'static str {
-    if cfg!(windows) { "yt-dlp.exe" } else { "yt-dlp" }
+    if cfg!(windows) {
+        "yt-dlp.exe"
+    } else {
+        "yt-dlp"
+    }
 }
 
 /// Classify how the binary is managed based on its path
 fn classify_managed_by(path_str: &str) -> ManagedBy {
-    if path_str.contains("Cellar") || path_str.contains("homebrew") || path_str.contains("Homebrew") {
+    if path_str.contains("Cellar") || path_str.contains("homebrew") || path_str.contains("Homebrew")
+    {
         ManagedBy::Homebrew
     } else if cfg!(windows) && (path_str.contains("chocolatey") || path_str.contains("scoop")) {
         ManagedBy::PackageManager
@@ -162,18 +167,16 @@ fn download_url() -> &'static str {
 pub fn download_ytdlp_binary() -> Result<PathBuf, String> {
     let target_path = bundled_binary_path();
     if let Some(parent) = target_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create bin dir: {}", e))?;
+        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create bin dir: {}", e))?;
     }
 
     let url = download_url();
-    let response = reqwest::blocking::get(url)
-        .map_err(|e| format!("Download failed: {}", e))?;
-    let bytes = response.bytes()
+    let response = reqwest::blocking::get(url).map_err(|e| format!("Download failed: {}", e))?;
+    let bytes = response
+        .bytes()
         .map_err(|e| format!("Failed to read response: {}", e))?;
 
-    std::fs::write(&target_path, &bytes)
-        .map_err(|e| format!("Failed to write binary: {}", e))?;
+    std::fs::write(&target_path, &bytes).map_err(|e| format!("Failed to write binary: {}", e))?;
 
     // Make executable on Unix
     #[cfg(unix)]

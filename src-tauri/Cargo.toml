@@ -1,6 +1,6 @@
 [package]
 name = "ytdown"
-version = "0.4.0"
+version = "0.5.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -35,4 +35,4 @@ cron = "0.12"
 scraper = "0.20"
 image = { version = "0.25", features = ["webp"] }
 url = "2"
-
+uuid = "1"

@@ -7,6 +7,18 @@ export function useDownload() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  async function fetchChannelInfo(url: string) {
+    loading.value = true
+    error.value = null
+    try {
+      videoInfo.value = await invoke<VideoInfo>('fetch_channel_info', { url })
+    } catch (e) {
+      error.value = String(e)
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function fetchFormats(url: string) {
     loading.value = true
     error.value = null
@@ -23,5 +35,5 @@ export function useDownload() {
     return invoke<number>('start_download', { url, options })
   }
 
-  return { videoInfo, loading, error, fetchFormats, startDownload }
+  return { videoInfo, loading, error, fetchFormats, fetchChannelInfo, startDownload }
 }

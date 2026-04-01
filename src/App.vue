@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { ViewMode, SidebarSection, DownloadOptions } from './types'
 import { useDownloadsStore } from './stores/downloads'
 import { useLibraryStore } from './stores/library'
+import { useSchedulesStore } from './stores/schedules'
 import { useSettingsStore } from './stores/settings'
 
 // Layout components
@@ -15,6 +17,7 @@ import AppStatusBar from './components/layout/AppStatusBar.vue'
 import DownloadDialog from './components/download/DownloadDialog.vue'
 import DownloadQueue from './components/download/DownloadQueue.vue'
 import BatchUrlDialog from './components/download/BatchUrlDialog.vue'
+import ChannelMonitorDialog from './components/schedules/ChannelMonitorDialog.vue'
 
 // Library view components
 import ListView from './components/library/ListView.vue'
@@ -34,6 +37,7 @@ import FormatSettings from './components/settings/FormatSettings.vue'
 import AuthSettings from './components/settings/AuthSettings.vue'
 import AdvancedSettings from './components/settings/AdvancedSettings.vue'
 import RuleSettings from './components/settings/RuleSettings.vue'
+import PresetSettings from './components/settings/PresetSettings.vue'
 
 const currentView = ref<ViewMode>('list')
 const currentSection = ref<SidebarSection>('library-all')
@@ -42,10 +46,17 @@ const searchQuery = ref('')
 // Download dialog state
 const showDownloadDialog = ref(false)
 const showBatchDialog = ref(false)
+const showChannelMonitorDialog = ref(false)
 const downloadUrl = ref('')
+const droppedBatchUrls = ref<string[]>([])
+const isDraggingUrl = ref(false)
+const dropTextCapture = ref<HTMLTextAreaElement | null>(null)
+let dragDepth = 0
+let unlistenNativeDragDrop: null | (() => void) = null
 
 const downloadsStore = useDownloadsStore()
 const libraryStore = useLibraryStore()
+const schedulesStore = useSchedulesStore()
 const settingsStore = useSettingsStore()
 
 // Computed: items to display in library views
@@ -69,7 +80,7 @@ const sectionLabel = computed(() => {
     'library-audio': '音声',
     'images-download': '画像ダウンロード',
     'images-gallery': '画像ギャラリー',
-    'schedules': 'スケジュール',
+    'schedules': 'スケジュール（動画のみ）',
     'settings': '設定',
   }
   return labels[currentSection.value] ?? currentSection.value
@@ -130,6 +141,11 @@ function handleSubmitUrl(url: string) {
   showDownloadDialog.value = true
 }
 
+function closeBatchDialog() {
+  showBatchDialog.value = false
+  droppedBatchUrls.value = []
+}
+
 async function handleStartDownload(url: string, options: DownloadOptions) {
   currentSection.value = 'downloads-active'
   invoke('save_url_history', { historyType: 'video', url }).catch(() => {})
@@ -170,6 +186,281 @@ async function handleBatchDownload(urls: string[]) {
   )
 }
 
+function normalizeDroppedUrl(value: string): string | null {
+  const candidates = [value.trim(), value.trim().replace(/[),.;]+$/g, '')]
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    try {
+      const url = new URL(candidate)
+      if (!['http:', 'https:'].includes(url.protocol)) continue
+      return url.toString()
+    } catch {
+      continue
+    }
+  }
+  return null
+}
+
+function extractUrlsFromText(text: string): string[] {
+  const urls = new Set<string>()
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const matches = trimmed.match(/https?:\/\/[^\s"'<>]+/g) ?? []
+    for (const match of matches) {
+      const normalized = normalizeDroppedUrl(match)
+      if (normalized) urls.add(normalized)
+    }
+  }
+  return [...urls]
+}
+
+function extractUrlsFromHtml(html: string): string[] {
+  const urls = new Set<string>()
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  for (const element of doc.querySelectorAll('[href], [src]')) {
+    const raw = element.getAttribute('href') ?? element.getAttribute('src')
+    if (!raw) continue
+    const normalized = normalizeDroppedUrl(raw)
+    if (normalized) urls.add(normalized)
+  }
+  return [...urls]
+}
+
+function extractUrlsFromWebloc(text: string): string[] {
+  const urls = new Set<string>()
+  const doc = new DOMParser().parseFromString(text, 'application/xml')
+  const keys = Array.from(doc.getElementsByTagName('key'))
+  for (const key of keys) {
+    if (key.textContent?.trim() !== 'URL') continue
+    const sibling = key.nextElementSibling
+    if (!sibling || sibling.tagName.toLowerCase() !== 'string') continue
+    const normalized = normalizeDroppedUrl(sibling.textContent ?? '')
+    if (normalized) urls.add(normalized)
+  }
+  return [...urls]
+}
+
+function extractUrlsFromInternetShortcut(text: string): string[] {
+  const urls = new Set<string>()
+  const match = text.match(/^URL=(.+)$/im)
+  if (!match) return []
+  const normalized = normalizeDroppedUrl(match[1])
+  if (normalized) urls.add(normalized)
+  return [...urls]
+}
+
+async function readDroppedStringItems(dataTransfer: DataTransfer): Promise<string[]> {
+  const items = Array.from(dataTransfer.items ?? [])
+    .filter((item) => item.kind === 'string')
+
+  const values = await Promise.all(items.map((item) => new Promise<string>((resolve) => {
+    item.getAsString((value) => resolve(value ?? ''))
+  })))
+
+  return values.filter(Boolean)
+}
+
+async function extractUrlsFromDroppedFile(file: File): Promise<string[]> {
+  const ext = file.name.toLowerCase().split('.').pop() ?? ''
+  const isPlainTextFile = ext === 'txt' || file.type.startsWith('text/')
+  if (!['txt', 'webloc', 'url'].includes(ext) && !isPlainTextFile) {
+    return []
+  }
+
+  let text = ''
+  try {
+    text = await file.text()
+  } catch {
+    return []
+  }
+
+  if (ext === 'webloc') {
+    return extractUrlsFromWebloc(text)
+  }
+  if (ext === 'url') {
+    return extractUrlsFromInternetShortcut(text)
+  }
+  return extractUrlsFromText(text)
+}
+
+async function extractUrlsFromDroppedPath(path: string): Promise<string[]> {
+  const ext = path.toLowerCase().split('.').pop() ?? ''
+  let text = ''
+  try {
+    text = await invoke<string>('read_text_file', { path })
+  } catch {
+    try {
+      const response = await fetch(convertFileSrc(path))
+      if (!response.ok) return []
+      text = await response.text()
+    } catch {
+      return []
+    }
+  }
+
+  const urls = new Set<string>()
+  if (ext === 'webloc') {
+    extractUrlsFromWebloc(text).forEach((url) => urls.add(url))
+  }
+  if (ext === 'url') {
+    extractUrlsFromInternetShortcut(text).forEach((url) => urls.add(url))
+  }
+  extractUrlsFromText(text).forEach((url) => urls.add(url))
+  extractUrlsFromHtml(text).forEach((url) => urls.add(url))
+  return [...urls]
+}
+
+async function extractUrlsFromFiles(files: FileList | File[]): Promise<string[]> {
+  const urls = new Set<string>()
+  for (const file of Array.from(files)) {
+    for (const url of await extractUrlsFromDroppedFile(file)) {
+      urls.add(url)
+    }
+  }
+  return [...urls]
+}
+
+async function extractUrlsFromPaths(paths: string[]): Promise<string[]> {
+  try {
+    const urls = await invoke<string[]>('extract_urls_from_paths', { paths })
+    if (urls.length > 0) {
+      return urls
+    }
+  } catch {
+    // Fall back to frontend-side file reads below.
+  }
+
+  const urls = new Set<string>()
+  for (const path of paths) {
+    for (const url of await extractUrlsFromDroppedPath(path)) {
+      urls.add(url)
+    }
+  }
+  return [...urls]
+}
+
+async function extractDroppedUrls(dataTransfer: DataTransfer | null): Promise<string[]> {
+  if (!dataTransfer) return []
+
+  const urls = new Set<string>()
+  const types = Array.from(dataTransfer.types ?? [])
+  const urlLikeTypes = types.filter((type) =>
+    /url|uri|plain|text|html|moz/i.test(type)
+  )
+
+  if (types.includes('text/uri-list')) {
+    for (const url of extractUrlsFromText(dataTransfer.getData('text/uri-list'))) {
+      urls.add(url)
+    }
+  }
+  if (types.includes('text/plain')) {
+    for (const url of extractUrlsFromText(dataTransfer.getData('text/plain'))) {
+      urls.add(url)
+    }
+  }
+  if (types.includes('text/html')) {
+    for (const url of extractUrlsFromHtml(dataTransfer.getData('text/html'))) {
+      urls.add(url)
+    }
+  }
+  for (const type of urlLikeTypes) {
+    const text = dataTransfer.getData(type)
+    if (!text) continue
+    for (const url of extractUrlsFromText(text)) {
+      urls.add(url)
+    }
+    for (const url of extractUrlsFromHtml(text)) {
+      urls.add(url)
+    }
+  }
+  for (const text of await readDroppedStringItems(dataTransfer)) {
+    for (const url of extractUrlsFromText(text)) {
+      urls.add(url)
+    }
+    for (const url of extractUrlsFromHtml(text)) {
+      urls.add(url)
+    }
+  }
+  if (dataTransfer.files.length > 0) {
+    for (const url of await extractUrlsFromFiles(dataTransfer.files)) {
+      urls.add(url)
+    }
+  }
+
+  return [...urls]
+}
+
+function openDroppedUrls(urls: string[]) {
+  const uniqueUrls = Array.from(new Set(urls)).slice(0, 10)
+  if (uniqueUrls.length === 0) return
+
+  if (uniqueUrls.length === 1) {
+    handleSubmitUrl(uniqueUrls[0])
+    return
+  }
+
+  droppedBatchUrls.value = uniqueUrls
+  showBatchDialog.value = true
+}
+
+function resetUrlDragState() {
+  dragDepth = 0
+  isDraggingUrl.value = false
+}
+
+function focusDropCapture() {
+  nextTick(() => {
+    dropTextCapture.value?.focus()
+  })
+}
+
+function handleDragEnter(event: DragEvent) {
+  event.preventDefault()
+  dragDepth += 1
+  isDraggingUrl.value = true
+  focusDropCapture()
+}
+
+function handleDragOver(event: DragEvent) {
+  event.preventDefault()
+  isDraggingUrl.value = true
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+}
+
+function preventNativeDropNavigation(event: DragEvent) {
+  event.preventDefault()
+}
+
+function handleDragLeave() {
+  if (!isDraggingUrl.value) return
+  dragDepth = Math.max(0, dragDepth - 1)
+  if (dragDepth === 0) {
+    resetUrlDragState()
+  }
+}
+
+async function handleTextCaptureDrop(event: DragEvent) {
+  const urls = await extractDroppedUrls(event.dataTransfer)
+  if (urls.length > 0) {
+    event.preventDefault()
+    resetUrlDragState()
+    openDroppedUrls(urls)
+    return
+  }
+
+  setTimeout(() => {
+    const fallbackText = dropTextCapture.value?.value ?? ''
+    if (dropTextCapture.value) {
+      dropTextCapture.value.value = ''
+    }
+    resetUrlDragState()
+    openDroppedUrls(extractUrlsFromText(fallbackText))
+  }, 0)
+}
+
 // Keyboard shortcuts
 function handleKeydown(e: KeyboardEvent) {
   if (e.metaKey && e.key === ',') {
@@ -187,15 +478,40 @@ function handleKeydown(e: KeyboardEvent) {
 
 // Re-apply theme when setting changes
 watch(() => settingsStore.settings.theme, () => applyTheme())
+watch(currentSection, (section) => {
+  if (section === 'schedules') {
+    schedulesStore.markStartupChecksSeen()
+  }
+})
 
 onMounted(async () => {
   await settingsStore.loadSettings()
   applyTheme()
+  await schedulesStore.setupScheduleListener()
   await downloadsStore.setupProgressListener(() => {
     libraryStore.loadItems()
   })
   await libraryStore.loadItems()
   document.addEventListener('keydown', handleKeydown)
+  document.addEventListener('dragover', preventNativeDropNavigation, true)
+  document.addEventListener('drop', preventNativeDropNavigation, true)
+  window.addEventListener('dragenter', handleDragEnter)
+  window.addEventListener('dragover', handleDragOver)
+  window.addEventListener('dragleave', handleDragLeave)
+  window.addEventListener('blur', resetUrlDragState)
+  unlistenNativeDragDrop = await getCurrentWindow().onDragDropEvent(async (event) => {
+    if (event.payload.type === 'enter' || event.payload.type === 'over') {
+      isDraggingUrl.value = true
+      focusDropCapture()
+      return
+    }
+    if (event.payload.type === 'leave') {
+      resetUrlDragState()
+      return
+    }
+    resetUrlDragState()
+    openDroppedUrls(await extractUrlsFromPaths(event.payload.paths))
+  })
   darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)')
   darkModeQuery.addEventListener('change', onDarkModeChange)
 })
@@ -203,6 +519,14 @@ onMounted(async () => {
 onUnmounted(() => {
   downloadsStore.cleanup()
   document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('dragover', preventNativeDropNavigation, true)
+  document.removeEventListener('drop', preventNativeDropNavigation, true)
+  window.removeEventListener('dragenter', handleDragEnter)
+  window.removeEventListener('dragover', handleDragOver)
+  window.removeEventListener('dragleave', handleDragLeave)
+  window.removeEventListener('blur', resetUrlDragState)
+  unlistenNativeDragDrop?.()
+  unlistenNativeDragDrop = null
   darkModeQuery?.removeEventListener('change', onDarkModeChange)
 })
 </script>
@@ -224,7 +548,9 @@ onUnmounted(() => {
       <!-- Sidebar -->
       <AppSidebar
         :currentSection="currentSection"
+        :scheduleAttentionCount="schedulesStore.unseenStartupCheckIds.length"
         @update:currentSection="currentSection = $event"
+        @open-channel-monitor="showChannelMonitorDialog = true"
       />
 
       <!-- Main Content -->
@@ -234,7 +560,7 @@ onUnmounted(() => {
              class="absolute inset-0 bg-white dark:bg-neutral-900 pointer-events-none"
              :style="{ opacity: backgroundOverlayOpacity }" />
         <!-- Section header (for library views) -->
-        <div v-if="isLibrarySection" class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-separator)] relative z-10">
+        <div v-if="isLibrarySection" class="flex items-center px-4 py-2 border-b border-[var(--color-separator)] relative z-10">
           <span class="text-sm font-medium text-neutral-600 dark:text-neutral-400">
             {{ sectionLabel }}
           </span>
@@ -286,6 +612,8 @@ onUnmounted(() => {
               <AdvancedSettings />
               <hr class="border-[var(--color-separator)]" />
               <RuleSettings />
+              <hr class="border-[var(--color-separator)]" />
+              <PresetSettings />
             </div>
           </template>
         </div>
@@ -294,6 +622,32 @@ onUnmounted(() => {
 
     <!-- Status Bar -->
     <AppStatusBar />
+
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="isDraggingUrl"
+          class="fixed inset-0 z-[9998] bg-black/10 backdrop-blur-[1px] flex items-center justify-center"
+        >
+          <textarea
+            ref="dropTextCapture"
+            class="absolute inset-0 z-0 opacity-0 pointer-events-auto resize-none"
+            aria-hidden="true"
+            tabindex="-1"
+            @dragover.prevent
+            @drop="handleTextCaptureDrop"
+          />
+          <div class="relative z-10 pointer-events-none px-6 py-4 rounded-2xl border border-[var(--color-accent)]/30 bg-white/90 dark:bg-neutral-900/90 shadow-2xl">
+            <p class="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+              URL をドロップして追加
+            </p>
+            <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+              1件はダウンロード、複数件は一括ダウンロードで開きます
+            </p>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Download Dialog -->
     <DownloadDialog
@@ -306,8 +660,16 @@ onUnmounted(() => {
     <!-- Batch URL Dialog -->
     <BatchUrlDialog
       :open="showBatchDialog"
-      @close="showBatchDialog = false"
+      :initial-urls="droppedBatchUrls"
+      @close="closeBatchDialog"
       @start-batch="handleBatchDownload"
+    />
+
+    <!-- Channel Monitor Dialog -->
+    <ChannelMonitorDialog
+      :open="showChannelMonitorDialog"
+      @close="showChannelMonitorDialog = false"
+      @start="showChannelMonitorDialog = false; currentSection = 'schedules'"
     />
   </div>
 </template>

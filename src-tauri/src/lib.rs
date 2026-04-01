@@ -1,9 +1,40 @@
 mod commands;
 mod db;
-mod state;
-mod ytdlp;
 mod images;
 mod scheduler;
+mod state;
+mod ytdlp;
+
+fn escape_applescript_string(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace(['\r', '\n'], " ")
+}
+
+/// Send a macOS native notification via osascript.
+pub(crate) fn notify(title: &str, body: &str) {
+    let script = format!(
+        r#"display notification "{}" with title "{}""#,
+        escape_applescript_string(body),
+        escape_applescript_string(title)
+    );
+    match std::process::Command::new("osascript")
+        .args(["-e", &script])
+        .output()
+    {
+        Ok(output) if !output.status.success() => {
+            eprintln!(
+                "[YTDown] osascript notification failed: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+        }
+        Err(error) => {
+            eprintln!("[YTDown] failed to launch osascript: {error}");
+        }
+        Ok(_) => {}
+    }
+}
 
 use state::AppState;
 use tauri::{Listener, Manager};
@@ -14,31 +45,29 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            let app_data_dir = app.path().app_data_dir()
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
                 .expect("Failed to get app data dir");
-            let conn = db::init_db(&app_data_dir)
-                .expect("Failed to initialize database");
+            let conn = db::init_db(&app_data_dir).expect("Failed to initialize database");
 
-            let sched = tauri::async_runtime::block_on(
-                tokio_cron_scheduler::JobScheduler::new()
-            )
-            .expect("Failed to create job scheduler");
+            let sched = tauri::async_runtime::block_on(tokio_cron_scheduler::JobScheduler::new())
+                .expect("Failed to create job scheduler");
+
+            // スケジューラをセットアップ完了前に起動して競合を防ぐ
+            tauri::async_runtime::block_on(sched.start()).expect("Failed to start scheduler");
 
             app.manage(AppState::new(conn, sched));
 
-            // スケジューラ起動・ジョブ登録・スキップ判定
+            // 既存ジョブ登録・スキップ判定
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                // スケジューラ開始
-                {
-                    let state = app_handle.state::<AppState>();
-                    let mut sched = state.scheduler.lock().await;
-                    sched.start().await.expect("Failed to start scheduler");
-                }
                 // 全ジョブ登録
                 scheduler::register_all_jobs(&app_handle).await;
                 // 起動時スキップ判定
                 scheduler::check_overdue_schedules(&app_handle).await;
+                // 起動時の一回チェック
+                scheduler::run_startup_checks(&app_handle).await;
 
                 // スリープ復帰時のスキップ判定: window focus イベントをリッスン
                 let app_focus = app_handle.clone();
@@ -60,6 +89,7 @@ pub fn run() {
             commands::ytdlp_mgmt::install_ytdlp,
             // Formats
             commands::formats::fetch_formats,
+            commands::formats::fetch_channel_info,
             // Download engine
             commands::download::start_download,
             commands::download::fetch_playlist_items,
@@ -67,6 +97,8 @@ pub fn run() {
             commands::download::pause_download,
             commands::download::resume_download,
             // File operations
+            commands::file_ops::extract_urls_from_paths,
+            commands::file_ops::read_text_file,
             commands::file_ops::move_file,
             commands::file_ops::delete_file,
             commands::file_ops::reveal_in_finder,
@@ -104,6 +136,12 @@ pub fn run() {
             commands::schedules::list_schedules,
             commands::schedules::get_schedule,
             commands::schedules::run_schedule_now,
+            commands::schedules::stop_schedule_run,
+            // Presets
+            commands::presets::list_presets,
+            commands::presets::create_preset,
+            commands::presets::update_preset,
+            commands::presets::delete_preset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

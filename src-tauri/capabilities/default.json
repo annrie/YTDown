@@ -20,6 +20,7 @@
     "allow-check-ytdlp-update",
     "allow-delete-file",
     "allow-fetch-formats",
+    "allow-fetch-channel-info",
     "allow-get-all-settings",
     "allow-get-url-history",
     "allow-get-download",
@@ -54,6 +55,11 @@
     "allow-toggle-schedule",
     "allow-list-schedules",
     "allow-get-schedule",
-    "allow-run-schedule-now"
+    "allow-run-schedule-now",
+    "allow-stop-schedule-run",
+    "allow-list-presets",
+    "allow-create-preset",
+    "allow-update-preset",
+    "allow-delete-preset"
   ]
 }

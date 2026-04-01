@@ -1,24 +1,44 @@
 <script setup lang="ts">
 import type { Schedule } from '../../types'
+import { computed } from 'vue'
 
-defineProps<{ schedule: Schedule }>()
+const props = defineProps<{
+  schedule: Schedule
+  isStartupChecked?: boolean
+  isChecking?: boolean
+}>()
 const emit = defineEmits<{
   toggle: [id: number, is_active: boolean]
   edit: [schedule: Schedule]
   delete: [id: number]
   runNow: [id: number]
+  stop: [id: number]
 }>()
 
-function formatNextRun(iso: string | null): string {
-  if (!iso) return '未設定'
+function formatDate(iso: string | null): string {
+  if (!iso) return 'なし'
   return new Date(iso).toLocaleString('ja-JP')
 }
+
+const parsedOptions = computed(() => {
+  try {
+    return JSON.parse(props.schedule.options_json)
+  } catch {
+    return {}
+  }
+})
 </script>
 
 <template>
   <div class="schedule-card" :class="{ inactive: !schedule.is_active }">
     <div class="card-header">
-      <span class="card-name">{{ schedule.name }}</span>
+      <div class="flex items-center gap-2.5">
+        <img v-if="parsedOptions.avatar_url" :src="parsedOptions.avatar_url" class="w-8 h-8 rounded-full object-cover shadow-sm bg-neutral-200 dark:bg-neutral-800" />
+        <div class="flex items-center flex-wrap gap-1.5 leading-tight">
+          <span class="card-name">{{ schedule.name }}</span>
+          <span v-if="parsedOptions.channel_id" class="text-xs font-mono text-neutral-500">(@{{ parsedOptions.channel_id }})</span>
+        </div>
+      </div>
       <label class="toggle-switch">
         <input type="checkbox" :checked="schedule.is_active"
                @change="emit('toggle', schedule.id, !schedule.is_active)" />
@@ -34,8 +54,18 @@ function formatNextRun(iso: string | null): string {
         </svg>
         {{ schedule.cron_expr }}
       </span>
-      <span class="meta-item">次回: {{ formatNextRun(schedule.next_run_at) }}</span>
+      <span class="meta-item">次回: {{ formatDate(schedule.next_run_at) }}</span>
+      <span v-if="schedule.last_run_at" class="meta-item">前回: {{ formatDate(schedule.last_run_at) }}</span>
       <span v-if="schedule.is_channel" class="badge-channel">チャンネル監視</span>
+      <span v-if="props.isStartupChecked" class="badge-startup-check">起動時確認</span>
+    </div>
+
+    <div v-if="props.isChecking || schedule.is_running || schedule.last_run_status" class="last-run-status">
+      <span v-if="props.isChecking && !schedule.is_running" class="status-badge status-checking">確認中</span>
+      <span v-else-if="schedule.is_running" class="status-badge status-running">ダウンロード中</span>
+      <span v-else-if="schedule.last_run_status === 'completed'" class="status-badge status-completed">ダウンロード済み</span>
+      <span v-else-if="schedule.last_run_status === 'no_new'" class="status-badge status-no-new">新着なし</span>
+      <span v-else-if="schedule.last_run_status === 'stopped'" class="status-badge status-stopped">停止しました</span>
     </div>
 
     <div v-if="schedule.last_error" class="card-error">
@@ -44,7 +74,13 @@ function formatNextRun(iso: string | null): string {
     </div>
 
     <div class="card-actions">
-      <button class="btn-action" @click="emit('runNow', schedule.id)" title="今すぐ実行">
+      <!-- 実行中: 停止ボタン / 停止中: 実行ボタン -->
+      <button v-if="schedule.is_running" class="btn-action btn-stop" @click="emit('stop', schedule.id)" title="停止">
+        <svg viewBox="0 0 16 16" fill="currentColor" class="action-icon">
+          <path d="M5 3.5h6A1.5 1.5 0 0112.5 5v6a1.5 1.5 0 01-1.5 1.5H5A1.5 1.5 0 013.5 11V5A1.5 1.5 0 015 3.5z"/>
+        </svg>
+      </button>
+      <button v-else class="btn-action" @click="emit('runNow', schedule.id)" title="今すぐ実行">
         <svg viewBox="0 0 16 16" fill="currentColor" class="action-icon">
           <path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z"/>
         </svg>
@@ -79,11 +115,20 @@ function formatNextRun(iso: string | null): string {
 .meta-item { display: flex; align-items: center; gap: 0.25rem; }
 .meta-icon { width: 0.875rem; height: 0.875rem; }
 .badge-channel { background: var(--color-accent, #007aff); color: white; font-size: 0.625rem; padding: 0.1rem 0.4rem; border-radius: 999px; }
+.badge-startup-check { background: rgba(255, 149, 0, 0.15); color: #ff9500; font-size: 0.625rem; padding: 0.1rem 0.4rem; border-radius: 999px; }
+.last-run-status { margin-bottom: 0.5rem; }
+.status-badge { font-size: 0.6875rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 600; }
+.status-completed { background: rgba(52, 199, 89, 0.15); color: #34c759; }
+.status-no-new { background: rgba(120, 120, 128, 0.15); color: rgba(120, 120, 128, 0.9); }
+.status-stopped { background: rgba(255, 149, 0, 0.15); color: #ff9500; }
+.status-checking { background: rgba(90, 145, 255, 0.12); color: #2f6fed; }
+.status-running { background: rgba(0, 122, 255, 0.15); color: #007aff; }
 .card-error { font-size: 0.75rem; color: #ff3b30; margin-bottom: 0.5rem; }
 .fail-count { opacity: 0.7; }
 .card-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 .btn-action { background: transparent; border: 1px solid var(--color-separator, rgba(120,120,128,0.2)); border-radius: 0.375rem; padding: 0.25rem; cursor: pointer; color: inherit; }
 .btn-danger { color: #ff3b30; }
+.btn-stop { color: #ff9500; border-color: #ff9500; }
 .action-icon { width: 1rem; height: 1rem; }
 .toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }

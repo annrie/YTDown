@@ -125,7 +125,23 @@ CREATE TABLE IF NOT EXISTS schedules (
   last_error   TEXT,
   fail_count   INTEGER NOT NULL DEFAULT 0,
   is_running   INTEGER NOT NULL DEFAULT 0,
-  last_run_at  TEXT,
-  next_run_at  TEXT,
-  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  last_run_at     TEXT,
+  next_run_at     TEXT,
+  last_run_status TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS download_presets (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  name            TEXT NOT NULL UNIQUE,
+  format          TEXT NOT NULL,
+  quality         TEXT NOT NULL,
+  output_dir      TEXT NOT NULL,
+  embed_thumbnail INTEGER NOT NULL DEFAULT 0,
+  embed_metadata  INTEGER NOT NULL DEFAULT 0,
+  write_subs      INTEGER NOT NULL DEFAULT 0,
+  embed_subs      INTEGER NOT NULL DEFAULT 0,
+  embed_chapters  INTEGER NOT NULL DEFAULT 0,
+  sponsorblock    INTEGER NOT NULL DEFAULT 0,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );

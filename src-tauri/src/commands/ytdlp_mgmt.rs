@@ -1,7 +1,7 @@
-use serde::Serialize;
-use tauri::State;
 use crate::state::AppState;
 use crate::ytdlp::binary;
+use serde::Serialize;
+use tauri::State;
 
 #[derive(Serialize)]
 pub struct YtdlpInfo {
@@ -17,8 +17,10 @@ pub async fn get_ytdlp_info(state: State<'_, AppState>) -> Result<YtdlpInfo, Str
     let manual_path = ytdlp_path.as_deref();
 
     let bin = binary::detect_binary(manual_path)?;
-    let update_available = matches!(bin.managed_by, binary::ManagedBy::Homebrew | binary::ManagedBy::PackageManager)
-        && binary::check_package_manager_update().unwrap_or(false);
+    let update_available = matches!(
+        bin.managed_by,
+        binary::ManagedBy::Homebrew | binary::ManagedBy::PackageManager
+    ) && binary::check_package_manager_update().unwrap_or(false);
 
     let managed_by = match bin.managed_by {
         binary::ManagedBy::Homebrew => "homebrew",
@@ -64,9 +66,10 @@ pub async fn update_ytdlp(state: State<'_, AppState>) -> Result<String, String> 
     let ytdlp_path = state.ytdlp_path.lock().await;
     let bin = binary::detect_binary(ytdlp_path.as_deref())?;
     match bin.managed_by {
-        binary::ManagedBy::Homebrew => {
-            Err("homebrew管理のyt-dlpです。ターミナルで `brew upgrade yt-dlp` を実行してください。".to_string())
-        }
+        binary::ManagedBy::Homebrew => Err(
+            "homebrew管理のyt-dlpです。ターミナルで `brew upgrade yt-dlp` を実行してください。"
+                .to_string(),
+        ),
         binary::ManagedBy::PackageManager => {
             Err("パッケージマネージャ管理のyt-dlpです。手動で更新してください。".to_string())
         }

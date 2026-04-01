@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useSchedulesStore } from '../../stores/schedules'
 import type { Schedule } from '../../types'
 import ScheduleCard from './ScheduleCard.vue'
@@ -8,10 +8,21 @@ import ScheduleDialog from './ScheduleDialog.vue'
 const store = useSchedulesStore()
 const showDialog = ref(false)
 const editTarget = ref<Schedule | null>(null)
+const errorMsg = ref('')
 
 onMounted(async () => {
-  await store.fetchSchedules()
-  await store.setupScheduleListener()
+  try {
+    await store.fetchSchedules()
+  } catch (e) {
+    errorMsg.value = `リスト取得失敗: ${e}`
+  }
+  store.markStartupChecksSeen()
+})
+
+watch(() => store.unseenStartupCheckIds.length, (count) => {
+  if (count > 0) {
+    store.markStartupChecksSeen()
+  }
 })
 
 function openCreate() {
@@ -28,12 +39,16 @@ async function onSave(payload: {
   name: string; url: string; cron_expr: string
   options_json: string; is_channel: boolean
 }) {
-  if (editTarget.value) {
-    await store.updateSchedule({ id: editTarget.value.id, ...payload })
-  } else {
-    await store.createSchedule(payload)
-  }
   showDialog.value = false
+  try {
+    if (editTarget.value) {
+      await store.updateSchedule({ id: editTarget.value.id, ...payload })
+    } else {
+      await store.createSchedule(payload)
+    }
+  } catch (e) {
+    errorMsg.value = `保存失敗: ${e}`
+  }
 }
 
 async function onDelete(id: number) {
@@ -41,12 +56,28 @@ async function onDelete(id: number) {
     await store.deleteSchedule(id)
   }
 }
+
+async function onRunNow(id: number) {
+  try {
+    await store.runNow(id)
+  } catch (e) {
+    errorMsg.value = `実行失敗: ${e}`
+  }
+}
+
+async function onStop(id: number) {
+  try {
+    await store.stopSchedule(id)
+  } catch (e) {
+    errorMsg.value = `停止失敗: ${e}`
+  }
+}
 </script>
 
 <template>
   <div class="schedule-view">
     <div class="view-header">
-      <h2 class="view-title">スケジュール</h2>
+      <h2 class="view-title">スケジュール（動画のみ）</h2>
       <button class="btn-add" @click="openCreate">
         <svg viewBox="0 0 20 20" fill="currentColor" class="add-icon">
           <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
@@ -54,6 +85,8 @@ async function onDelete(id: number) {
         新規スケジュール
       </button>
     </div>
+
+    <div v-if="errorMsg" class="error-banner">{{ errorMsg }}</div>
 
     <div v-if="store.schedules.length === 0" class="empty-state">
       <p>スケジュールはありません</p>
@@ -65,10 +98,13 @@ async function onDelete(id: number) {
         v-for="s in store.schedules"
         :key="s.id"
         :schedule="s"
+        :is-startup-checked="store.startupCheckedScheduleIds.includes(s.id)"
+        :is-checking="store.checkingScheduleIds.includes(s.id)"
         @toggle="(id, isActive) => store.toggleSchedule(id, isActive)"
         @edit="openEdit"
         @delete="onDelete"
-        @run-now="(id) => store.runNow(id)"
+        @run-now="onRunNow"
+        @stop="onStop"
       />
     </div>
 
@@ -90,4 +126,5 @@ async function onDelete(id: number) {
 .empty-state { text-align: center; padding: 3rem; color: rgba(120,120,128,0.7); }
 .btn-add-empty { margin-top: 1rem; background: rgba(0,122,255,0.1); color: var(--color-accent, #007aff); border: 1px solid var(--color-accent, #007aff); padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; }
 .cards-grid { display: grid; gap: 0.75rem; }
+.error-banner { background: rgba(255,59,48,0.1); color: #ff3b30; border: 1px solid #ff3b30; border-radius: 0.5rem; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.875rem; word-break: break-all; }
 </style>

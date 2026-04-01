@@ -39,10 +39,15 @@ pub async fn scrape_images_from_url(
         return Err("アクセスがブロックされました。別のURLを試してください".to_string());
     }
     if !status.is_success() {
-        return Err(format!("ページを取得できませんでした（ステータス: {status}）"));
+        return Err(format!(
+            "ページを取得できませんでした（ステータス: {status}）"
+        ));
     }
 
-    let html = response.text().await.map_err(|e| format!("HTML read error: {e}"))?;
+    let html = response
+        .text()
+        .await
+        .map_err(|e| format!("HTML read error: {e}"))?;
     let base_url = Url::parse(page_url).map_err(|e| format!("Invalid URL: {e}"))?;
     let document = Html::parse_document(&html);
     let img_selector = Selector::parse("img").unwrap();

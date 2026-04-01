@@ -2,13 +2,26 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 
 const BROWSERS: &[&str] = &[
-    "Safari", "Google Chrome", "Chromium", "Brave Browser",
-    "Arc", "Microsoft Edge", "Vivaldi", "Opera", "Firefox", "Biscuit",
+    "Safari",
+    "Google Chrome",
+    "Chromium",
+    "Brave Browser",
+    "Arc",
+    "Microsoft Edge",
+    "Vivaldi",
+    "Opera",
+    "Firefox",
+    "Biscuit",
 ];
 
 const CHROMIUM_BROWSERS: &[&str] = &[
-    "Google Chrome", "Chromium", "Brave Browser",
-    "Arc", "Microsoft Edge", "Vivaldi", "Opera",
+    "Google Chrome",
+    "Chromium",
+    "Brave Browser",
+    "Arc",
+    "Microsoft Edge",
+    "Vivaldi",
+    "Opera",
 ];
 
 /// Get the URL of the frontmost browser tab.
@@ -18,7 +31,10 @@ const CHROMIUM_BROWSERS: &[&str] = &[
 pub async fn get_browser_url() -> Result<String, String> {
     #[cfg(not(target_os = "macos"))]
     {
-        return Err("ブラウザからのURL取得はmacOSのみ対応しています。URLを直接入力してください。".to_string());
+        return Err(
+            "ブラウザからのURL取得はmacOSのみ対応しています。URLを直接入力してください。"
+                .to_string(),
+        );
     }
 
     #[cfg(target_os = "macos")]
@@ -31,12 +47,14 @@ pub async fn get_browser_url() -> Result<String, String> {
 /// Use Swift + CoreGraphics to get the actual window z-order
 /// and find the topmost browser (skipping YTDown itself).
 fn detect_topmost_browser() -> Result<String, String> {
-    let browser_list = BROWSERS.iter()
+    let browser_list = BROWSERS
+        .iter()
         .map(|b| format!("\"{}\"", b))
         .collect::<Vec<_>>()
         .join(", ");
 
-    let swift_code = format!(r#"
+    let swift_code = format!(
+        r#"
 import CoreGraphics
 let browsers: Set<String> = [{browsers}]
 let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
@@ -50,7 +68,9 @@ if let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String:
         }}
     }}
 }}
-"#, browsers = browser_list);
+"#,
+        browsers = browser_list
+    );
 
     let output = Command::new("swift")
         .args(["-e", &swift_code])
@@ -76,7 +96,8 @@ fn get_url_from_browser(browser: &str) -> Result<String, String> {
         r#"tell application "Safari"
     if (count of windows) is 0 then error "Safariにウィンドウがありません"
     return URL of current tab of front window
-end tell"#.to_string()
+end tell"#
+            .to_string()
     } else if CHROMIUM_BROWSERS.contains(&browser) {
         format!(
             "using terms from application \"Google Chrome\"\n\
@@ -84,7 +105,9 @@ end tell"#.to_string()
                     if (count of windows) is 0 then error \"{b}にウィンドウがありません\"\n\
                     return URL of active tab of front window\n\
                 end tell\n\
-            end using terms from", b = browser)
+            end using terms from",
+            b = browser
+        )
     } else {
         // Firefox, Biscuit, etc.
         return get_url_via_ui_scripting(browser);
@@ -120,7 +143,9 @@ fn get_url_via_ui_scripting(browser: &str) -> Result<String, String> {
         end tell\n\
         set theURL to (the clipboard) as text\n\
         set the clipboard to prevClip\n\
-        return theURL", b = browser);
+        return theURL",
+        b = browser
+    );
 
     run_osascript(&script)
 }
@@ -136,11 +161,13 @@ fn run_osascript(script: &str) -> Result<String, String> {
         .map_err(|e| format!("osascript実行エラー: {}", e))?;
 
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(script.as_bytes())
+        stdin
+            .write_all(script.as_bytes())
             .map_err(|e| format!("スクリプト書き込みエラー: {}", e))?;
     }
 
-    let output = child.wait_with_output()
+    let output = child
+        .wait_with_output()
         .map_err(|e| format!("osascript待機エラー: {}", e))?;
 
     if output.status.success() {
