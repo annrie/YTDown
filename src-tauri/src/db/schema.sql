@@ -125,9 +125,10 @@ CREATE TABLE IF NOT EXISTS schedules (
   last_error   TEXT,
   fail_count   INTEGER NOT NULL DEFAULT 0,
   is_running   INTEGER NOT NULL DEFAULT 0,
-  last_run_at  TEXT,
-  next_run_at  TEXT,
-  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  last_run_at     TEXT,
+  next_run_at     TEXT,
+  last_run_status TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS download_presets (

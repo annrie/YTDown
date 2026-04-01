@@ -57,7 +57,10 @@ export interface VideoInfo {
   channel_url: string | null
   site: string
   thumbnail_url: string | null
+  channel_avatar_url: string | null
   duration: number | null
+  subtitle_languages: string[]
+  auto_subtitle_languages: string[]
   formats: FormatInfo[]
 }
 
@@ -236,6 +239,7 @@ export interface Schedule {
   is_running: boolean
   last_run_at: string | null
   next_run_at: string | null
+  last_run_status: 'completed' | 'no_new' | 'stopped' | null
   created_at: string
 }
 

@@ -35,4 +35,4 @@ cron = "0.12"
 scraper = "0.20"
 image = { version = "0.25", features = ["webp"] }
 url = "2"
-
+uuid = "1"

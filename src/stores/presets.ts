@@ -8,6 +8,21 @@ export const usePresetsStore = defineStore('presets', () => {
 
   async function fetchPresets() {
     presets.value = await invoke<Preset[]>('list_presets')
+    const hasDefault = presets.value.some(p => p.name === 'デフォルト')
+    if (!hasDefault) {
+      await createPreset({
+        name: 'デフォルト',
+        format: 'mp4',
+        quality: 'best',
+        output_dir: '~/Downloads/YTDown',
+        embed_thumbnail: true,
+        embed_metadata: true,
+        write_subs: false,
+        embed_subs: false,
+        embed_chapters: true,
+        sponsorblock: false,
+      })
+    }
   }
 
   async function createPreset(payload: Omit<Preset, 'id' | 'created_at'>): Promise<number> {

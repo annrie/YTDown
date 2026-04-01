@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { homeDir } from '@tauri-apps/api/path'
 import { useDownload } from '../../composables/useDownload'
 import { useDownloadsStore, type PlaylistItemInfo } from '../../stores/downloads'
 import { useSettingsStore } from '../../stores/settings'
@@ -23,6 +26,7 @@ const presetsStore = usePresetsStore()
 const showSavePreset = ref(false)
 const savePresetName = ref('')
 const savePresetError = ref('')
+const selectedPresetId = ref<number | ''>('')
 
 onMounted(() => {
   presetsStore.fetchPresets()
@@ -104,9 +108,9 @@ async function handleSavePreset() {
   try {
     await presetsStore.createPreset({
       name,
-      format: selectedFormat.value,
-      quality: selectedQuality.value,
-      output_dir: settingsStore.settings.download_dir,
+      format: '',
+      quality: '',
+      output_dir: '',
       embed_thumbnail: embedThumbnail.value,
       embed_metadata: embedMetadata.value,
       write_subs: writeSubs.value,
@@ -126,7 +130,6 @@ const installing = ref(false)
 async function handleInstallYtdlp() {
   installing.value = true
   try {
-    const { invoke } = await import('@tauri-apps/api/core')
     await invoke('install_ytdlp')
     // Retry fetching formats after install
     fetchFormats(props.url)
@@ -142,8 +145,19 @@ const isYtdlpMissing = computed(() =>
 )
 
 const mediaType = ref<'video' | 'audio'>('video')
-const selectedFormat = ref('mp4')
-const selectedQuality = ref('best')
+
+const selectedFormat = computed({
+  get: () => mediaType.value === 'video' ? settingsStore.settings.default_video_format : settingsStore.settings.default_audio_format,
+  set: (val) => {
+    if (mediaType.value === 'video') settingsStore.updateSetting('default_video_format', val)
+    else settingsStore.updateSetting('default_audio_format', val)
+  }
+})
+
+const selectedQuality = computed({
+  get: () => settingsStore.settings.default_video_quality,
+  set: (val) => settingsStore.updateSetting('default_video_quality', val)
+})
 const embedThumbnail = ref(true)
 const embedMetadata = ref(true)
 const writeSubs = ref(false)
@@ -178,22 +192,69 @@ const availableFormats = computed(() =>
   mediaType.value === 'video' ? videoFormats : audioFormats
 )
 
-function applyPreset(e: Event) {
-  const select = e.target as HTMLSelectElement
-  const idx = select.selectedIndex - 1  // offset by 1 for the placeholder option
-  if (idx < 0) return
-  const preset = presetsStore.presets[idx]
+const subtitleInfo = computed(() => {
+  const info = videoInfo.value
+  if (!info) {
+    return {
+      hasAny: false,
+      manual: [] as string[],
+      automatic: [] as string[],
+    }
+  }
+
+  return {
+    hasAny: info.subtitle_languages.length > 0 || info.auto_subtitle_languages.length > 0,
+    manual: info.subtitle_languages,
+    automatic: info.auto_subtitle_languages,
+  }
+})
+
+const subtitleWarning = computed(() => {
+  if (!(writeSubs.value || embedSubs.value)) return ''
+  if (!subtitleInfo.value.hasAny) {
+    return 'この動画では利用可能な字幕が見つかっていません。字幕設定を有効にしても追加ファイルや埋め込みは行われません。'
+  }
+  if (embedSubs.value && mediaType.value === 'audio') {
+    return '字幕埋め込みは動画コンテナ向けです。音声のみダウンロードでは字幕は埋め込まれません。'
+  }
+  return ''
+})
+
+async function applyPreset() {
+  const presetId = selectedPresetId.value
+  if (!presetId) return
+  
+  const preset = presetsStore.presets.find(p => p.id === presetId)
   if (!preset) return
-  selectedFormat.value = preset.format
-  mediaType.value = audioFormats.includes(preset.format) ? 'audio' : 'video'
-  selectedQuality.value = preset.quality
+  
+  // Format and Quality are explicitly ignored from presets now.
+  // Wait for post-processing options to update
+  await nextTick()
+  if (preset.output_dir) {
+    settingsStore.updateSetting('download_dir', preset.output_dir)
+  }
   embedThumbnail.value = preset.embed_thumbnail
   embedMetadata.value = preset.embed_metadata
   writeSubs.value = preset.write_subs
   embedSubs.value = preset.embed_subs
   embedChapters.value = preset.embed_chapters
   sponsorblock.value = preset.sponsorblock
-  select.selectedIndex = 0
+}
+
+async function selectDirectory() {
+  try {
+    const defaultPath = settingsStore.settings.download_dir.replace(/^~/, await homeDir())
+    const selected = await openDialog({
+      directory: true,
+      multiple: false,
+      defaultPath
+    })
+    if (selected && typeof selected === 'string') {
+      settingsStore.updateSetting('download_dir', selected)
+    }
+  } catch (e) {
+    console.error('Failed to open dialog:', e)
+  }
 }
 
 const LARGE_PLAYLIST_THRESHOLD = 50
@@ -217,6 +278,24 @@ watch(() => props.open, (isOpen) => {
     showSavePreset.value = false
     savePresetName.value = ''
     savePresetError.value = ''
+
+    // Attempt to automatically load the 'デフォルト' preset
+    if (!selectedPresetId.value) {
+      const defaultPreset = presetsStore.presets.find(p => p.name === 'デフォルト')
+      if (defaultPreset) {
+        selectedPresetId.value = defaultPreset.id
+        // Apply the preset's post-processing values immediately
+        embedThumbnail.value = defaultPreset.embed_thumbnail
+        embedMetadata.value = defaultPreset.embed_metadata
+        writeSubs.value = defaultPreset.write_subs
+        embedSubs.value = defaultPreset.embed_subs
+        embedChapters.value = defaultPreset.embed_chapters
+        sponsorblock.value = defaultPreset.sponsorblock
+        if (defaultPreset.output_dir) {
+          settingsStore.updateSetting('download_dir', defaultPreset.output_dir)
+        }
+      }
+    }
   }
 })
 
@@ -282,7 +361,7 @@ function handleStart() {
 </script>
 
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  <div v-if="props.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
     <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl w-[560px] max-h-[80vh] flex flex-col">
       <!-- Header (fixed) -->
       <div class="flex items-center justify-between p-4 border-b border-[var(--color-separator)] flex-shrink-0">
@@ -317,6 +396,27 @@ function handleStart() {
               <p class="text-sm text-neutral-500">{{ videoInfo.channel }}</p>
               <p class="text-xs text-neutral-400">{{ videoInfo.site }}</p>
             </div>
+          </div>
+
+          <div class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40 px-3 py-2">
+            <p class="text-xs font-semibold text-neutral-600 dark:text-neutral-300">字幕の利用可否</p>
+            <p v-if="subtitleInfo.hasAny" class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              <span v-if="subtitleInfo.manual.length > 0">
+                手動字幕: {{ subtitleInfo.manual.join(', ') }}
+              </span>
+              <span v-else>
+                手動字幕: なし
+              </span>
+              <span v-if="subtitleInfo.automatic.length > 0">
+                / 自動字幕: {{ subtitleInfo.automatic.join(', ') }}
+              </span>
+              <span v-else>
+                / 自動字幕: なし
+              </span>
+            </p>
+            <p v-else class="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              この動画では利用可能な字幕が見つかっていません。
+            </p>
           </div>
 
           <!-- Playlist mode selector -->
@@ -391,54 +491,17 @@ function handleStart() {
           </div>
 
           <!-- Media type toggle -->
-          <div class="flex gap-2">
+          <div class="flex gap-2 mb-4">
             <button v-for="type_ in (['video', 'audio'] as const)" :key="type_"
-                    class="px-4 py-1.5 rounded-md text-sm"
-                    :class="mediaType === type_ ? 'bg-[var(--color-accent)] text-white' : 'bg-neutral-100 dark:bg-neutral-700'"
-                    @click="mediaType = type_; selectedFormat = type_ === 'video' ? 'mp4' : 'mp3'">
+                    class="px-4 py-1.5 rounded-md text-sm transition-colors"
+                    :class="mediaType === type_ ? 'bg-[var(--color-accent)] text-white' : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600'"
+                    @click="mediaType = type_">
               {{ type_ === 'video' ? '映像' : '音声' }}
             </button>
           </div>
 
-          <!-- Preset row -->
-          <div class="flex items-center gap-2 mb-3">
-            <select
-              class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm"
-              @change="applyPreset"
-            >
-              <option value="">プリセットを選択…</option>
-              <option v-for="p in presetsStore.presets" :key="p.id" :value="p.id">
-                {{ p.name }}
-              </option>
-            </select>
-            <button
-              class="text-xs px-2 py-1 rounded border border-[var(--color-separator)] hover:bg-white/10"
-              @click="showSavePreset = !showSavePreset"
-            >
-              保存
-            </button>
-          </div>
-          <!-- Save preset inline form -->
-          <div v-if="showSavePreset" class="flex items-center gap-2 mb-3">
-            <input
-              v-model="savePresetName"
-              type="text"
-              placeholder="プリセット名"
-              class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm"
-              @keyup.enter="handleSavePreset"
-            />
-            <button
-              class="text-xs px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
-              :disabled="!savePresetName.trim()"
-              @click="handleSavePreset"
-            >
-              OK
-            </button>
-            <span v-if="savePresetError" class="text-xs text-red-400">{{ savePresetError }}</span>
-          </div>
-
           <!-- Format & Quality -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-2 gap-4 mb-3">
             <div>
               <label class="block text-xs text-neutral-500 mb-1">フォーマット</label>
               <select v-model="selectedFormat" class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm">
@@ -455,8 +518,21 @@ function handleStart() {
             </div>
           </div>
 
+          <!-- Output Directory -->
+          <div class="mb-3">
+            <label class="block text-xs text-neutral-500 mb-1">出力先ディレクトリ</label>
+            <div class="flex gap-2">
+              <input :value="settingsStore.settings.download_dir" disabled
+                     class="flex-1 h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm opacity-70" />
+              <button @click="selectDirectory" 
+                      class="px-3 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-opacity">
+                選択...
+              </button>
+            </div>
+          </div>
+
           <!-- Custom format -->
-          <div>
+          <div class="mb-5">
             <label class="flex items-center gap-2 text-sm">
               <input type="checkbox" v-model="useCustomFormat" />
               カスタムフォーマット指定
@@ -465,27 +541,77 @@ function handleStart() {
                    class="mt-1 w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm font-mono" />
           </div>
 
-          <!-- Post-process options -->
-          <div class="space-y-2">
-            <p class="text-xs text-neutral-500 font-semibold">ポストプロセス</p>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" v-model="embedThumbnail" /> サムネイル埋め込み
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" v-model="embedMetadata" /> メタデータ埋め込み
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" v-model="writeSubs" /> 字幕ダウンロード
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" v-model="embedSubs" /> 字幕埋め込み
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" v-model="embedChapters" /> チャプター埋め込み
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" v-model="sponsorblock" /> SponsorBlock
-            </label>
+          <div class="border-t border-[var(--color-separator)] my-4"></div>
+
+          <!-- Post-process options (Preset Group) -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-neutral-500 font-semibold">詳細設定 (プリセット管理)</p>
+            </div>
+
+            <!-- Preset row -->
+            <div class="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-800 p-2 rounded-md border border-neutral-200 dark:border-neutral-700">
+              <select
+                v-model="selectedPresetId"
+                class="flex-1 rounded border-none bg-transparent px-2 py-1 text-sm outline-none"
+                @change="applyPreset"
+              >
+                <option value="">適応するプリセットを選択…</option>
+                <option v-for="p in presetsStore.presets" :key="p.id" :value="p.id">
+                  {{ p.name }}
+                </option>
+              </select>
+              <button
+                class="text-xs px-3 py-1.5 rounded-md bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors"
+                @click="showSavePreset = !showSavePreset"
+              >
+                保存
+              </button>
+            </div>
+            
+            <!-- Save preset inline form -->
+            <div v-if="showSavePreset" class="flex items-center gap-2 mt-2">
+              <input
+                v-model="savePresetName"
+                type="text"
+                placeholder="新しいプリセット名"
+                class="flex-1 h-8 rounded border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 px-2 py-1 text-sm"
+                @keyup.enter="handleSavePreset"
+              />
+              <button
+                class="text-xs px-3 py-1.5 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                :disabled="!savePresetName.trim()"
+                @click="handleSavePreset"
+              >
+                OK
+              </button>
+              <span v-if="savePresetError" class="text-xs text-red-500">{{ savePresetError }}</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-2">
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" v-model="embedThumbnail" /> サムネイル埋め込み
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" v-model="embedMetadata" /> メタデータ埋め込み
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" v-model="writeSubs" /> 字幕ダウンロード
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" v-model="embedSubs" /> 字幕埋め込み
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" v-model="embedChapters" /> チャプター埋め込み
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" v-model="sponsorblock" /> SponsorBlock
+              </label>
+            </div>
+
+            <p v-if="subtitleWarning" class="text-xs text-amber-600 dark:text-amber-400">
+              {{ subtitleWarning }}
+            </p>
           </div>
         </div>
       </div>

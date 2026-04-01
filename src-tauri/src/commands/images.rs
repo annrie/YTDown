@@ -80,15 +80,18 @@ pub async fn download_images(
 
     for (i, img) in images.iter().enumerate() {
         // Emit progress
-        let _ = app.emit("image-download-progress", DownloadProgress {
-            session_id,
-            image_index: i,
-            total_images: total,
-            current_url: img.url.clone(),
-            percent: (i as f64 / total as f64) * 100.0,
-            status: "downloading".to_string(),
-            error_message: None,
-        });
+        let _ = app.emit(
+            "image-download-progress",
+            DownloadProgress {
+                session_id,
+                image_index: i,
+                total_images: total,
+                current_url: img.url.clone(),
+                percent: (i as f64 / total as f64) * 100.0,
+                status: "downloading".to_string(),
+                error_message: None,
+            },
+        );
 
         match downloader::download_and_save(&client, img, output_path, format_ref, i).await {
             Ok(result) => {
@@ -115,15 +118,18 @@ pub async fn download_images(
                 ).map_err(|e| format!("DB insert error: {e}"))?;
                 drop(db);
 
-                let _ = app.emit("image-download-progress", DownloadProgress {
-                    session_id,
-                    image_index: i,
-                    total_images: total,
-                    current_url: img.url.clone(),
-                    percent: ((i + 1) as f64 / total as f64) * 100.0,
-                    status: "failed".to_string(),
-                    error_message: Some(err),
-                });
+                let _ = app.emit(
+                    "image-download-progress",
+                    DownloadProgress {
+                        session_id,
+                        image_index: i,
+                        total_images: total,
+                        current_url: img.url.clone(),
+                        percent: ((i + 1) as f64 / total as f64) * 100.0,
+                        status: "failed".to_string(),
+                        error_message: Some(err),
+                    },
+                );
             }
         }
     }
@@ -131,35 +137,39 @@ pub async fn download_images(
     // Update session count
     {
         let db = state.db.lock().await;
-        let completed_count: i64 = db.query_row(
-            "SELECT COUNT(*) FROM images WHERE session_id = ?1 AND status = 'completed'",
-            params![session_id],
-            |row| row.get(0),
-        ).unwrap_or(0);
+        let completed_count: i64 = db
+            .query_row(
+                "SELECT COUNT(*) FROM images WHERE session_id = ?1 AND status = 'completed'",
+                params![session_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
         db.execute(
             "UPDATE image_sessions SET image_count = ?1 WHERE id = ?2",
             params![completed_count, session_id],
-        ).map_err(|e| format!("DB update error: {e}"))?;
+        )
+        .map_err(|e| format!("DB update error: {e}"))?;
     }
 
     // Final progress
-    let _ = app.emit("image-download-progress", DownloadProgress {
-        session_id,
-        image_index: total,
-        total_images: total,
-        current_url: String::new(),
-        percent: 100.0,
-        status: "completed".to_string(),
-        error_message: None,
-    });
+    let _ = app.emit(
+        "image-download-progress",
+        DownloadProgress {
+            session_id,
+            image_index: total,
+            total_images: total,
+            current_url: String::new(),
+            percent: 100.0,
+            status: "completed".to_string(),
+            error_message: None,
+        },
+    );
 
     Ok(session_id)
 }
 
 #[tauri::command]
-pub async fn list_image_sessions(
-    state: State<'_, AppState>,
-) -> Result<Vec<ImageSession>, String> {
+pub async fn list_image_sessions(state: State<'_, AppState>) -> Result<Vec<ImageSession>, String> {
     let db = state.db.lock().await;
     let mut stmt = db
         .prepare("SELECT id, source_url, site_name, image_count, output_dir, created_at FROM image_sessions ORDER BY created_at DESC")
@@ -226,7 +236,9 @@ pub async fn delete_image_session(
         let paths: Vec<String> = {
             let db = state.db.lock().await;
             let mut stmt = db
-                .prepare("SELECT file_path FROM images WHERE session_id = ?1 AND file_path IS NOT NULL")
+                .prepare(
+                    "SELECT file_path FROM images WHERE session_id = ?1 AND file_path IS NOT NULL",
+                )
                 .map_err(|e| format!("Query error: {e}"))?;
 
             let result: Vec<String> = stmt

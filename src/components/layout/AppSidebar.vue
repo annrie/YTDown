@@ -4,10 +4,12 @@ import { useDownloadsStore } from '../../stores/downloads'
 
 const props = defineProps<{
   currentSection: SidebarSection
+  scheduleAttentionCount: number
 }>()
 
 const emit = defineEmits<{
   'update:currentSection': [section: SidebarSection]
+  'open-channel-monitor': []
 }>()
 
 const downloadsStore = useDownloadsStore()
@@ -138,6 +140,18 @@ function isLibraryExpanded() {
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
               </svg>
               <span class="item-label">スケジュール管理</span>
+              <span v-if="props.scheduleAttentionCount > 0" class="item-badge item-badge-accent">
+                {{ props.scheduleAttentionCount }}
+              </span>
+            </button>
+          </li>
+          <li>
+            <button class="sidebar-item" @click="emit('open-channel-monitor')">
+              <span class="item-indicator" />
+              <svg class="item-icon" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553-1.106A1 1 0 0014 5.882v8.236a1 1 0 001.447.894l4-2a1 1 0 000-1.788l-4-2.118z"/>
+              </svg>
+              <span class="item-label">チャンネル監視追加</span>
             </button>
           </li>
         </ul>
@@ -365,6 +379,10 @@ function isLibraryExpanded() {
   position: relative;
 }
 
+.item-badge-accent {
+  background: #ff9500;
+}
+
 /* Subtree / tree connectors */
 .subtree {
   list-style: none;
@@ -451,4 +469,5 @@ function isLibraryExpanded() {
 .sidebar-section {
   margin-bottom: 0.25rem;
 }
+
 </style>

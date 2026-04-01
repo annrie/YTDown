@@ -1,6 +1,6 @@
-use tauri::State;
+use crate::db::{models::Preset, queries};
 use crate::state::AppState;
-use crate::db::{queries, models::Preset};
+use tauri::State;
 
 #[tauri::command]
 pub async fn list_presets(state: State<'_, AppState>) -> Result<Vec<Preset>, String> {
@@ -28,10 +28,19 @@ pub async fn create_preset(
     let id = {
         let db = state.db.lock().await;
         queries::insert_preset(
-            &db, &name, &format, &quality, &output_dir,
-            embed_thumbnail, embed_metadata, write_subs,
-            embed_subs, embed_chapters, sponsorblock,
-        ).map_err(|e| e.to_string())?
+            &db,
+            &name,
+            &format,
+            &quality,
+            &output_dir,
+            embed_thumbnail,
+            embed_metadata,
+            write_subs,
+            embed_subs,
+            embed_chapters,
+            sponsorblock,
+        )
+        .map_err(|e| e.to_string())?
     };
     Ok(id)
 }
@@ -54,19 +63,26 @@ pub async fn update_preset(
     {
         let db = state.db.lock().await;
         queries::update_preset(
-            &db, id, &name, &format, &quality, &output_dir,
-            embed_thumbnail, embed_metadata, write_subs,
-            embed_subs, embed_chapters, sponsorblock,
-        ).map_err(|e| e.to_string())?
+            &db,
+            id,
+            &name,
+            &format,
+            &quality,
+            &output_dir,
+            embed_thumbnail,
+            embed_metadata,
+            write_subs,
+            embed_subs,
+            embed_chapters,
+            sponsorblock,
+        )
+        .map_err(|e| e.to_string())?
     };
     Ok(())
 }
 
 #[tauri::command]
-pub async fn delete_preset(
-    id: i64,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn delete_preset(id: i64, state: State<'_, AppState>) -> Result<(), String> {
     {
         let db = state.db.lock().await;
         queries::delete_preset(&db, id).map_err(|e| e.to_string())?

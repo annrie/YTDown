@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useSchedulesStore } from '../../stores/schedules'
 import type { Schedule } from '../../types'
 import ScheduleCard from './ScheduleCard.vue'
@@ -16,7 +16,13 @@ onMounted(async () => {
   } catch (e) {
     errorMsg.value = `リスト取得失敗: ${e}`
   }
-  await store.setupScheduleListener()
+  store.markStartupChecksSeen()
+})
+
+watch(() => store.unseenStartupCheckIds.length, (count) => {
+  if (count > 0) {
+    store.markStartupChecksSeen()
+  }
 })
 
 function openCreate() {
@@ -58,6 +64,14 @@ async function onRunNow(id: number) {
     errorMsg.value = `実行失敗: ${e}`
   }
 }
+
+async function onStop(id: number) {
+  try {
+    await store.stopSchedule(id)
+  } catch (e) {
+    errorMsg.value = `停止失敗: ${e}`
+  }
+}
 </script>
 
 <template>
@@ -84,10 +98,13 @@ async function onRunNow(id: number) {
         v-for="s in store.schedules"
         :key="s.id"
         :schedule="s"
+        :is-startup-checked="store.startupCheckedScheduleIds.includes(s.id)"
+        :is-checking="store.checkingScheduleIds.includes(s.id)"
         @toggle="(id, isActive) => store.toggleSchedule(id, isActive)"
         @edit="openEdit"
         @delete="onDelete"
         @run-now="onRunNow"
+        @stop="onStop"
       />
     </div>
 

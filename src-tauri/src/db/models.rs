@@ -64,6 +64,7 @@ pub struct Schedule {
     pub is_running: bool,
     pub last_run_at: Option<String>,
     pub next_run_at: Option<String>,
+    pub last_run_status: Option<String>,
     pub created_at: String,
 }
 

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { homeDir } from '@tauri-apps/api/path'
 import { usePresetsStore } from '../../stores/presets'
 import type { Preset } from '../../types'
 
@@ -9,8 +11,6 @@ const editingId = ref<number | null>(null)
 const showCreateForm = ref(false)
 const errorMsg = ref('')
 
-const allFormats = ['mp4', 'mkv', 'webm', 'mp3', 'm4a', 'flac', 'wav', 'opus']
-const qualities = ['best', '2160', '1080', '720', '480']
 
 function blankForm(): Omit<Preset, 'id' | 'created_at'> {
   return {
@@ -62,6 +62,24 @@ function cancelForm() {
   errorMsg.value = ''
 }
 
+async function selectDirectory() {
+  try {
+    const defaultPath = form.value.output_dir
+      ? form.value.output_dir.replace(/^~/, await homeDir())
+      : await homeDir()
+    const selected = await openDialog({
+      directory: true,
+      multiple: false,
+      defaultPath
+    })
+    if (selected && typeof selected === 'string') {
+      form.value.output_dir = selected
+    }
+  } catch (e) {
+    console.error('Failed to open dialog:', e)
+  }
+}
+
 async function saveForm() {
   errorMsg.value = ''
   try {
@@ -105,23 +123,12 @@ async function onDelete(id: number) {
         <label class="text-xs">名前</label>
         <input v-model="form.name" type="text" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1" />
       </div>
-      <div class="flex gap-2">
-        <div class="flex-1">
-          <label class="text-xs">フォーマット</label>
-          <select v-model="form.format" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1">
-            <option v-for="f in allFormats" :key="f" :value="f">{{ f }}</option>
-          </select>
-        </div>
-        <div class="flex-1">
-          <label class="text-xs">品質</label>
-          <select v-model="form.quality" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1">
-            <option v-for="q in qualities" :key="q" :value="q">{{ q }}</option>
-          </select>
-        </div>
-      </div>
-      <div>
+      <div class="mb-3">
         <label class="text-xs">出力先ディレクトリ</label>
-        <input v-model="form.output_dir" type="text" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1" placeholder="~/Downloads/YTDown/" />
+        <div class="flex gap-2 items-center mt-1">
+          <input v-model="form.output_dir" type="text" class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm" placeholder="~/Downloads/YTDown/" />
+          <button @click="selectDirectory" class="px-3 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-opacity">参照...</button>
+        </div>
       </div>
       <div class="flex flex-wrap gap-3 text-sm">
         <label><input type="checkbox" v-model="form.embed_thumbnail" class="mr-1">サムネイル埋め込み</label>
@@ -154,23 +161,12 @@ async function onDelete(id: number) {
             <label class="text-xs">名前</label>
             <input v-model="form.name" type="text" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1" />
           </div>
-          <div class="flex gap-2">
-            <div class="flex-1">
-              <label class="text-xs">フォーマット</label>
-              <select v-model="form.format" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1">
-                <option v-for="f in allFormats" :key="f" :value="f">{{ f }}</option>
-              </select>
-            </div>
-            <div class="flex-1">
-              <label class="text-xs">品質</label>
-              <select v-model="form.quality" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1">
-                <option v-for="q in qualities" :key="q" :value="q">{{ q }}</option>
-              </select>
-            </div>
-          </div>
-          <div>
+          <div class="mb-3">
             <label class="text-xs">出力先ディレクトリ</label>
-            <input v-model="form.output_dir" type="text" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1" />
+            <div class="flex gap-2 items-center mt-1">
+              <input v-model="form.output_dir" type="text" class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm" />
+              <button @click="selectDirectory" class="px-3 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-opacity">参照...</button>
+            </div>
           </div>
           <div class="flex flex-wrap gap-3 text-sm">
             <label><input type="checkbox" v-model="form.embed_thumbnail" class="mr-1">サムネイル埋め込み</label>
@@ -192,7 +188,6 @@ async function onDelete(id: number) {
         <div v-else class="flex items-center justify-between">
           <div>
             <span class="font-medium text-sm">{{ preset.name }}</span>
-            <span class="ml-2 text-xs text-neutral-500">{{ preset.format }} / {{ preset.quality }}</span>
             <span class="ml-2 text-xs text-neutral-400 truncate max-w-[200px] inline-block align-bottom">
               {{ preset.output_dir }}
             </span>

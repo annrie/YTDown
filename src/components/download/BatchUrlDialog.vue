@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 
-defineProps<{ open: boolean }>()
+const props = defineProps<{
+  open: boolean
+  initialUrls?: string[]
+}>()
 const emit = defineEmits<{
   close: []
   'start-batch': [urls: string[]]
@@ -11,6 +14,26 @@ const emit = defineEmits<{
 const MAX_URLS = 10
 const urls = ref<string[]>(Array(MAX_URLS).fill(''))
 const fetchingBrowserUrl = ref(false)
+
+function applyInitialUrls(nextUrls: string[]) {
+  const seeded = Array(MAX_URLS).fill('')
+  nextUrls.slice(0, MAX_URLS).forEach((url, index) => {
+    seeded[index] = url
+  })
+  urls.value = seeded
+}
+
+watch(() => props.open, (isOpen) => {
+  if (isOpen && props.initialUrls?.length) {
+    applyInitialUrls(props.initialUrls)
+  }
+})
+
+watch(() => props.initialUrls, (nextUrls) => {
+  if (props.open && nextUrls?.length) {
+    applyInitialUrls(nextUrls)
+  }
+}, { deep: true })
 
 async function addBrowserUrl() {
   fetchingBrowserUrl.value = true

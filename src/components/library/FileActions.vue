@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
+import { message } from '@tauri-apps/plugin-dialog'
 import { useFileManager } from '../../composables/useFileManager'
 import { useLibraryStore } from '../../stores/library'
 import type { Download } from '../../types'
@@ -55,7 +57,6 @@ async function handleDelete(toTrash: boolean) {
 
 async function handleMove() {
   if (!props.item.file_path) {
-    const { message } = await import('@tauri-apps/plugin-dialog')
     await message('ファイルパスが記録されていないため移動できません。', { title: 'エラー', kind: 'error' })
     emit('close')
     return
@@ -75,7 +76,6 @@ async function handleMove() {
       await moveFile(sourcePath, destPath, props.item.id)
       await libraryStore.loadItems()
     } catch (e) {
-      const { message } = await import('@tauri-apps/plugin-dialog')
       await message(`ファイルの移動に失敗しました: ${e}`, { title: 'エラー', kind: 'error' })
     }
   }
@@ -84,7 +84,6 @@ async function handleMove() {
 
 async function handleFavorite() {
   try {
-    const { invoke } = await import('@tauri-apps/api/core')
     await invoke('toggle_favorite', { id: props.item.id })
     await libraryStore.loadItems()
   } catch (e) {

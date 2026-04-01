@@ -1,7 +1,7 @@
 use std::process::Stdio;
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
-use tauri::{AppHandle, Emitter, Manager};
 
 use super::parser::{parse_progress_line, parse_video_info, VideoInfo};
 
@@ -31,7 +31,6 @@ pub struct DownloadConfig {
     pub rate_limit: Option<String>,
     pub sub_lang: Option<String>,
     pub convert_subs: Option<String>,
-    pub merge_output_format: Option<String>,
     pub recode_video: Option<String>,
     pub retries: u32,
     pub proxy: Option<String>,
@@ -62,9 +61,7 @@ pub async fn fetch_info(
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(30),
-        Command::new(ytdlp_path)
-            .args(&args)
-            .output(),
+        Command::new(ytdlp_path).args(&args).output(),
     )
     .await
     .map_err(|_| "yt-dlp の情報取得がタイムアウトしました（30秒）".to_string())?
@@ -135,9 +132,17 @@ async fn try_fetch_playlist(
     flat: bool,
 ) -> Result<Vec<PlaylistItemInfo>, String> {
     let mut args: Vec<String> = if flat {
-        vec!["--flat-playlist".to_string(), "--dump-json".to_string(), "--yes-playlist".to_string()]
+        vec![
+            "--flat-playlist".to_string(),
+            "--dump-json".to_string(),
+            "--yes-playlist".to_string(),
+        ]
     } else {
-        vec!["--dump-json".to_string(), "--yes-playlist".to_string(), "--no-download".to_string()]
+        vec![
+            "--dump-json".to_string(),
+            "--yes-playlist".to_string(),
+            "--no-download".to_string(),
+        ]
     };
     args.extend(cookie_args.iter().cloned());
     args.push(url.to_string());
@@ -145,9 +150,7 @@ async fn try_fetch_playlist(
     let timeout_secs = if flat { 60 } else { 120 };
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(timeout_secs),
-        Command::new(ytdlp_path)
-            .args(&args)
-            .output(),
+        Command::new(ytdlp_path).args(&args).output(),
     )
     .await
     .map_err(|_| "プレイリスト情報の取得がタイムアウトしました".to_string())?
@@ -166,22 +169,35 @@ fn parse_playlist_json(stdout: &str) -> Vec<PlaylistItemInfo> {
     let mut items = Vec::new();
     for line in stdout.lines() {
         let line = line.trim();
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
-            let video_url = v["url"].as_str()
+            let video_url = v["url"]
+                .as_str()
                 .or_else(|| v["webpage_url"].as_str())
                 .map(|s| s.to_string());
             if let Some(url) = video_url {
                 items.push(PlaylistItemInfo {
                     url,
                     title: v["title"].as_str().map(|s| s.to_string()),
-                    channel: v["channel"].as_str().or(v["uploader"].as_str()).map(|s| s.to_string()),
+                    channel: v["channel"]
+                        .as_str()
+                        .or(v["uploader"].as_str())
+                        .map(|s| s.to_string()),
                     channel_id: v["channel_id"].as_str().map(|s| s.to_string()),
                     channel_url: v["channel_url"].as_str().map(|s| s.to_string()),
-                    site: v["ie_key"].as_str().or(v["extractor_key"].as_str()).map(|s| s.to_string()),
-                    thumbnail_url: v["thumbnail"].as_str().or(v["thumbnails"].as_array()
-                        .and_then(|a| a.last())
-                        .and_then(|t| t["url"].as_str())).map(|s| s.to_string()),
+                    site: v["ie_key"]
+                        .as_str()
+                        .or(v["extractor_key"].as_str())
+                        .map(|s| s.to_string()),
+                    thumbnail_url: v["thumbnail"]
+                        .as_str()
+                        .or(v["thumbnails"]
+                            .as_array()
+                            .and_then(|a| a.last())
+                            .and_then(|t| t["url"].as_str()))
+                        .map(|s| s.to_string()),
                     duration: v["duration"].as_f64().map(|d| d as i64),
                 });
             }
@@ -210,6 +226,14 @@ pub async fn start_download(
     } else {
         let format_str = build_format_string(&config.format, &config.quality);
         args.extend(["-f".to_string(), format_str]);
+
+        match config.format.as_str() {
+            "mp3" | "m4a" | "flac" | "wav" | "opus" => {
+                args.push("-x".to_string());
+                args.extend(["--audio-format".to_string(), config.format.clone()]);
+            }
+            _ => {}
+        }
     }
 
     // Output
@@ -226,11 +250,21 @@ pub async fn start_download(
         args.push("jpg".to_string());
         args.push("--embed-thumbnail".to_string());
     }
-    if config.embed_metadata { args.push("--embed-metadata".to_string()); }
-    if config.write_subs { args.extend(["--write-subs".to_string(), "--write-auto-subs".to_string()]); }
-    if config.embed_subs { args.push("--embed-subs".to_string()); }
-    if config.embed_chapters { args.push("--embed-chapters".to_string()); }
-    if config.sponsorblock { args.push("--sponsorblock-remove".to_string()); }
+    if config.embed_metadata {
+        args.push("--embed-metadata".to_string());
+    }
+    if config.write_subs || config.embed_subs {
+        args.extend(["--write-subs".to_string(), "--write-auto-subs".to_string()]);
+    }
+    if config.embed_subs {
+        args.push("--embed-subs".to_string());
+    }
+    if config.embed_chapters {
+        args.push("--embed-chapters".to_string());
+    }
+    if config.sponsorblock {
+        args.push("--sponsorblock-remove".to_string());
+    }
 
     // Cookies
     if let Some(ref browser) = config.cookie_browser {
@@ -245,9 +279,15 @@ pub async fn start_download(
     }
 
     // Advanced options
-    if config.restrict_filenames { args.push("--restrict-filenames".to_string()); }
-    if config.no_overwrites { args.push("--no-overwrites".to_string()); }
-    if config.geo_bypass { args.push("--geo-bypass".to_string()); }
+    if config.restrict_filenames {
+        args.push("--restrict-filenames".to_string());
+    }
+    if config.no_overwrites {
+        args.push("--no-overwrites".to_string());
+    }
+    if config.geo_bypass {
+        args.push("--geo-bypass".to_string());
+    }
     if let Some(ref limit) = config.rate_limit {
         args.extend(["-r".to_string(), limit.clone()]);
     }
@@ -256,9 +296,6 @@ pub async fn start_download(
     }
     if let Some(ref fmt) = config.convert_subs {
         args.extend(["--convert-subs".to_string(), fmt.clone()]);
-    }
-    if let Some(ref fmt) = config.merge_output_format {
-        args.extend(["--merge-output-format".to_string(), fmt.clone()]);
     }
     if let Some(ref fmt) = config.recode_video {
         args.extend(["--recode-video".to_string(), fmt.clone()]);
@@ -341,7 +378,11 @@ pub async fn start_download(
                     if !title_saved {
                         if let Some(state) = app_clone.try_state::<crate::state::AppState>() {
                             if let Ok(db) = state.db.try_lock() {
-                                let _ = crate::db::queries::update_download_title(&db, download_id, title);
+                                let _ = crate::db::queries::update_download_title(
+                                    &db,
+                                    download_id,
+                                    title,
+                                );
                             }
                         }
                         title_saved = true;
@@ -400,7 +441,11 @@ pub async fn start_download(
 
         // Wait for the child process to finish
         if let Ok(status) = child.wait().await {
-            let final_status = if status.success() { "completed" } else { "error" };
+            let final_status = if status.success() {
+                "completed"
+            } else {
+                "error"
+            };
 
             // Build error message from stderr if download failed
             let error_msg = if !status.success() {
@@ -423,19 +468,34 @@ pub async fn start_download(
                     if let Some(ref msg) = error_msg {
                         let _ = crate::db::queries::update_download_error(&db, download_id, msg);
                     } else {
-                        let _ = crate::db::queries::update_download_status(&db, download_id, final_status);
+                        let _ = crate::db::queries::update_download_status(
+                            &db,
+                            download_id,
+                            final_status,
+                        );
                     }
 
                     // Save file_path if detected and download succeeded
                     if status.success() {
                         if let Some(ref path) = final_file_path {
                             let file_size = std::fs::metadata(path).ok().map(|m| m.len() as i64);
-                            let _ = crate::db::queries::update_download_file_path(&db, download_id, path, file_size);
+                            let _ = crate::db::queries::update_download_file_path(
+                                &db,
+                                download_id,
+                                path,
+                                file_size,
+                            );
                         } else {
                             // Fallback: try to find the file in output_dir
                             if let Some(path) = find_latest_file(&output_dir) {
-                                let file_size = std::fs::metadata(&path).ok().map(|m| m.len() as i64);
-                                let _ = crate::db::queries::update_download_file_path(&db, download_id, &path, file_size);
+                                let file_size =
+                                    std::fs::metadata(&path).ok().map(|m| m.len() as i64);
+                                let _ = crate::db::queries::update_download_file_path(
+                                    &db,
+                                    download_id,
+                                    &path,
+                                    file_size,
+                                );
                             }
                         }
                     }
@@ -455,6 +515,14 @@ pub async fn start_download(
                 event["error_message"] = serde_json::json!(msg);
             }
             let _ = app_clone.emit("download-progress", event);
+
+            // Send native notification on success
+            if status.success() {
+                let body = current_title
+                    .as_deref()
+                    .unwrap_or("ダウンロードが完了しました");
+                crate::notify("YTDown", body);
+            }
         }
     });
 
@@ -517,18 +585,27 @@ fn humanize_ytdlp_error(raw: &str) -> String {
     let lower = raw.to_lowercase();
 
     // Safari cookie access errors (macOS Full Disk Access required)
-    if lower.contains("safari") && (lower.contains("permission") || lower.contains("could not find") || lower.contains("library") || lower.contains("failed to") || lower.contains("access")) {
+    if lower.contains("safari")
+        && (lower.contains("permission")
+            || lower.contains("could not find")
+            || lower.contains("library")
+            || lower.contains("failed to")
+            || lower.contains("access"))
+    {
         return "Safari の Cookie にアクセスできません。\nシステム設定 → プライバシーとセキュリティ → フルディスクアクセス で YTDown を許可してください。".to_string();
     }
 
     // Generic cookie/browser access errors
-    if lower.contains("cookies") && (lower.contains("permission") || lower.contains("failed") || lower.contains("could not")) {
+    if lower.contains("cookies")
+        && (lower.contains("permission") || lower.contains("failed") || lower.contains("could not"))
+    {
         return "ブラウザの Cookie にアクセスできませんでした。ブラウザが閉じている場合は起動するか、別のブラウザを選択してください。".to_string();
     }
 
     // Login required
     if lower.contains("sign in") || lower.contains("login") || lower.contains("authentication") {
-        return "ログインが必要なコンテンツです。認証設定でブラウザを指定してください。".to_string();
+        return "ログインが必要なコンテンツです。認証設定でブラウザを指定してください。"
+            .to_string();
     }
 
     // Video unavailable
@@ -538,32 +615,55 @@ fn humanize_ytdlp_error(raw: &str) -> String {
 
     // Age restricted
     if lower.contains("age") && lower.contains("restrict") {
-        return "年齢制限コンテンツです。認証設定でログイン済みブラウザを指定してください。".to_string();
+        return "年齢制限コンテンツです。認証設定でログイン済みブラウザを指定してください。"
+            .to_string();
     }
 
     // Fallback: show the raw error (trimmed)
-    let trimmed: String = raw.lines()
+    let trimmed: String = raw
+        .lines()
         .filter(|l| l.contains("ERROR:"))
         .map(|l| l.trim_start_matches("ERROR:").trim())
         .collect::<Vec<_>>()
         .join("\n");
-    if trimmed.is_empty() { raw.to_string() } else { trimmed }
+    if trimmed.is_empty() {
+        raw.to_string()
+    } else {
+        trimmed
+    }
 }
 
 fn build_format_string(format: &str, quality: &str) -> String {
+    let height = match quality {
+        "4k" | "2160" => "2160",
+        "1080" => "1080",
+        "720" => "720",
+        "480" => "480",
+        _ => "",
+    };
+
     match format {
-        "mp3" | "m4a" | "flac" | "wav" | "opus" => {
-            "bestaudio/best".to_string()
+        "mp3" | "m4a" | "flac" | "wav" | "opus" => "bestaudio/best".to_string(),
+        "mp4" => {
+            if height.is_empty() {
+                "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best".to_string()
+            } else {
+                format!("bestvideo[ext=mp4][height<={}]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best", height)
+            }
+        }
+        "webm" => {
+            if height.is_empty() {
+                "bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best".to_string()
+            } else {
+                format!("bestvideo[ext=webm][height<={}]+bestaudio[ext=webm]/bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best", height)
+            }
         }
         _ => {
-            let height = match quality {
-                "4k" | "2160" => "2160",
-                "1080" => "1080",
-                "720" => "720",
-                "480" => "480",
-                _ => return "bestvideo+bestaudio/best".to_string(),
-            };
-            format!("bestvideo[height<={}]+bestaudio/best", height)
+            if height.is_empty() {
+                "bestvideo+bestaudio/best".to_string()
+            } else {
+                format!("bestvideo[height<={}]+bestaudio/best", height)
+            }
         }
     }
 }
