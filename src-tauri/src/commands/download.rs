@@ -1,5 +1,8 @@
 use crate::state::{ActiveDownload, AppState};
-use crate::ytdlp::{binary, process::DownloadConfig};
+use crate::ytdlp::{
+    binary,
+    process::{self, DownloadConfig},
+};
 use chrono::Local;
 use serde::Deserialize;
 use serde_json::Value;
@@ -243,6 +246,7 @@ async fn fetch_latest_channel_entry(
         std::time::Duration::from_secs(45),
         tokio::process::Command::new(ytdlp_path)
             .args(&args)
+            .env("PATH", process::augmented_path_env())
             .output(),
     )
     .await
@@ -285,13 +289,14 @@ async fn fetch_video_publish_info(
     args.push(video_url.to_string());
 
     let output = tokio::time::timeout(
-        std::time::Duration::from_secs(60),
+        std::time::Duration::from_secs(120),
         tokio::process::Command::new(ytdlp_path)
             .args(&args)
+            .env("PATH", process::augmented_path_env())
             .output(),
     )
     .await
-    .map_err(|_| "yt-dlp の最新動画メタデータ確認がタイムアウトしました".to_string())?
+    .map_err(|_| "yt-dlp の最新動画メタデータ確認がタイムアウトしました（120秒）".to_string())?
     .map_err(|e| format!("Failed to execute yt-dlp: {}", e))?;
 
     if !output.status.success() {
@@ -342,6 +347,7 @@ async fn find_recent_channel_video_urls(
         std::time::Duration::from_secs(120),
         tokio::process::Command::new(ytdlp_path)
             .args(&args)
+            .env("PATH", process::augmented_path_env())
             .output(),
     )
     .await
@@ -825,29 +831,35 @@ pub async fn run_download_internal(
                 return Ok(None);
             }
 
-            if let (Some(entry), Some(last_run_ts)) = (latest_entry.as_ref(), last_run_ts) {
+            if let Some(entry) = latest_entry.as_ref() {
                 if let Some(video_url) = entry.video_url.as_deref() {
-                    let publish_info = fetch_video_publish_info(
-                        &ytdlp_path,
-                        video_url,
-                        cookie_browser.as_deref(),
-                        cookie_file.as_deref(),
-                    )
-                    .await?;
+                    // Flat-playlist entries often omit upload_date. For initial channel checks,
+                    // fetch the newest video's publish metadata before falling back to the
+                    // expensive full channel scan.
+                    if entry.upload_date.is_none() || last_run_ts.is_some() {
+                        let publish_info = fetch_video_publish_info(
+                            &ytdlp_path,
+                            video_url,
+                            cookie_browser.as_deref(),
+                            cookie_file.as_deref(),
+                        )
+                        .await?;
 
-                    if publish_info
-                        .upload_date
-                        .as_deref()
-                        .is_some_and(|upload_date| upload_date < cutoff_date.as_str())
-                    {
-                        return Ok(None);
-                    }
+                        if publish_info
+                            .upload_date
+                            .as_deref()
+                            .is_some_and(|upload_date| upload_date < cutoff_date.as_str())
+                        {
+                            return Ok(None);
+                        }
 
-                    if publish_info
-                        .timestamp
-                        .is_some_and(|video_ts| video_ts <= last_run_ts)
-                    {
-                        return Ok(None);
+                        if last_run_ts.is_some_and(|known_last_run_ts| {
+                            publish_info
+                                .timestamp
+                                .is_some_and(|video_ts| video_ts <= known_last_run_ts)
+                        }) {
+                            return Ok(None);
+                        }
                     }
                 }
             }
@@ -1013,22 +1025,9 @@ pub async fn run_download_internal(
     // Capture output file path via --print
     args.extend(["--print".to_string(), "after_move:filepath".to_string()]);
 
-    // Ensure ffmpeg is on PATH
-    let path_env = {
-        let current = std::env::var("PATH").unwrap_or_default();
-        let extra = ["/usr/local/bin", "/opt/homebrew/bin", "/usr/bin"];
-        let mut parts: Vec<&str> = current.split(':').collect();
-        for p in &extra {
-            if !parts.contains(p) {
-                parts.push(p);
-            }
-        }
-        parts.join(":")
-    };
-
     let child = tokio::process::Command::new(&ytdlp_path)
         .args(&args)
-        .env("PATH", &path_env)
+        .env("PATH", process::augmented_path_env())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()

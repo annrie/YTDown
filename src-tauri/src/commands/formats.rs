@@ -80,6 +80,7 @@ pub async fn fetch_channel_info(
         std::time::Duration::from_secs(30),
         tokio::process::Command::new(&binary.path)
             .args(&args)
+            .env("PATH", process::augmented_path_env())
             .output(),
     )
     .await

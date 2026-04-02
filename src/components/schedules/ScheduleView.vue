@@ -9,6 +9,12 @@ const store = useSchedulesStore()
 const showDialog = ref(false)
 const editTarget = ref<Schedule | null>(null)
 const errorMsg = ref('')
+const transientRunErrorScheduleId = ref<number | null>(null)
+
+function isAlreadyRunningMessage(message: unknown): boolean {
+  const text = String(message)
+  return text.includes('確認中または実行中です') || text.includes('実行中です')
+}
 
 onMounted(async () => {
   try {
@@ -24,6 +30,26 @@ watch(() => store.unseenStartupCheckIds.length, (count) => {
     store.markStartupChecksSeen()
   }
 })
+
+watch(
+  () => ({
+    checking: [...store.checkingScheduleIds],
+    startupChecking: [...store.startupCheckingScheduleIds],
+  }),
+  ({ checking, startupChecking }) => {
+    const id = transientRunErrorScheduleId.value
+    if (id == null) return
+
+    const isStillBusy = checking.includes(id) || startupChecking.includes(id)
+    if (!isStillBusy) {
+      transientRunErrorScheduleId.value = null
+      if (isAlreadyRunningMessage(errorMsg.value)) {
+        errorMsg.value = ''
+      }
+    }
+  },
+  { deep: true }
+)
 
 function openCreate() {
   editTarget.value = null
@@ -58,10 +84,15 @@ async function onDelete(id: number) {
 }
 
 async function onRunNow(id: number) {
+  errorMsg.value = ''
+  transientRunErrorScheduleId.value = null
   try {
     await store.runNow(id)
   } catch (e) {
     errorMsg.value = `実行失敗: ${e}`
+    if (isAlreadyRunningMessage(e)) {
+      transientRunErrorScheduleId.value = id
+    }
   }
 }
 
@@ -98,7 +129,7 @@ async function onStop(id: number) {
         v-for="s in store.schedules"
         :key="s.id"
         :schedule="s"
-        :is-startup-checked="store.startupCheckedScheduleIds.includes(s.id)"
+        :is-startup-checking="store.startupCheckingScheduleIds.includes(s.id)"
         :is-checking="store.checkingScheduleIds.includes(s.id)"
         @toggle="(id, isActive) => store.toggleSchedule(id, isActive)"
         @edit="openEdit"

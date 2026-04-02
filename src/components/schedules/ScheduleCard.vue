@@ -4,7 +4,7 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   schedule: Schedule
-  isStartupChecked?: boolean
+  isStartupChecking?: boolean
   isChecking?: boolean
 }>()
 const emit = defineEmits<{
@@ -27,6 +27,8 @@ const parsedOptions = computed(() => {
     return {}
   }
 })
+
+const isBusy = computed(() => !!props.isChecking || !!props.isStartupChecking || props.schedule.is_running)
 </script>
 
 <template>
@@ -57,7 +59,7 @@ const parsedOptions = computed(() => {
       <span class="meta-item">次回: {{ formatDate(schedule.next_run_at) }}</span>
       <span v-if="schedule.last_run_at" class="meta-item">前回: {{ formatDate(schedule.last_run_at) }}</span>
       <span v-if="schedule.is_channel" class="badge-channel">チャンネル監視</span>
-      <span v-if="props.isStartupChecked" class="badge-startup-check">起動時確認</span>
+      <span v-if="props.isStartupChecking" class="badge-startup-check">起動時確認</span>
     </div>
 
     <div v-if="props.isChecking || schedule.is_running || schedule.last_run_status" class="last-run-status">
@@ -80,7 +82,14 @@ const parsedOptions = computed(() => {
           <path d="M5 3.5h6A1.5 1.5 0 0112.5 5v6a1.5 1.5 0 01-1.5 1.5H5A1.5 1.5 0 013.5 11V5A1.5 1.5 0 015 3.5z"/>
         </svg>
       </button>
-      <button v-else class="btn-action" @click="emit('runNow', schedule.id)" title="今すぐ実行">
+      <button
+        v-else
+        class="btn-action"
+        :class="{ 'btn-disabled': isBusy }"
+        :disabled="isBusy"
+        @click="emit('runNow', schedule.id)"
+        :title="isBusy ? '確認中' : '今すぐ実行'"
+      >
         <svg viewBox="0 0 16 16" fill="currentColor" class="action-icon">
           <path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z"/>
         </svg>
@@ -127,6 +136,7 @@ const parsedOptions = computed(() => {
 .fail-count { opacity: 0.7; }
 .card-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 .btn-action { background: transparent; border: 1px solid var(--color-separator, rgba(120,120,128,0.2)); border-radius: 0.375rem; padding: 0.25rem; cursor: pointer; color: inherit; }
+.btn-disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-danger { color: #ff3b30; }
 .btn-stop { color: #ff9500; border-color: #ff9500; }
 .action-icon { width: 1rem; height: 1rem; }
