@@ -7,18 +7,26 @@ import { useLibraryStore } from './library'
 
 export const useSchedulesStore = defineStore('schedules', () => {
   const schedules = ref<Schedule[]>([])
-  const startupCheckedScheduleIds = ref<number[]>([])
+  const startupCheckingScheduleIds = ref<number[]>([])
   const unseenStartupCheckIds = ref<number[]>([])
   const checkingScheduleIds = ref<number[]>([])
   const listenerReady = ref(false)
 
   function addStartupCheckId(id: number) {
-    if (!startupCheckedScheduleIds.value.includes(id)) {
-      startupCheckedScheduleIds.value = [...startupCheckedScheduleIds.value, id]
-    }
     if (!unseenStartupCheckIds.value.includes(id)) {
       unseenStartupCheckIds.value = [...unseenStartupCheckIds.value, id]
     }
+  }
+
+  function markStartupCheckingStarted(id: number) {
+    if (!startupCheckingScheduleIds.value.includes(id)) {
+      startupCheckingScheduleIds.value = [...startupCheckingScheduleIds.value, id]
+    }
+  }
+
+  function markStartupCheckingFinished(id: number) {
+    if (!startupCheckingScheduleIds.value.includes(id)) return
+    startupCheckingScheduleIds.value = startupCheckingScheduleIds.value.filter(scheduleId => scheduleId !== id)
   }
 
   function markCheckingStarted(id: number) {
@@ -151,6 +159,9 @@ export const useSchedulesStore = defineStore('schedules', () => {
     if (listenerReady.value) return
     listenerReady.value = true
 
+    await listen<number>('startup-schedule-started', (event) => {
+      markStartupCheckingStarted(event.payload)
+    })
     await listen<number>('schedule-checking-started', (event) => {
       markCheckingStarted(event.payload)
     })
@@ -165,6 +176,7 @@ export const useSchedulesStore = defineStore('schedules', () => {
     })
     await listen<number>('startup-schedule-result', (event) => {
       addStartupCheckId(event.payload)
+      markStartupCheckingFinished(event.payload)
       markCheckingFinished(event.payload)
       fetchSchedules()
       useLibraryStore().loadItems()
@@ -177,7 +189,7 @@ export const useSchedulesStore = defineStore('schedules', () => {
 
   return {
     schedules,
-    startupCheckedScheduleIds,
+    startupCheckingScheduleIds,
     unseenStartupCheckIds,
     checkingScheduleIds,
     fetchSchedules,

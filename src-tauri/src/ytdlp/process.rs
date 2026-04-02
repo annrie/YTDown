@@ -37,6 +37,20 @@ pub struct DownloadConfig {
     pub extra_args: Vec<String>,
 }
 
+/// GUI apps on macOS do not inherit the user's shell PATH.
+/// Ensure yt-dlp can find helper binaries such as ffmpeg and JS runtimes.
+pub fn augmented_path_env() -> String {
+    let current = std::env::var("PATH").unwrap_or_default();
+    let extra = ["/usr/local/bin", "/opt/homebrew/bin", "/usr/bin"];
+    let mut parts: Vec<&str> = current.split(':').filter(|part| !part.is_empty()).collect();
+    for path in &extra {
+        if !parts.contains(path) {
+            parts.push(path);
+        }
+    }
+    parts.join(":")
+}
+
 /// Fetch video info (formats, metadata) without downloading
 pub async fn fetch_info(
     ytdlp_path: &str,
@@ -61,7 +75,10 @@ pub async fn fetch_info(
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(30),
-        Command::new(ytdlp_path).args(&args).output(),
+        Command::new(ytdlp_path)
+            .args(&args)
+            .env("PATH", augmented_path_env())
+            .output(),
     )
     .await
     .map_err(|_| "yt-dlp の情報取得がタイムアウトしました（30秒）".to_string())?
@@ -150,7 +167,10 @@ async fn try_fetch_playlist(
     let timeout_secs = if flat { 60 } else { 120 };
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(timeout_secs),
-        Command::new(ytdlp_path).args(&args).output(),
+        Command::new(ytdlp_path)
+            .args(&args)
+            .env("PATH", augmented_path_env())
+            .output(),
     )
     .await
     .map_err(|_| "プレイリスト情報の取得がタイムアウトしました".to_string())?
@@ -311,22 +331,9 @@ pub async fn start_download(
 
     args.push(config.url);
 
-    // GUI apps on macOS don't inherit shell PATH; ensure yt-dlp can find ffmpeg
-    let path_env = {
-        let current = std::env::var("PATH").unwrap_or_default();
-        let extra = ["/usr/local/bin", "/opt/homebrew/bin", "/usr/bin"];
-        let mut parts: Vec<&str> = current.split(':').collect();
-        for p in &extra {
-            if !parts.contains(p) {
-                parts.push(p);
-            }
-        }
-        parts.join(":")
-    };
-
     let mut child = Command::new(&config.ytdlp_path)
         .args(&args)
-        .env("PATH", &path_env)
+        .env("PATH", augmented_path_env())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()

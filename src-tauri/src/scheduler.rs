@@ -147,6 +147,9 @@ async fn execute_schedule_with_source(
             return Err(format!("スケジュール {} は無効化されています", schedule_id));
         }
 
+        if source == ScheduleRunSource::Startup {
+            let _ = app.emit("startup-schedule-started", schedule_id);
+        }
         let _ = app.emit("schedule-checking-started", schedule_id);
         let result = run_download(app, &schedule).await;
         let now = Utc::now().to_rfc3339();
