@@ -35,10 +35,13 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
 - **Quality selection** — Choose from Best, 4K, 1080p, 720p, 480p
 - **Playlist support** — Download entire playlists with parallel processing
 - **Batch download** — Paste multiple URLs at once
+- **URL drag & drop** — Drop URLs from browsers, selected text, `.txt`, `.webloc`, or `.url` files
 - **Cookie authentication** — Access private/age-restricted content via browser cookies
 - **Post-processing** — Embed thumbnails, metadata, subtitles, chapters; SponsorBlock integration
 - **Library management** — Browse, search, filter, and organize downloaded media
 - **YouTube channel folders** — Automatically organizes downloads into channel-name subfolders
+- **Channel monitoring** — Watch YouTube channels and automatically check for new uploads on schedule or app startup
+- **Download notifications** — Show a desktop notification when downloads finish
 - **URL history** — Recent URLs are saved automatically and accessible via the clock icon
 - **Auto yt-dlp install** — If yt-dlp is not found, install it directly from the app
 
@@ -67,6 +70,9 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
 | Pause / Resume download | ✅ | — | ✅ |
 | Move to Trash | ✅ | ✅ | ✅ |
 | Reveal in file manager | ✅ | ✅ | ✅ |
+
+> [!IMPORTANT]
+> Current real-device testing has only been performed on macOS Intel. Windows, Linux, and macOS Apple Silicon (arm64) builds are provided on a best-effort basis and have not been validated on physical machines yet.
 
 ## Installation
 
@@ -162,10 +168,13 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
 - **画質選択** — 最高画質, 4K, 1080p, 720p, 480p から選択
 - **プレイリスト対応** — プレイリスト全体を並列ダウンロード
 - **一括ダウンロード** — 複数の URL をまとめて入力可能
+- **URL ドラッグ&ドロップ** — ブラウザ、テキスト選択、`.txt`、`.webloc`、`.url` から URL をドロップ可能
 - **Cookie 認証** — ブラウザの Cookie を利用して限定公開・年齢制限コンテンツにアクセス
 - **ポストプロセス** — サムネイル・メタデータ・字幕・チャプターの埋め込み、SponsorBlock 対応
 - **ライブラリ管理** — ダウンロード済みメディアの一覧・検索・フィルタリング
 - **YouTube チャンネルフォルダ** — チャンネル名のサブフォルダに自動整理
+- **チャンネル監視** — YouTube チャンネルを登録し、定期実行や起動時チェックで新着を自動確認
+- **完了通知** — ダウンロード完了時にデスクトップ通知を表示
 - **URL 履歴** — 直近の URL を自動保存、時計アイコンからすぐに呼び出し可能
 - **yt-dlp 自動インストール** — yt-dlp 未検出時、アプリ内からワンクリックでインストール
 
@@ -194,6 +203,9 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
 | 一時停止 / 再開 | ✅ | — | ✅ |
 | ゴミ箱へ移動 | ✅ | ✅ | ✅ |
 | ファイルマネージャで表示 | ✅ | ✅ | ✅ |
+
+> [!IMPORTANT]
+> 現時点で実機確認を行っているのは macOS Intel 版のみです。Windows、Linux、macOS Apple Silicon（arm64）向けビルドは提供できますが、まだ実機での検証はしていません。
 
 ### インストール
 
