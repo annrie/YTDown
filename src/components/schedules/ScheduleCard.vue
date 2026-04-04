@@ -136,7 +136,7 @@ const isBusy = computed(() => !!props.isChecking || !!props.isStartupChecking ||
 .fail-count { opacity: 0.7; }
 .card-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 .btn-action { background: transparent; border: 1px solid var(--color-separator, rgba(120,120,128,0.2)); border-radius: 0.375rem; padding: 0.25rem; cursor: pointer; color: inherit; }
-.btn-disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-danger { color: #ff3b30; }
 .btn-stop { color: #ff9500; border-color: #ff9500; }
 .action-icon { width: 1rem; height: 1rem; }

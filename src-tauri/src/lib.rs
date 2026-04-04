@@ -142,6 +142,11 @@ pub fn run() {
             commands::presets::create_preset,
             commands::presets::update_preset,
             commands::presets::delete_preset,
+            // Auto-classify rules
+            commands::rules::list_rules,
+            commands::rules::create_rule,
+            commands::rules::update_rule,
+            commands::rules::delete_rule,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

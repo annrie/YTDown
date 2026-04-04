@@ -82,7 +82,7 @@ function handleKeydown(e: KeyboardEvent) {
         <button
           @click="fetchBrowserUrl"
           :disabled="fetchingBrowserUrl || imagesStore.scraping"
-          class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40"
+          class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
           :class="browserUrlError ? 'text-red-500' : 'text-neutral-500 hover:text-[var(--color-accent)]'"
           title="ブラウザから取得"
         >

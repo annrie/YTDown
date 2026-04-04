@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { homeDir } from '@tauri-apps/api/path'
@@ -28,8 +28,17 @@ const savePresetName = ref('')
 const savePresetError = ref('')
 const selectedPresetId = ref<number | ''>('')
 
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && props.open) emit('close')
+}
+
 onMounted(() => {
   presetsStore.fetchPresets()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 const showScheduleMode = ref(false)
@@ -320,6 +329,20 @@ function handleCancelPlaylistFetch() {
   playlistMode.value = 'single'
 }
 
+async function retryPlaylistFetch() {
+  playlistFetchError.value = null
+  playlistPreviewLoaded.value = false
+  try {
+    const items = await downloadsStore.fetchPlaylistItems(props.url)
+    if (items.length > 0) {
+      playlistItems.value = items
+      playlistPreviewLoaded.value = true
+    }
+  } catch (e) {
+    playlistFetchError.value = `プレイリスト取得に失敗しました: ${e}`
+  }
+}
+
 const playlistConfirmed = ref(false)
 
 const needsPlaylistConfirmation = computed(() =>
@@ -462,7 +485,13 @@ function handleStart() {
             </div>
 
             <!-- Playlist fetch error -->
-            <p v-if="playlistFetchError" class="mt-2 text-xs text-red-500">{{ playlistFetchError }}</p>
+            <div v-if="playlistFetchError" class="mt-2 flex items-center gap-2">
+              <p class="flex-1 text-xs text-red-500">{{ playlistFetchError }}</p>
+              <button @click="retryPlaylistFetch"
+                      class="px-2 py-1 text-xs rounded bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors flex-shrink-0">
+                再試行
+              </button>
+            </div>
 
             <!-- Playlist item count preview -->
             <div v-if="playlistMode === 'all' && playlistPreviewLoaded && playlistItems.length > 0" class="mt-3">

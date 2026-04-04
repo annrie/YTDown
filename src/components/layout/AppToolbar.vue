@@ -105,7 +105,7 @@ function handleToolbarMousedown(e: MouseEvent) {
           v-model="urlInput"
           type="url"
           placeholder="URLを入力..."
-          class="flex-1 h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
+          class="flex-1 h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="isImageSection"
           @keydown="handleUrlKeydown"
         />
@@ -118,7 +118,7 @@ function handleToolbarMousedown(e: MouseEvent) {
         <button
           @click="fetchBrowserUrl"
           :disabled="fetchingBrowserUrl || isImageSection"
-          class="w-10 h-10 flex items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-40"
+          class="w-10 h-10 flex items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
           :class="browserUrlError ? 'text-red-500' : 'text-neutral-500 hover:text-[var(--color-accent)]'"
           title="ブラウザから取得"
         >
@@ -142,7 +142,7 @@ function handleToolbarMousedown(e: MouseEvent) {
 
     <!-- Download button -->
     <button v-if="!showSearch"
-            class="px-4 h-8 rounded-md bg-[var(--color-accent)] text-white text-sm font-medium flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            class="px-4 h-8 rounded-md bg-[var(--color-accent)] text-white text-sm font-medium flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="isImageSection"
             @click="handleSubmitUrl">
       ダウンロード
@@ -150,7 +150,7 @@ function handleToolbarMousedown(e: MouseEvent) {
 
     <!-- Batch URL button -->
     <button v-if="!showSearch"
-            class="px-3 h-8 rounded-md text-sm font-medium flex-shrink-0 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            class="px-3 h-8 rounded-md text-sm font-medium flex-shrink-0 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="isImageSection"
             @click="emit('open-batch')">
       一括

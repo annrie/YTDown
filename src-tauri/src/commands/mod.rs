@@ -7,6 +7,7 @@ pub mod history;
 pub mod images;
 pub mod library;
 pub mod presets;
+pub mod rules;
 pub mod schedules;
 pub mod settings;
 pub mod ytdlp_mgmt;

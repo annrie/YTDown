@@ -138,5 +138,5 @@ function onSave() {
 .btn { padding: 0.5rem 1.25rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none; }
 .btn-cancel { background: rgba(120,120,128,0.12); color: inherit; }
 .btn-save { background: var(--color-accent, #007aff); color: white; }
-.btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
