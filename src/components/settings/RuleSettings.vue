@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useSettingsStore } from '../../stores/settings'
@@ -19,9 +19,20 @@ const ruleTypes = [
   { value: 'date', label: '日付' },
 ]
 
-onMounted(async () => {
-  await loadRules()
+onMounted(() => {
+  if (settingsStore.settings.auto_classify) {
+    void loadRules()
+  }
 })
+
+watch(
+  () => settingsStore.settings.auto_classify,
+  (enabled) => {
+    if (enabled && rules.value.length === 0) {
+      void loadRules()
+    }
+  }
+)
 
 async function loadRules() {
   try {

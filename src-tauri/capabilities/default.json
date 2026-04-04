@@ -60,6 +60,10 @@
     "allow-list-presets",
     "allow-create-preset",
     "allow-update-preset",
-    "allow-delete-preset"
+    "allow-delete-preset",
+    "allow-list-rules",
+    "allow-create-rule",
+    "allow-update-rule",
+    "allow-delete-rule"
   ]
 }
