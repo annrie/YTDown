@@ -57,12 +57,13 @@ export const useSettingsStore = defineStore('settings', () => {
       for (const { key, value } of all) {
         if (key in settings.value) {
           const k = key as keyof AppSettings
+          const defaults = DEFAULTS as unknown as Record<string, unknown>
           if (BOOLEAN_KEYS.includes(k)) {
-            ;(settings.value as unknown as Record<string, unknown>)[k] = value === 'true'
+            Object.assign(settings.value, { [k]: value === 'true' })
           } else if (INTEGER_KEYS.includes(k)) {
-            ;(settings.value as unknown as Record<string, unknown>)[k] = parseInt(value) || (DEFAULTS as unknown as Record<string, unknown>)[k]
+            Object.assign(settings.value, { [k]: parseInt(value) || defaults[k] })
           } else {
-            ;(settings.value as unknown as Record<string, unknown>)[k] = value
+            Object.assign(settings.value, { [k]: value })
           }
         }
       }
