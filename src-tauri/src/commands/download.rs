@@ -332,7 +332,9 @@ async fn find_recent_channel_video_urls(
         "--no-download".to_string(),
         "--yes-playlist".to_string(),
         "--playlist-end".to_string(),
-        "10".to_string(),
+        "5".to_string(),
+        "--socket-timeout".to_string(),
+        "30".to_string(),
     ];
 
     if let Some(browser) = cookie_browser {
@@ -344,14 +346,14 @@ async fn find_recent_channel_video_urls(
     args.push(channel_url.to_string());
 
     let output = tokio::time::timeout(
-        std::time::Duration::from_secs(120),
+        std::time::Duration::from_secs(180),
         tokio::process::Command::new(ytdlp_path)
             .args(&args)
             .env("PATH", process::augmented_path_env())
             .output(),
     )
     .await
-    .map_err(|_| "yt-dlp のチャンネル確認がタイムアウトしました".to_string())?
+    .map_err(|_| "yt-dlp のチャンネル確認がタイムアウトしました（ネットワークが遅い可能性があります。次回実行時に自動リトライされます）".to_string())?
     .map_err(|e| format!("Failed to execute yt-dlp: {}", e))?;
 
     if !output.status.success() {
