@@ -1,0 +1,6 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-rule"
+description = "Enables the update_rule command without any pre-configured scope."
+commands.allow = ["update_rule"]
