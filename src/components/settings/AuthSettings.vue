@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../../stores/settings'
 import { open } from '@tauri-apps/plugin-dialog'
+import { openUrl } from '@tauri-apps/plugin-opener'
 
 const settingsStore = useSettingsStore()
 const safariAccessGranted = ref<boolean | null>(null)
@@ -53,6 +54,10 @@ async function recheckSafariAccess() {
     safariAccessGranted.value = false
   }
 }
+
+function openFullDiskAccessSettings() {
+  openUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles')
+}
 </script>
 
 <template>
@@ -76,12 +81,18 @@ async function recheckSafariAccess() {
       <div v-if="settingsStore.settings.cookie_browser === 'safari' && safariAccessGranted === false"
            class="mt-2 p-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
         <p class="text-xs text-amber-600 dark:text-amber-400">
-          ⚠ Safari の Cookie にアクセスできません。システム設定 → プライバシーとセキュリティ → フルディスクアクセス で YTDown を許可してください。
+          ⚠ Safari の Cookie にアクセスできません。フルディスクアクセスに YTDown を追加してください。
         </p>
-        <button @click="recheckSafariAccess"
-                class="mt-1.5 px-2 py-0.5 text-xs rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors">
-          再チェック
-        </button>
+        <div class="mt-1.5 flex gap-2">
+          <button @click="openFullDiskAccessSettings"
+                  class="px-2 py-0.5 text-xs rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors">
+            システム設定を開く
+          </button>
+          <button @click="recheckSafariAccess"
+                  class="px-2 py-0.5 text-xs rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors">
+            再チェック
+          </button>
+        </div>
       </div>
 
       <!-- Safari: FDA granted -->
