@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import { useSettingsStore } from '../../stores/settings'
 import type { AutoClassifyRule } from '../../types'
 
@@ -8,6 +10,8 @@ const settingsStore = useSettingsStore()
 const rules = ref<AutoClassifyRule[]>([])
 const editingRule = ref<Partial<AutoClassifyRule> | null>(null)
 const showEditor = ref(false)
+const saving = ref(false)
+const errorMsg = ref('')
 
 const ruleTypes = [
   { value: 'site', label: 'サイト名' },
@@ -15,7 +19,20 @@ const ruleTypes = [
   { value: 'date', label: '日付' },
 ]
 
+onMounted(async () => {
+  await loadRules()
+})
+
+async function loadRules() {
+  try {
+    rules.value = await invoke<AutoClassifyRule[]>('list_rules')
+  } catch (e) {
+    errorMsg.value = `ルールの読み込みに失敗しました: ${e}`
+  }
+}
+
 function addNewRule() {
+  errorMsg.value = ''
   editingRule.value = {
     rule_type: 'site',
     pattern: '',
@@ -27,25 +44,75 @@ function addNewRule() {
 }
 
 function editRule(rule: AutoClassifyRule) {
+  errorMsg.value = ''
   editingRule.value = { ...rule }
   showEditor.value = true
 }
 
-function saveRule() {
-  if (!editingRule.value) return
-  // TODO: invoke create_rule or update_rule command
-  showEditor.value = false
-  editingRule.value = null
+async function browseFolder() {
+  const selected = await open({ directory: true, multiple: false })
+  if (selected && editingRule.value) {
+    editingRule.value.target_dir = selected as string
+  }
 }
 
-function deleteRule(id: number) {
-  // TODO: invoke delete_rule command
-  rules.value = rules.value.filter(r => r.id !== id)
+async function saveRule() {
+  if (!editingRule.value) return
+  const r = editingRule.value
+  if (!r.pattern?.trim()) {
+    errorMsg.value = 'パターンを入力してください'
+    return
+  }
+  if (!r.target_dir?.trim()) {
+    errorMsg.value = '保存先フォルダを入力してください'
+    return
+  }
+
+  saving.value = true
+  errorMsg.value = ''
+  try {
+    if (r.id) {
+      await invoke('update_rule', {
+        id: r.id,
+        ruleType: r.rule_type ?? 'site',
+        pattern: r.pattern,
+        targetDir: r.target_dir,
+        priority: r.priority ?? 0,
+        enabled: r.enabled ?? true,
+      })
+    } else {
+      const newId = await invoke<number>('create_rule', {
+        ruleType: r.rule_type ?? 'site',
+        pattern: r.pattern,
+        targetDir: r.target_dir,
+        priority: r.priority ?? 0,
+        enabled: r.enabled ?? true,
+      })
+      r.id = newId
+    }
+    await loadRules()
+    showEditor.value = false
+    editingRule.value = null
+  } catch (e) {
+    errorMsg.value = `保存に失敗しました: ${e}`
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteRule(id: number) {
+  try {
+    await invoke('delete_rule', { id })
+    rules.value = rules.value.filter(r => r.id !== id)
+  } catch (e) {
+    errorMsg.value = `削除に失敗しました: ${e}`
+  }
 }
 
 function cancelEdit() {
   showEditor.value = false
   editingRule.value = null
+  errorMsg.value = ''
 }
 </script>
 
@@ -67,6 +134,11 @@ function cancelEdit() {
           + ルール追加
         </button>
       </div>
+    </div>
+
+    <!-- Error message -->
+    <div v-if="errorMsg" class="px-3 py-2 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs">
+      {{ errorMsg }}
     </div>
 
     <!-- Rules list -->
@@ -136,18 +208,26 @@ function cancelEdit() {
           <input v-model="editingRule.target_dir"
                  class="flex-1 h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm font-mono outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
                  placeholder="~/Downloads/YTDown/Music/" />
-          <button class="px-3 h-8 rounded-md text-sm bg-neutral-200 dark:bg-neutral-700">
+          <button class="px-3 h-8 rounded-md text-sm bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600"
+                  @click="browseFolder">
             参照...
           </button>
         </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="rule-enabled" v-model="editingRule.enabled" class="rounded" />
+        <label for="rule-enabled" class="text-sm">ルールを有効にする</label>
       </div>
 
       <div class="flex justify-end gap-2">
         <button class="px-4 py-1.5 rounded-md text-sm bg-neutral-100 dark:bg-neutral-700" @click="cancelEdit">
           キャンセル
         </button>
-        <button class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white" @click="saveRule">
-          保存
+        <button class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50"
+                :disabled="saving"
+                @click="saveRule">
+          {{ saving ? '保存中...' : '保存' }}
         </button>
       </div>
     </div>

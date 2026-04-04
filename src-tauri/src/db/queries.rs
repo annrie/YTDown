@@ -294,7 +294,6 @@ pub fn get_all_settings(conn: &Connection) -> SqlResult<Vec<Setting>> {
 
 // === Auto-Classify Rules ===
 
-#[allow(dead_code)]
 pub fn list_rules(conn: &Connection) -> SqlResult<Vec<AutoClassifyRule>> {
     let mut stmt = conn.prepare(
         "SELECT id, rule_type, pattern, target_dir, priority, enabled FROM auto_classify_rules ORDER BY priority DESC"
@@ -312,19 +311,40 @@ pub fn list_rules(conn: &Connection) -> SqlResult<Vec<AutoClassifyRule>> {
     rows.collect()
 }
 
-#[allow(dead_code)]
 pub fn create_rule(
     conn: &Connection,
     rule_type: &str,
     pattern: &str,
     target_dir: &str,
     priority: i64,
+    enabled: bool,
 ) -> SqlResult<i64> {
     conn.execute(
-        "INSERT INTO auto_classify_rules (rule_type, pattern, target_dir, priority) VALUES (?1, ?2, ?3, ?4)",
-        params![rule_type, pattern, target_dir, priority],
+        "INSERT INTO auto_classify_rules (rule_type, pattern, target_dir, priority, enabled) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![rule_type, pattern, target_dir, priority, enabled],
     )?;
     Ok(conn.last_insert_rowid())
+}
+
+pub fn update_rule(
+    conn: &Connection,
+    id: i64,
+    rule_type: &str,
+    pattern: &str,
+    target_dir: &str,
+    priority: i64,
+    enabled: bool,
+) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE auto_classify_rules SET rule_type=?1, pattern=?2, target_dir=?3, priority=?4, enabled=?5 WHERE id=?6",
+        params![rule_type, pattern, target_dir, priority, enabled, id],
+    )?;
+    Ok(())
+}
+
+pub fn delete_rule(conn: &Connection, id: i64) -> SqlResult<()> {
+    conn.execute("DELETE FROM auto_classify_rules WHERE id=?1", params![id])?;
+    Ok(())
 }
 
 // === URL History ===

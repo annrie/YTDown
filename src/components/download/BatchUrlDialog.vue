@@ -123,7 +123,7 @@ function handleStart() {
             すべてクリア
           </button>
           <button @click="addBrowserUrl" :disabled="fetchingBrowserUrl"
-                  class="px-3 py-1.5 rounded-md text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-[var(--color-accent)] disabled:opacity-40 flex items-center gap-1 transition-colors">
+                  class="px-3 py-1.5 rounded-md text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-[var(--color-accent)] disabled:opacity-50 flex items-center gap-1 transition-colors">
             <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': fetchingBrowserUrl }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path v-if="!fetchingBrowserUrl" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-18v18m-9-9h18M3.6 9h16.8M3.6 15h16.8" />
               <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8" />
@@ -137,7 +137,7 @@ function handleStart() {
             キャンセル
           </button>
           <button @click="handleStart" :disabled="validUrls.length === 0"
-                  class="px-5 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white font-medium disabled:opacity-40 transition-opacity">
+                  class="px-5 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white font-medium disabled:opacity-50 transition-opacity">
             {{ validUrls.length }}件 ダウンロード
           </button>
         </div>

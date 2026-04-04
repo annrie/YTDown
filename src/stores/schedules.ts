@@ -95,7 +95,12 @@ export const useSchedulesStore = defineStore('schedules', () => {
   }
 
   async function fetchSchedules() {
-    schedules.value = await invoke<Schedule[]>('list_schedules')
+    try {
+      schedules.value = await invoke<Schedule[]>('list_schedules')
+    } catch (e) {
+      console.error('[schedules] list_schedules failed:', e)
+      throw e
+    }
     void refreshChannelAvatars()
   }
 
@@ -106,15 +111,20 @@ export const useSchedulesStore = defineStore('schedules', () => {
     options_json: string
     is_channel: boolean
   }): Promise<number> {
-    const id = await invoke<number>('create_schedule', {
-      name: payload.name,
-      url: payload.url,
-      cronExpr: payload.cron_expr,
-      optionsJson: payload.options_json,
-      isChannel: payload.is_channel,
-    })
-    await fetchSchedules()
-    return id
+    try {
+      const id = await invoke<number>('create_schedule', {
+        name: payload.name,
+        url: payload.url,
+        cronExpr: payload.cron_expr,
+        optionsJson: payload.options_json,
+        isChannel: payload.is_channel,
+      })
+      await fetchSchedules()
+      return id
+    } catch (e) {
+      console.error('[schedules] create_schedule failed:', e)
+      throw e
+    }
   }
 
   async function updateSchedule(payload: {
@@ -125,34 +135,59 @@ export const useSchedulesStore = defineStore('schedules', () => {
     options_json: string
     is_channel: boolean
   }) {
-    await invoke('update_schedule', {
-      id: payload.id,
-      name: payload.name,
-      url: payload.url,
-      cronExpr: payload.cron_expr,
-      optionsJson: payload.options_json,
-      isChannel: payload.is_channel,
-    })
-    await fetchSchedules()
+    try {
+      await invoke('update_schedule', {
+        id: payload.id,
+        name: payload.name,
+        url: payload.url,
+        cronExpr: payload.cron_expr,
+        optionsJson: payload.options_json,
+        isChannel: payload.is_channel,
+      })
+      await fetchSchedules()
+    } catch (e) {
+      console.error('[schedules] update_schedule failed:', e)
+      throw e
+    }
   }
 
   async function deleteSchedule(id: number) {
-    await invoke('delete_schedule', { id })
-    await fetchSchedules()
+    try {
+      await invoke('delete_schedule', { id })
+      await fetchSchedules()
+    } catch (e) {
+      console.error('[schedules] delete_schedule failed:', e)
+      throw e
+    }
   }
 
   async function toggleSchedule(id: number, is_active: boolean) {
-    await invoke('toggle_schedule', { id, isActive: is_active })
-    await fetchSchedules()
+    try {
+      await invoke('toggle_schedule', { id, isActive: is_active })
+      await fetchSchedules()
+    } catch (e) {
+      console.error('[schedules] toggle_schedule failed:', e)
+      throw e
+    }
   }
 
   async function runNow(id: number) {
-    await invoke('run_schedule_now', { id })
+    try {
+      await invoke('run_schedule_now', { id })
+    } catch (e) {
+      console.error('[schedules] run_schedule_now failed:', e)
+      throw e
+    }
   }
 
   async function stopSchedule(id: number) {
-    await invoke('stop_schedule_run', { id })
-    await fetchSchedules()
+    try {
+      await invoke('stop_schedule_run', { id })
+      await fetchSchedules()
+    } catch (e) {
+      console.error('[schedules] stop_schedule_run failed:', e)
+      throw e
+    }
   }
 
   async function setupScheduleListener() {

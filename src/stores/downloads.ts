@@ -151,19 +151,34 @@ export const useDownloadsStore = defineStore('downloads', () => {
   }
 
   async function cancelDownload(downloadId: number) {
-    await invoke('cancel_download', { downloadId })
+    try {
+      await invoke('cancel_download', { downloadId })
+    } catch (e) {
+      console.error('[downloads] cancel_download failed:', e)
+      throw e
+    }
   }
 
   async function pauseDownload(downloadId: number) {
-    await invoke('pause_download', { downloadId })
-    const item = queue.value.find(d => d.id === downloadId)
-    if (item) item.status = 'paused'
+    try {
+      await invoke('pause_download', { downloadId })
+      const item = queue.value.find(d => d.id === downloadId)
+      if (item) item.status = 'paused'
+    } catch (e) {
+      console.error('[downloads] pause_download failed:', e)
+      throw e
+    }
   }
 
   async function resumeDownload(downloadId: number) {
-    await invoke('resume_download', { downloadId })
-    const item = queue.value.find(d => d.id === downloadId)
-    if (item) item.status = 'downloading'
+    try {
+      await invoke('resume_download', { downloadId })
+      const item = queue.value.find(d => d.id === downloadId)
+      if (item) item.status = 'downloading'
+    } catch (e) {
+      console.error('[downloads] resume_download failed:', e)
+      throw e
+    }
   }
 
   let unlistenFn: (() => void) | null = null
