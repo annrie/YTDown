@@ -47,14 +47,6 @@ async function handleBrowseCookieFile() {
   }
 }
 
-async function recheckSafariAccess() {
-  try {
-    safariAccessGranted.value = await invoke<boolean>('check_safari_access')
-  } catch {
-    safariAccessGranted.value = false
-  }
-}
-
 function openFullDiskAccessSettings() {
   openUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles')
 }
@@ -83,14 +75,10 @@ function openFullDiskAccessSettings() {
         <p class="text-xs text-amber-600 dark:text-amber-400">
           ⚠ Safari の Cookie にアクセスできません。フルディスクアクセスに YTDown を追加してください。
         </p>
-        <div class="mt-1.5 flex gap-2">
+        <div class="mt-1.5">
           <button @click="openFullDiskAccessSettings"
                   class="px-2 py-0.5 text-xs rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors">
             システム設定を開く
-          </button>
-          <button @click="recheckSafariAccess"
-                  class="px-2 py-0.5 text-xs rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors">
-            再チェック
           </button>
         </div>
       </div>
