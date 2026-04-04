@@ -50,7 +50,7 @@ pub async fn scrape_images_from_url(
         .map_err(|e| format!("HTML read error: {e}"))?;
     let base_url = Url::parse(page_url).map_err(|e| format!("Invalid URL: {e}"))?;
     let document = Html::parse_document(&html);
-    let img_selector = Selector::parse("img").unwrap();
+    let img_selector = Selector::parse("img").expect("'img' is a valid CSS selector");
 
     let mut seen_urls = HashSet::new();
     let mut images = Vec::new();

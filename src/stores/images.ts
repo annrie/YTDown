@@ -138,7 +138,7 @@ export const useImagesStore = defineStore('images', () => {
     currentPageUrl.value = ''
   }
 
-  function setupProgressListener() {
+  function setupProgressListener(): Promise<() => void> {
     return listen<ImageDownloadProgress>('image-download-progress', (event) => {
       downloadProgress.value = event.payload
     })

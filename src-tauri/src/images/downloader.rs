@@ -93,7 +93,11 @@ pub async fn download_and_save(
     let full_filename = format!("{filename}.{format_str}");
     let file_path = output_dir.join(&full_filename);
     let file_path = ensure_unique_path(file_path);
-    let final_filename = file_path.file_name().unwrap().to_string_lossy().to_string();
+    let final_filename = file_path
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new(&full_filename))
+        .to_string_lossy()
+        .to_string();
 
     let file_size = final_bytes.len() as u64;
     fs::write(&file_path, &final_bytes)
@@ -129,13 +133,13 @@ fn ensure_unique_path(path: PathBuf) -> PathBuf {
     if !path.exists() {
         return path;
     }
-    let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+    let stem = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
     let ext = path
         .extension()
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
-    let parent = path.parent().unwrap();
+    let Some(parent) = path.parent() else { return path };
     for i in 1..1000 {
         let new_path = parent.join(format!("{stem}_{i}.{ext}"));
         if !new_path.exists() {

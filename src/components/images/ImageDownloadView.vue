@@ -20,7 +20,7 @@ let unlistenProgress: (() => void) | null = null
 
 onMounted(async () => {
   const unlisten = await imagesStore.setupProgressListener()
-  unlistenProgress = unlisten as unknown as () => void
+  unlistenProgress = unlisten
 })
 
 onUnmounted(() => {
