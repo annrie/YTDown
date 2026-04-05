@@ -229,6 +229,16 @@ async function handleBrowseDir() {
       </div>
     </div>
 
+    <!-- yt-dlp path override -->
+    <div>
+      <label class="block text-sm font-medium mb-1">yt-dlp パス</label>
+      <input :value="settingsStore.settings.ytdlp_path"
+             @input="settingsStore.updateSetting('ytdlp_path', ($event.target as HTMLInputElement).value)"
+             class="w-full h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+             placeholder="auto（自動検出）" />
+      <p class="text-xs text-neutral-400 mt-1">「auto」で自動検出、またはフルパスを入力</p>
+    </div>
+
     <!-- Backup / Restore -->
     <div class="p-3 rounded-lg border border-[var(--color-separator)] space-y-3">
       <h4 class="text-sm font-medium">バックアップ / リストア</h4>
@@ -246,16 +256,6 @@ async function handleBrowseDir() {
       <p v-if="backupMsg"
          :class="backupMsg.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-500'"
          class="text-xs">{{ backupMsg.text }}</p>
-    </div>
-
-    <!-- yt-dlp path override -->
-    <div>
-      <label class="block text-sm font-medium mb-1">yt-dlp パス</label>
-      <input :value="settingsStore.settings.ytdlp_path"
-             @input="settingsStore.updateSetting('ytdlp_path', ($event.target as HTMLInputElement).value)"
-             class="w-full h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-             placeholder="auto（自動検出）" />
-      <p class="text-xs text-neutral-400 mt-1">「auto」で自動検出、またはフルパスを入力</p>
     </div>
   </div>
 </template>
