@@ -9,6 +9,7 @@
     "core:event:allow-listen",
     "core:event:allow-emit",
     "opener:default",
+    "allow-system-prefs-url",
     "core:app:default",
     "core:path:default",
     "core:window:default",
