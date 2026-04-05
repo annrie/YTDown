@@ -51,6 +51,11 @@ export interface AutoClassifyRule {
 
 // === yt-dlp Types ===
 
+export interface ChapterInfo {
+  title: string
+  start_time: number
+}
+
 export interface VideoInfo {
   title: string
   channel: string
@@ -60,6 +65,9 @@ export interface VideoInfo {
   thumbnail_url: string | null
   channel_avatar_url: string | null
   duration: number | null
+  upload_date: string | null
+  view_count: number | null
+  chapters: ChapterInfo[]
   subtitle_languages: string[]
   auto_subtitle_languages: string[]
   formats: FormatInfo[]
