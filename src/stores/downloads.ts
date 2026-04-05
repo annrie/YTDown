@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { useSettingsStore } from './settings'
 import type { Download, DownloadProgress, DownloadOptions, VideoInfo } from '../types'
 
 export interface PlaylistItemInfo {
@@ -15,11 +16,22 @@ export interface PlaylistItemInfo {
   duration: number | null
 }
 
+interface PendingItem {
+  url: string
+  options: DownloadOptions
+  meta: PlaylistItemInfo | null
+}
+
 export const useDownloadsStore = defineStore('downloads', () => {
+  const settingsStore = useSettingsStore()
+
   const queue = ref<Download[]>([])
   const progressMap = ref<Map<number, DownloadProgress>>(new Map())
   // Buffer for progress events that arrive before queue entry exists
   const pendingEvents = new Map<number, Array<DownloadProgress & { status?: string; title?: string }>>()
+
+  // Items waiting to be dispatched (not yet sent to Rust / DB)
+  const pendingQueue = ref<PendingItem[]>([])
 
   // Playlist fetch state
   const playlistFetching = ref(false)
@@ -30,6 +42,11 @@ export const useDownloadsStore = defineStore('downloads', () => {
   )
   const completedDownloads = computed(() =>
     queue.value.filter(d => d.status === 'completed')
+  )
+
+  // Count of items actively running (not paused) — used for concurrency limit
+  const runningCount = computed(() =>
+    queue.value.filter(d => d.status === 'downloading').length
   )
 
   async function fetchFormats(url: string): Promise<VideoInfo> {
@@ -57,36 +74,65 @@ export const useDownloadsStore = defineStore('downloads', () => {
     if (options.playlist_mode === 'all') {
       return startPlaylistDownload(url, options)
     }
-    const id = await invoke<number>('start_download', { url, options })
-    addToQueue(id, url, null, null, null, null, null, options.format, options.quality, null)
-    return id
+    return enqueue(url, options, null)
   }
 
   async function startPlaylistDownload(url: string, options: DownloadOptions): Promise<number> {
-    // Step 1: Fetch playlist items (metadata only)
     const items = await fetchPlaylistItems(url)
     if (items.length === 0) return 0
 
     const singleOptions = { ...options, playlist_mode: 'single' as const }
-    let firstId = 0
 
-    // Step 2: Start each item sequentially (check cancel flag each iteration)
+    // Push all playlist items to pendingQueue, then dispatch available slots
     for (const item of items) {
       if (playlistCancelled.value) break
-      try {
-        const id = await invoke<number>('start_download', { url: item.url, options: singleOptions })
-        addToQueue(
-          id, item.url, item.title, item.channel, item.site,
-          item.thumbnail_url, item.channel_id,
-          options.format, options.quality, item.duration,
-        )
-        applyPendingEvents(id)
-        if (!firstId) firstId = id
-      } catch (e) {
-        console.error(`Failed to start download for ${item.title ?? item.url}:`, e)
-      }
+      pendingQueue.value.push({ url: item.url, options: singleOptions, meta: item })
     }
-    return firstId
+
+    dispatchPending()
+    return 0
+  }
+
+  // Add to pendingQueue or dispatch immediately if slot available
+  function enqueue(url: string, options: DownloadOptions, meta: PlaylistItemInfo | null): number {
+    const limit = settingsStore.settings.concurrent_downloads
+    if (runningCount.value < limit) {
+      void dispatchOne({ url, options, meta })
+    } else {
+      pendingQueue.value.push({ url, options, meta })
+    }
+    return 0
+  }
+
+  // Dispatch a single item immediately (invoke Rust, add to queue)
+  async function dispatchOne(item: PendingItem) {
+    const { url, options, meta } = item
+    try {
+      const id = await invoke<number>('start_download', { url, options })
+      addToQueue(
+        id, url,
+        meta?.title ?? null,
+        meta?.channel ?? null,
+        meta?.site ?? null,
+        meta?.thumbnail_url ?? null,
+        meta?.channel_id ?? null,
+        options.format, options.quality,
+        meta?.duration ?? null,
+      )
+      applyPendingEvents(id)
+    } catch (e) {
+      console.error(`[downloads] Failed to start download for ${meta?.title ?? url}:`, e)
+    }
+  }
+
+  // Start pending items up to the concurrent limit
+  function dispatchPending() {
+    const limit = settingsStore.settings.concurrent_downloads
+    const slots = limit - runningCount.value
+    const toDispatch = pendingQueue.value.splice(0, Math.max(0, slots))
+    for (const item of toDispatch) {
+      void dispatchOne(item)
+    }
   }
 
   function addToQueue(
@@ -140,9 +186,11 @@ export const useDownloadsStore = defineStore('downloads', () => {
       item.status = 'completed'
       item.completed_at = new Date().toISOString()
       onCompletedCallback?.()
+      dispatchPending()
     } else if (p.status === 'error') {
       item.status = 'error'
       if (p.error_message) item.error_message = p.error_message
+      dispatchPending()
     } else if (p.status === 'paused') {
       item.status = 'paused'
     } else if (p.status === 'downloading') {
@@ -153,10 +201,17 @@ export const useDownloadsStore = defineStore('downloads', () => {
   async function cancelDownload(downloadId: number) {
     try {
       await invoke('cancel_download', { downloadId })
+      // Free the slot for pending items
+      dispatchPending()
     } catch (e) {
       console.error('[downloads] cancel_download failed:', e)
       throw e
     }
+  }
+
+  // Cancel a queued (not-yet-started) item by index
+  function cancelQueued(index: number) {
+    pendingQueue.value.splice(index, 1)
   }
 
   async function pauseDownload(downloadId: number) {
@@ -212,14 +267,17 @@ export const useDownloadsStore = defineStore('downloads', () => {
   return {
     queue,
     progressMap,
+    pendingQueue,
     activeDownloads,
     completedDownloads,
+    runningCount,
     playlistFetching,
     fetchFormats,
     fetchPlaylistItems,
     cancelPlaylistFetch,
     startDownload,
     cancelDownload,
+    cancelQueued,
     pauseDownload,
     resumeDownload,
     setupProgressListener,
