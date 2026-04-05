@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-import-settings-from-file"
+description = "Allow importing settings from a file"
+
+[permission.commands]
+allow = ["import_settings_from_file"]

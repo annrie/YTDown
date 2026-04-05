@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-export-settings-to-file"
+description = "Allow exporting settings to a file"
+
+[permission.commands]
+allow = ["export_settings_to_file"]
