@@ -189,18 +189,24 @@ pub fn download_ytdlp_binary() -> Result<PathBuf, String> {
     Ok(target_path)
 }
 
-/// Check if a package manager has updates for yt-dlp
-pub fn check_package_manager_update() -> Result<bool, String> {
-    if cfg!(target_os = "macos") {
-        // Homebrew
-        let output = Command::new("brew")
-            .args(["outdated", "yt-dlp"])
-            .output()
-            .map_err(|e| format!("Failed to check brew: {}", e))?;
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        Ok(!stdout.trim().is_empty())
-    } else {
-        // For Windows/Linux package managers, we don't auto-check
-        Ok(false)
-    }
+/// Fetch the latest yt-dlp version tag from GitHub releases API
+pub fn fetch_latest_github_version() -> Result<String, String> {
+    let response = reqwest::blocking::Client::new()
+        .get("https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
+        .header("User-Agent", "YTDown")
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .map_err(|e| format!("Failed to fetch GitHub releases: {}", e))?;
+
+    let body = response
+        .text()
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    let json: serde_json::Value =
+        serde_json::from_str(&body).map_err(|e| format!("Failed to parse JSON: {}", e))?;
+
+    json["tag_name"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "tag_name not found in GitHub response".to_string())
 }

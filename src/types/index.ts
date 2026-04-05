@@ -120,7 +120,8 @@ export interface YtdlpInfo {
   path: string
   version: string
   update_available: boolean
-  managed_by: 'homebrew' | 'bundled' | 'manual'
+  latest_version: string | null
+  managed_by: 'homebrew' | 'bundled' | 'package_manager' | 'manual'
 }
 
 // === UI Types ===

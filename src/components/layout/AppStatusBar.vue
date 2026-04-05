@@ -6,10 +6,12 @@ import { useYtdlp } from '../../composables/useYtdlp'
 
 const downloadsStore = useDownloadsStore()
 const libraryStore = useLibraryStore()
-const { info: ytdlpInfo, loadInfo: loadYtdlpInfo } = useYtdlp()
+const { info: ytdlpInfo, loadInfo: loadYtdlpInfo, checkUpdate: checkYtdlpUpdate } = useYtdlp()
 
 onMounted(() => {
   loadYtdlpInfo()
+  // Background update check after startup — delay to avoid blocking initial render
+  setTimeout(() => { void checkYtdlpUpdate() }, 5000)
 })
 
 const activeCount = computed(() => downloadsStore.activeDownloads.length)

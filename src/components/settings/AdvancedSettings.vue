@@ -1,16 +1,93 @@
 <script setup lang="ts">
 import { useSettingsStore } from '../../stores/settings'
+import { useYtdlp } from '../../composables/useYtdlp'
+import { onMounted } from 'vue'
 
 const settingsStore = useSettingsStore()
 
 const subFormats = ['', 'srt', 'ass', 'vtt', 'lrc']
 const videoFormats = ['', 'mp4', 'mkv', 'webm', 'flv', 'avi']
+
+const { info: ytdlpInfo, loading, checking, updating, error: ytdlpError, loadInfo, checkUpdate, performUpdate } = useYtdlp()
+
+onMounted(() => { void loadInfo() })
+
+const managedByLabel: Record<string, string> = {
+  homebrew: 'Homebrew',
+  bundled: 'アプリ内蔵',
+  package_manager: 'パッケージマネージャ',
+  manual: '手動インストール',
+}
 </script>
 
 <template>
   <div class="space-y-6">
     <h3 class="text-base font-semibold">詳細オプション</h3>
     <p class="text-xs text-neutral-500">yt-dlpの追加オプションを設定します。これらはすべてのダウンロードに適用されます。</p>
+
+    <!-- yt-dlp version management -->
+    <div class="p-3 rounded-lg border border-[var(--color-separator)] space-y-3">
+      <h4 class="text-sm font-medium">yt-dlp バージョン管理</h4>
+
+      <div v-if="loading" class="text-xs text-neutral-400">読み込み中...</div>
+
+      <template v-else-if="ytdlpInfo">
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <span class="text-neutral-500">現在のバージョン</span>
+          <span class="font-mono">{{ ytdlpInfo.version }}</span>
+          <span class="text-neutral-500">管理方法</span>
+          <span>{{ managedByLabel[ytdlpInfo.managed_by] ?? ytdlpInfo.managed_by }}</span>
+          <template v-if="ytdlpInfo.latest_version">
+            <span class="text-neutral-500">最新バージョン</span>
+            <span class="font-mono text-orange-500">{{ ytdlpInfo.latest_version }}</span>
+          </template>
+        </div>
+
+        <!-- Update available banner -->
+        <div v-if="ytdlpInfo.update_available"
+             class="px-3 py-2 rounded-md bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-xs text-orange-700 dark:text-orange-300">
+          <template v-if="ytdlpInfo.managed_by === 'bundled'">
+            新しいバージョン {{ ytdlpInfo.latest_version }} が利用可能です。
+          </template>
+          <template v-else-if="ytdlpInfo.managed_by === 'homebrew'">
+            新しいバージョン {{ ytdlpInfo.latest_version }} が利用可能です。ターミナルで
+            <code class="font-mono bg-orange-100 dark:bg-orange-900/40 px-1 rounded">brew upgrade yt-dlp</code>
+            を実行してください。
+          </template>
+          <template v-else>
+            新しいバージョン {{ ytdlpInfo.latest_version }} が利用可能です。手動で更新してください。
+          </template>
+        </div>
+
+        <!-- Error -->
+        <p v-if="ytdlpError" class="text-xs text-red-500">{{ ytdlpError }}</p>
+
+        <div class="flex gap-2">
+          <button @click="checkUpdate"
+                  :disabled="checking"
+                  class="px-3 py-1.5 text-xs rounded-md bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 transition-colors">
+            {{ checking ? '確認中...' : '更新を確認' }}
+          </button>
+          <button v-if="ytdlpInfo.update_available && ytdlpInfo.managed_by === 'bundled'"
+                  @click="performUpdate"
+                  :disabled="updating"
+                  class="px-3 py-1.5 text-xs rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50 transition-colors">
+            {{ updating ? '更新中...' : '今すぐ更新' }}
+          </button>
+        </div>
+
+        <p v-if="!ytdlpInfo.update_available && ytdlpInfo.latest_version === null && !checking"
+           class="text-xs text-neutral-400">
+          「更新を確認」をクリックして最新版をチェックします
+        </p>
+        <p v-if="!ytdlpInfo.update_available && ytdlpInfo.latest_version !== null"
+           class="text-xs text-green-600 dark:text-green-400">
+          ✓ 最新バージョンです
+        </p>
+      </template>
+
+      <div v-else class="text-xs text-red-400">yt-dlp が見つかりません</div>
+    </div>
 
     <!-- Boolean options -->
     <div class="space-y-3">
