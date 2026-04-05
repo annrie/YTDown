@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-system-prefs-url"
+description = "Allow opening macOS System Preferences / System Settings URLs"
+
+[[permission.scope.allow]]
+url = "x-apple.systempreferences:*"
