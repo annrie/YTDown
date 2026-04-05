@@ -26,6 +26,7 @@ export interface Download {
 }
 
 export type DownloadStatus =
+  | 'queued'
   | 'pending'
   | 'downloading'
   | 'paused'

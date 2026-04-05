@@ -15,6 +15,7 @@ onMounted(() => {
 })
 
 const activeCount = computed(() => downloadsStore.activeDownloads.length)
+const queuedCount = computed(() => downloadsStore.pendingQueue.length)
 
 const totalProgress = computed(() => {
   if (activeCount.value === 0) return 0
@@ -30,7 +31,11 @@ const libraryCount = computed(() => libraryStore.filteredItems.length)
 
 const statusText = computed(() => {
   if (activeCount.value > 0) {
-    return `${activeCount.value} 件ダウンロード中 (${totalProgress.value.toFixed(0)}%)`
+    const queued = queuedCount.value > 0 ? ` (+${queuedCount.value} 件待機)` : ''
+    return `${activeCount.value} 件ダウンロード中 (${totalProgress.value.toFixed(0)}%)${queued}`
+  }
+  if (queuedCount.value > 0) {
+    return `${queuedCount.value} 件待機中`
   }
   return '準備完了'
 })
