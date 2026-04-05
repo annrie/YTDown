@@ -201,6 +201,25 @@ const availableFormats = computed(() =>
   mediaType.value === 'video' ? videoFormats : audioFormats
 )
 
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function formatUploadDate(yyyymmdd: string): string {
+  if (yyyymmdd.length !== 8) return yyyymmdd
+  return `${yyyymmdd.slice(0, 4)}年${parseInt(yyyymmdd.slice(4, 6))}月${parseInt(yyyymmdd.slice(6, 8))}日`
+}
+
+function formatViewCount(n: number): string {
+  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}億回視聴`
+  if (n >= 10_000) return `${(n / 10_000).toFixed(1)}万回視聴`
+  return `${n.toLocaleString()}回視聴`
+}
+
 const subtitleInfo = computed(() => {
   const info = videoInfo.value
   if (!info) {
@@ -413,13 +432,44 @@ function handleStart() {
           <!-- Thumbnail + Title -->
           <div class="flex gap-4">
             <img v-if="videoInfo.thumbnail_url" :src="videoInfo.thumbnail_url"
-                 class="w-40 h-24 object-cover rounded-lg" />
-            <div>
+                 class="w-40 h-24 object-cover rounded-lg flex-shrink-0" />
+            <div class="min-w-0">
               <p class="font-medium line-clamp-2">{{ videoInfo.title }}</p>
-              <p class="text-sm text-neutral-500">{{ videoInfo.channel }}</p>
+              <p class="text-sm text-neutral-500 mt-0.5">{{ videoInfo.channel }}</p>
               <p class="text-xs text-neutral-400">{{ videoInfo.site }}</p>
+              <!-- Metadata row -->
+              <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-xs text-neutral-400">
+                <span v-if="videoInfo.duration">
+                  ⏱ {{ formatDuration(videoInfo.duration) }}
+                </span>
+                <span v-if="videoInfo.upload_date">
+                  📅 {{ formatUploadDate(videoInfo.upload_date) }}
+                </span>
+                <span v-if="videoInfo.view_count !== null">
+                  👁 {{ formatViewCount(videoInfo.view_count) }}
+                </span>
+                <span v-if="videoInfo.chapters.length > 0">
+                  📑 {{ videoInfo.chapters.length }} チャプター
+                </span>
+              </div>
             </div>
           </div>
+
+          <!-- Chapters list (collapsible) -->
+          <details v-if="videoInfo.chapters.length > 0"
+                   class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40">
+            <summary class="px-3 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300 cursor-pointer select-none list-none flex items-center justify-between">
+              <span>チャプター ({{ videoInfo.chapters.length }})</span>
+              <span class="text-neutral-400">▼</span>
+            </summary>
+            <ul class="px-3 pb-2 space-y-0.5 max-h-32 overflow-y-auto">
+              <li v-for="(ch, i) in videoInfo.chapters" :key="i"
+                  class="flex items-baseline gap-2 text-xs text-neutral-500">
+                <span class="font-mono text-neutral-400 flex-shrink-0">{{ formatDuration(Math.floor(ch.start_time)) }}</span>
+                <span class="truncate">{{ ch.title }}</span>
+              </li>
+            </ul>
+          </details>
 
           <div class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40 px-3 py-2">
             <p class="text-xs font-semibold text-neutral-600 dark:text-neutral-300">字幕の利用可否</p>

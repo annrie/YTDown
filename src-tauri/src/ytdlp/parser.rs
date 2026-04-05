@@ -2,6 +2,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChapterInfo {
+    pub title: String,
+    pub start_time: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VideoInfo {
     pub title: String,
     pub channel: String,
@@ -11,6 +17,9 @@ pub struct VideoInfo {
     pub thumbnail_url: Option<String>,
     pub channel_avatar_url: Option<String>,
     pub duration: Option<i64>,
+    pub upload_date: Option<String>,
+    pub view_count: Option<i64>,
+    pub chapters: Vec<ChapterInfo>,
     pub subtitle_languages: Vec<String>,
     pub auto_subtitle_languages: Vec<String>,
     pub formats: Vec<FormatInfo>,
@@ -139,6 +148,21 @@ pub fn parse_video_info(json_str: &str) -> Result<VideoInfo, String> {
         })
         .unwrap_or_default();
 
+    let chapters = v["chapters"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .map(|c| ChapterInfo {
+                    title: c["title"].as_str().unwrap_or("").to_string(),
+                    start_time: c["start_time"].as_f64().unwrap_or(0.0),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // upload_date is "YYYYMMDD" from yt-dlp — keep as-is for frontend formatting
+    let upload_date = v["upload_date"].as_str().map(|s| s.to_string());
+
     Ok(VideoInfo {
         title: v["title"].as_str().unwrap_or("Unknown").to_string(),
         channel: v["channel"]
@@ -157,6 +181,9 @@ pub fn parse_video_info(json_str: &str) -> Result<VideoInfo, String> {
         thumbnail_url: parse_thumbnail_url(&v),
         channel_avatar_url: parse_channel_avatar_url(&v),
         duration: v["duration"].as_i64(),
+        upload_date,
+        view_count: v["view_count"].as_i64(),
+        chapters,
         subtitle_languages: parse_subtitle_languages(&v, "subtitles"),
         auto_subtitle_languages: parse_subtitle_languages(&v, "automatic_captions"),
         formats,
