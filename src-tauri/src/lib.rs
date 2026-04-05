@@ -116,6 +116,8 @@ pub fn run() {
             commands::settings::get_all_settings,
             commands::settings::get_setting,
             commands::settings::set_setting,
+            commands::settings::export_settings_to_file,
+            commands::settings::import_settings_from_file,
             // Browser
             commands::browser::get_browser_url,
             // URL History

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useSettingsStore } from '../../stores/settings'
 import { useYtdlp } from '../../composables/useYtdlp'
-import { onMounted } from 'vue'
-import { open } from '@tauri-apps/plugin-dialog'
+import { onMounted, ref } from 'vue'
+import { open, save } from '@tauri-apps/plugin-dialog'
+import { invoke } from '@tauri-apps/api/core'
 
 const settingsStore = useSettingsStore()
 const { info: ytdlpInfo, loading: ytdlpLoading, loadInfo: loadYtdlpInfo } = useYtdlp()
@@ -10,6 +11,54 @@ const { info: ytdlpInfo, loading: ytdlpLoading, loadInfo: loadYtdlpInfo } = useY
 onMounted(() => {
   loadYtdlpInfo()
 })
+
+// Backup / Restore
+const backupBusy = ref(false)
+const backupMsg = ref<{ type: 'success' | 'error'; text: string } | null>(null)
+
+async function handleExport() {
+  const path = await save({
+    title: '設定をエクスポート',
+    defaultPath: 'ytdown-backup.json',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  if (!path) return
+  backupBusy.value = true
+  backupMsg.value = null
+  try {
+    await invoke('export_settings_to_file', { path })
+    backupMsg.value = { type: 'success', text: 'エクスポートしました' }
+  } catch (e) {
+    backupMsg.value = { type: 'error', text: String(e) }
+  } finally {
+    backupBusy.value = false
+  }
+}
+
+async function handleImport() {
+  const path = await open({
+    title: '設定をインポート',
+    multiple: false,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  if (!path || typeof path !== 'string') return
+  backupBusy.value = true
+  backupMsg.value = null
+  try {
+    const result = await invoke<{ settings_count: number; presets_count: number; rules_count: number; schedules_count: number }>(
+      'import_settings_from_file', { path }
+    )
+    await settingsStore.loadSettings()
+    backupMsg.value = {
+      type: 'success',
+      text: `インポート完了: 設定 ${result.settings_count} 件、プリセット ${result.presets_count} 件、ルール ${result.rules_count} 件、スケジュール ${result.schedules_count} 件`,
+    }
+  } catch (e) {
+    backupMsg.value = { type: 'error', text: String(e) }
+  } finally {
+    backupBusy.value = false
+  }
+}
 
 const filenamePresets = [
   { label: 'タイトル', value: '%(title)s.%(ext)s' },
@@ -178,6 +227,25 @@ async function handleBrowseDir() {
         </template>
         <div v-else class="text-red-500">yt-dlp が見つかりません</div>
       </div>
+    </div>
+
+    <!-- Backup / Restore -->
+    <div class="p-3 rounded-lg border border-[var(--color-separator)] space-y-3">
+      <h4 class="text-sm font-medium">バックアップ / リストア</h4>
+      <p class="text-xs text-neutral-500">設定・プリセット・自動分類ルール・スケジュールをJSONファイルに保存・復元します。インポート時は既存データが上書きされます。</p>
+      <div class="flex gap-2">
+        <button @click="handleExport" :disabled="backupBusy"
+                class="px-3 py-1.5 text-xs rounded-md bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 transition-colors">
+          エクスポート
+        </button>
+        <button @click="handleImport" :disabled="backupBusy"
+                class="px-3 py-1.5 text-xs rounded-md bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 transition-colors">
+          インポート
+        </button>
+      </div>
+      <p v-if="backupMsg"
+         :class="backupMsg.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-500'"
+         class="text-xs">{{ backupMsg.text }}</p>
     </div>
 
     <!-- yt-dlp path override -->

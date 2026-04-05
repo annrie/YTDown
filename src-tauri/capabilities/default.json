@@ -37,6 +37,8 @@
     "allow-search-library",
     "allow-set-cookie-file",
     "allow-set-setting",
+    "allow-export-settings-to-file",
+    "allow-import-settings-from-file",
     "allow-set-ytdlp-path",
     "allow-start-download",
     "allow-fetch-playlist-items",
