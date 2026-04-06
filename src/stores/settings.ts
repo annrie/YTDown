@@ -20,6 +20,7 @@ const DEFAULTS: AppSettings = {
   cookie_file: '',
   ytdlp_path: 'auto',
   theme: 'system',
+  language: 'ja',
   auto_classify: false,
   background_image_light: '',
   background_image_dark: '',

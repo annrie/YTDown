@@ -3,7 +3,9 @@ import { computed, onMounted } from 'vue'
 import { useDownloadsStore } from '../../stores/downloads'
 import { useLibraryStore } from '../../stores/library'
 import { useYtdlp } from '../../composables/useYtdlp'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const downloadsStore = useDownloadsStore()
 const libraryStore = useLibraryStore()
 const { info: ytdlpInfo, loadInfo: loadYtdlpInfo, checkUpdate: checkYtdlpUpdate } = useYtdlp()
@@ -31,13 +33,13 @@ const libraryCount = computed(() => libraryStore.filteredItems.length)
 
 const statusText = computed(() => {
   if (activeCount.value > 0) {
-    const queued = queuedCount.value > 0 ? ` (+${queuedCount.value} 件待機)` : ''
-    return `${activeCount.value} 件ダウンロード中 (${totalProgress.value.toFixed(0)}%)${queued}`
+    const queued = queuedCount.value > 0 ? ` (+${queuedCount.value})` : ''
+    return `${t('statusbar.active_count', { count: activeCount.value })} (${totalProgress.value.toFixed(0)}%)${queued}`
   }
   if (queuedCount.value > 0) {
-    return `${queuedCount.value} 件待機中`
+    return t('statusbar.active_count', { count: queuedCount.value })
   }
-  return '準備完了'
+  return t('statusbar.idle')
 })
 </script>
 
@@ -55,9 +57,9 @@ const statusText = computed(() => {
       <span v-if="libraryCount > 0">{{ libraryCount }} アイテム</span>
       <span v-if="ytdlpInfo">
         yt-dlp {{ ytdlpInfo.version }}
-        <span v-if="ytdlpInfo.update_available" class="text-orange-500 ml-1" title="アップデート利用可能">●</span>
+        <span v-if="ytdlpInfo.update_available" class="text-orange-500 ml-1" :title="t('general.ytdlp_update_available')">●</span>
       </span>
-      <span v-else class="text-red-400">yt-dlp 未検出</span>
+      <span v-else class="text-red-400">{{ t('general.ytdlp_not_found') }}</span>
     </div>
   </footer>
 </template>

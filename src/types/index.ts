@@ -165,6 +165,7 @@ export interface AppSettings {
   cookie_file: string
   ytdlp_path: string
   theme: 'system' | 'light' | 'dark'
+  language: string
   auto_classify: boolean
   // Appearance
   background_image_light: string

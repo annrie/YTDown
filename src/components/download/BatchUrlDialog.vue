@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   open: boolean
@@ -11,6 +12,7 @@ const emit = defineEmits<{
   'start-batch': [urls: string[]]
 }>()
 
+const { t } = useI18n()
 const MAX_URLS = 10
 const urls = ref<string[]>(Array(MAX_URLS).fill(''))
 const fetchingBrowserUrl = ref(false)
@@ -90,8 +92,8 @@ function handleStart() {
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b border-[var(--color-separator)]">
         <div>
-          <h2 class="text-lg font-semibold">一括ダウンロード</h2>
-          <p class="text-xs text-neutral-500 mt-0.5">最大{{ MAX_URLS }}件のURLを登録できます</p>
+          <h2 class="text-lg font-semibold">{{ t('batch_url_dialog.title') }}</h2>
+          <p class="text-xs text-neutral-500 mt-0.5">{{ t('batch_url_dialog.count', { count: MAX_URLS }) }}</p>
         </div>
         <button @click="emit('close')" class="text-neutral-400 hover:text-neutral-600 text-xl">&times;</button>
       </div>
@@ -120,7 +122,7 @@ function handleStart() {
       <div class="flex items-center justify-between p-4 border-t border-[var(--color-separator)]">
         <div class="flex items-center gap-2">
           <button @click="clearAll" class="px-3 py-1.5 rounded-md text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700">
-            すべてクリア
+            {{ t('download_queue.clear_completed') }}
           </button>
           <button @click="addBrowserUrl" :disabled="fetchingBrowserUrl"
                   class="px-3 py-1.5 rounded-md text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-[var(--color-accent)] disabled:opacity-50 flex items-center gap-1 transition-colors">
@@ -128,17 +130,17 @@ function handleStart() {
               <path v-if="!fetchingBrowserUrl" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-18v18m-9-9h18M3.6 9h16.8M3.6 15h16.8" />
               <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8" />
             </svg>
-            ブラウザから追加
+            {{ t('toolbar.fetch_browser_url') }}
           </button>
         </div>
         <div class="flex items-center gap-3">
-          <span class="text-xs text-neutral-500">{{ validUrls.length }} / {{ MAX_URLS }} 件</span>
+          <span class="text-xs text-neutral-500">{{ validUrls.length }} / {{ MAX_URLS }}</span>
           <button @click="emit('close')" class="px-4 py-1.5 rounded-md text-sm bg-neutral-100 dark:bg-neutral-700">
-            キャンセル
+            {{ t('common.cancel') }}
           </button>
           <button @click="handleStart" :disabled="validUrls.length === 0"
                   class="px-5 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white font-medium disabled:opacity-50 transition-opacity">
-            {{ validUrls.length }}件 ダウンロード
+            {{ t('batch_url_dialog.start') }}
           </button>
         </div>
       </div>
