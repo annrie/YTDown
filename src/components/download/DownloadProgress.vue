@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Download, DownloadProgress } from '../../types'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   download: Download
@@ -13,16 +14,18 @@ const emit = defineEmits<{
   cancel: [id: number]
 }>()
 
+const { t } = useI18n()
+
 const percent = computed(() =>
   props.progress?.percent ?? props.download.progress * 100
 )
 
 const statusLabel = computed(() => {
   switch (props.download.status) {
-    case 'downloading': return props.progress?.speed_str ?? 'ダウンロード中...'
-    case 'paused': return '一時停止中'
-    case 'pending': return 'キュー待ち'
-    case 'completed': return '完了'
+    case 'downloading': return props.progress?.speed_str ?? t('download_progress.speed')
+    case 'paused': return t('download_progress.paused')
+    case 'pending': return t('download_progress.pending')
+    case 'completed': return t('download_progress.completed')
     case 'failed':
     case 'error': return errorLabel.value
     default: return props.download.status
@@ -36,7 +39,7 @@ const isError = computed(() => ['failed', 'error'].includes(props.download.statu
 
 const errorLabel = computed(() => {
   if (!isError.value) return ''
-  return props.download.error_message ?? 'エラー'
+  return props.download.error_message ?? t('common.error')
 })
 
 const isPlaylist = computed(() =>
@@ -45,7 +48,7 @@ const isPlaylist = computed(() =>
 
 const playlistLabel = computed(() => {
   if (!isPlaylist.value || !props.progress) return ''
-  return `${props.progress.playlist_index} / ${props.progress.playlist_count} 件`
+  return t('download_progress.playlist_item', { index: props.progress.playlist_index, count: props.progress.playlist_count })
 })
 
 const barColor = computed(() => {
@@ -77,15 +80,15 @@ function formatBytes(bytes: number | null | undefined): string {
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
         <button v-if="isPausable" @click="emit('pause', download.id)"
-                class="w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 text-lg transition-colors" title="一時停止">
+                class="w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 text-lg transition-colors" :title="t('download_progress.pause')">
           ⏸
         </button>
         <button v-if="isResumable" @click="emit('resume', download.id)"
-                class="w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-lg transition-colors" title="再開">
+                class="w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-lg transition-colors" :title="t('download_progress.resume')">
           ▶
         </button>
         <button @click="emit('cancel', download.id)"
-                class="w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 text-lg font-bold transition-colors" title="キャンセル">
+                class="w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 text-lg font-bold transition-colors" :title="t('download_progress.cancel')">
           ✕
         </button>
       </div>
@@ -115,7 +118,7 @@ function formatBytes(bytes: number | null | undefined): string {
       <span>{{ statusLabel }}</span>
       <div class="flex gap-3">
         <span v-if="progress?.downloaded_bytes">{{ formatBytes(progress.downloaded_bytes) }} / {{ formatBytes(progress.total_bytes) }}</span>
-        <span v-if="progress?.eta_str && download.status === 'downloading'">残り {{ progress.eta_str }}</span>
+        <span v-if="progress?.eta_str && download.status === 'downloading'">{{ t('download_progress.eta') }} {{ progress.eta_str }}</span>
       </div>
     </div>
   </div>

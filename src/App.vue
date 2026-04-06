@@ -7,6 +7,8 @@ import { useDownloadsStore } from './stores/downloads'
 import { useLibraryStore } from './stores/library'
 import { useSchedulesStore } from './stores/schedules'
 import { useSettingsStore } from './stores/settings'
+import { useI18n } from 'vue-i18n'
+import { setLocale, type SupportedLocale } from './i18n'
 
 // Layout components
 import AppToolbar from './components/layout/AppToolbar.vue'
@@ -39,6 +41,7 @@ import AdvancedSettings from './components/settings/AdvancedSettings.vue'
 import RuleSettings from './components/settings/RuleSettings.vue'
 import PresetSettings from './components/settings/PresetSettings.vue'
 
+const { t } = useI18n()
 const currentView = ref<ViewMode>('list')
 const currentSection = ref<SidebarSection>('library-all')
 const searchQuery = ref('')
@@ -73,15 +76,15 @@ const displayItems = computed(() => {
 // Section label for display
 const sectionLabel = computed(() => {
   const labels: Record<SidebarSection, string> = {
-    'downloads-active': '進行中のダウンロード',
-    'downloads-completed': '完了したダウンロード',
-    'library-all': 'すべてのメディア',
-    'library-video': '映像',
-    'library-audio': '音声',
-    'images-download': '画像ダウンロード',
-    'images-gallery': '画像ギャラリー',
-    'schedules': 'スケジュール（動画のみ）',
-    'settings': '設定',
+    'downloads-active': t('sidebar.active'),
+    'downloads-completed': t('sidebar.completed'),
+    'library-all': t('sidebar.library'),
+    'library-video': t('sidebar.library_video'),
+    'library-audio': t('sidebar.library_audio'),
+    'images-download': t('images.download_title'),
+    'images-gallery': t('images.gallery_title'),
+    'schedules': t('sidebar.section_schedule'),
+    'settings': t('settings.title'),
   }
   return labels[currentSection.value] ?? currentSection.value
 })
@@ -486,6 +489,10 @@ watch(currentSection, (section) => {
 
 onMounted(async () => {
   await settingsStore.loadSettings()
+  // Sync language from settings
+  if (settingsStore.settings.language) {
+    setLocale(settingsStore.settings.language as SupportedLocale)
+  }
   applyTheme()
   await schedulesStore.setupScheduleListener()
   await downloadsStore.setupProgressListener(() => {
@@ -639,10 +646,7 @@ onUnmounted(() => {
           />
           <div class="relative z-10 pointer-events-none px-6 py-4 rounded-2xl border border-[var(--color-accent)]/30 bg-white/90 dark:bg-neutral-900/90 shadow-2xl">
             <p class="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-              URL をドロップして追加
-            </p>
-            <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              1件はダウンロード、複数件は一括ダウンロードで開きます
+              {{ t('toolbar.url_placeholder') }}
             </p>
           </div>
         </div>

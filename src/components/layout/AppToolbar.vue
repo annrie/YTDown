@@ -4,7 +4,9 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import type { ViewMode, SidebarSection } from '../../types'
 import UrlHistoryDropdown from '../common/UrlHistoryDropdown.vue'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const props = defineProps<{
   currentView: ViewMode
   searchQuery: string
@@ -94,7 +96,7 @@ function handleToolbarMousedown(e: MouseEvent) {
         type="text"
         :value="searchQuery"
         @input="handleSearchInput"
-        placeholder="検索..."
+        :placeholder="t('toolbar.search_placeholder')"
         class="flex-1 h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
         autofocus
       />
@@ -104,7 +106,7 @@ function handleToolbarMousedown(e: MouseEvent) {
         <input
           v-model="urlInput"
           type="url"
-          placeholder="URLを入力..."
+          :placeholder="t('toolbar.url_placeholder')"
           class="flex-1 h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="isImageSection"
           @keydown="handleUrlKeydown"
@@ -120,7 +122,7 @@ function handleToolbarMousedown(e: MouseEvent) {
           :disabled="fetchingBrowserUrl || isImageSection"
           class="w-10 h-10 flex items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
           :class="browserUrlError ? 'text-red-500' : 'text-neutral-500 hover:text-[var(--color-accent)]'"
-          title="ブラウザから取得"
+          :title="t('toolbar.fetch_browser_url')"
         >
           <svg class="w-5 h-5" :class="{ 'animate-spin': fetchingBrowserUrl }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path v-if="!fetchingBrowserUrl" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-18v18m-9-9h18M3.6 9h16.8M3.6 15h16.8" />
@@ -134,7 +136,7 @@ function handleToolbarMousedown(e: MouseEvent) {
     <button class="w-10 h-10 flex items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
             :class="{ 'text-[var(--color-accent)]': showSearch }"
             @click="toggleSearch"
-            title="検索">
+            :title="t('toolbar.search_placeholder')">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
@@ -145,7 +147,7 @@ function handleToolbarMousedown(e: MouseEvent) {
             class="px-4 h-8 rounded-md bg-[var(--color-accent)] text-white text-sm font-medium flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="isImageSection"
             @click="handleSubmitUrl">
-      ダウンロード
+      {{ t('toolbar.download') }}
     </button>
 
     <!-- Batch URL button -->
@@ -153,7 +155,7 @@ function handleToolbarMousedown(e: MouseEvent) {
             class="px-3 h-8 rounded-md text-sm font-medium flex-shrink-0 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="isImageSection"
             @click="emit('open-batch')">
-      一括
+      {{ t('toolbar.batch') }}
     </button>
 
     <!-- View mode toggle -->
@@ -165,7 +167,7 @@ function handleToolbarMousedown(e: MouseEvent) {
         :class="currentView === mode ? 'bg-white dark:bg-neutral-700 shadow-sm' : 'text-neutral-500'"
         @click="emit('update:currentView', mode)"
       >
-        {{ mode === 'list' ? 'リスト' : mode === 'grid' ? 'グリッド' : 'カラム' }}
+        {{ mode === 'list' ? t('toolbar.view_list') : mode === 'grid' ? t('toolbar.view_grid') : t('toolbar.view_column') }}
       </button>
     </div>
   </header>

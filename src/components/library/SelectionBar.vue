@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useLibraryStore } from '../../stores/library'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const libraryStore = useLibraryStore()
 const showDeleteConfirm = ref(false)
 
@@ -16,36 +18,35 @@ function handleDelete(toTrash: boolean) {
     <div v-if="libraryStore.hasSelection"
          class="flex items-center gap-3 px-4 py-2 bg-[var(--color-accent)]/10 border-b border-[var(--color-separator)]">
       <span class="text-sm font-medium">
-        {{ libraryStore.selectionCount }}件選択中
+        {{ t('selection_bar.selected', { count: libraryStore.selectionCount }) }}
       </span>
       <button @click="libraryStore.toggleSelectAll"
               class="text-xs px-2 py-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700">
-        {{ libraryStore.isAllSelected ? '全選択解除' : '全選択' }}
+        {{ libraryStore.isAllSelected ? t('selection_bar.cancel') : t('library.filter_all') }}
       </button>
       <button @click="libraryStore.clearSelection"
               class="text-xs px-2 py-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700">
-        選択解除
+        {{ t('selection_bar.cancel') }}
       </button>
       <div class="flex-1" />
       <template v-if="!showDeleteConfirm">
         <button @click="showDeleteConfirm = true"
                 class="text-xs px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors">
-          削除
+          {{ t('common.delete') }}
         </button>
       </template>
       <template v-else>
-        <span class="text-xs text-neutral-500">削除方法:</span>
         <button @click="handleDelete(true)"
                 class="text-xs px-3 py-1 rounded bg-orange-500 text-white hover:bg-orange-600 transition-colors">
-          ゴミ箱に移動
+          Trash
         </button>
         <button @click="handleDelete(false)"
                 class="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors">
-          完全に削除
+          {{ t('common.delete') }}
         </button>
         <button @click="showDeleteConfirm = false"
                 class="text-xs px-2 py-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700">
-          キャンセル
+          {{ t('common.cancel') }}
         </button>
       </template>
     </div>
