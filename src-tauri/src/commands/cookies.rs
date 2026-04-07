@@ -17,6 +17,23 @@ pub async fn set_cookie_file(path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Open macOS System Settings to the Full Disk Access privacy pane.
+#[tauri::command]
+pub async fn open_system_settings() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Ok(())
+    }
+}
+
 /// Check if the app can access Safari's cookie database.
 /// Tries multiple known paths (sandboxed and legacy).
 /// Returns true if accessible, false otherwise.

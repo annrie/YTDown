@@ -47,6 +47,7 @@
     "allow-update-ytdlp",
     "allow-get-browser-url",
     "allow-check-safari-access",
+    "allow-open-system-settings",
     "allow-scrape-images",
     "allow-download-images",
     "allow-list-image-sessions",
