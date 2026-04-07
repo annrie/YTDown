@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useSchedulesStore } from '../../stores/schedules'
+import { useI18n } from 'vue-i18n'
 import type { Schedule } from '../../types'
 import ScheduleCard from './ScheduleCard.vue'
 import ScheduleDialog from './ScheduleDialog.vue'
 
+const { t } = useI18n()
 const store = useSchedulesStore()
 const showDialog = ref(false)
 const editTarget = ref<Schedule | null>(null)
@@ -20,7 +22,7 @@ onMounted(async () => {
   try {
     await store.fetchSchedules()
   } catch (e) {
-    errorMsg.value = `リスト取得失敗: ${e}`
+    errorMsg.value = t('schedules.error_list', { error: e })
   }
   store.markStartupChecksSeen()
 })
@@ -73,12 +75,12 @@ async function onSave(payload: {
       await store.createSchedule(payload)
     }
   } catch (e) {
-    errorMsg.value = `保存失敗: ${e}`
+    errorMsg.value = t('schedules.error_save', { error: e })
   }
 }
 
 async function onDelete(id: number) {
-  if (confirm('このスケジュールを削除しますか？')) {
+  if (confirm(t('schedules.delete_confirm'))) {
     await store.deleteSchedule(id)
   }
 }
@@ -89,7 +91,7 @@ async function onRunNow(id: number) {
   try {
     await store.runNow(id)
   } catch (e) {
-    errorMsg.value = `実行失敗: ${e}`
+    errorMsg.value = t('schedules.error_run', { error: e })
     if (isAlreadyRunningMessage(e)) {
       transientRunErrorScheduleId.value = id
     }
@@ -100,7 +102,7 @@ async function onStop(id: number) {
   try {
     await store.stopSchedule(id)
   } catch (e) {
-    errorMsg.value = `停止失敗: ${e}`
+    errorMsg.value = t('schedules.error_stop', { error: e })
   }
 }
 </script>
@@ -108,20 +110,20 @@ async function onStop(id: number) {
 <template>
   <div class="schedule-view">
     <div class="view-header">
-      <h2 class="view-title">スケジュール（動画のみ）</h2>
+      <h2 class="view-title">{{ t('sidebar.section_schedule') }}</h2>
       <button class="btn-add" @click="openCreate">
         <svg viewBox="0 0 20 20" fill="currentColor" class="add-icon">
           <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
         </svg>
-        新規スケジュール
+        {{ t('schedules.add') }}
       </button>
     </div>
 
     <div v-if="errorMsg" class="error-banner">{{ errorMsg }}</div>
 
     <div v-if="store.schedules.length === 0" class="empty-state">
-      <p>スケジュールはありません</p>
-      <button class="btn-add-empty" @click="openCreate">最初のスケジュールを追加</button>
+      <p>{{ t('schedules.empty') }}</p>
+      <button class="btn-add-empty" @click="openCreate">{{ t('schedules.add_first') }}</button>
     </div>
 
     <div v-else class="cards-grid">

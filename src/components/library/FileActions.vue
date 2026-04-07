@@ -5,7 +5,10 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { message } from '@tauri-apps/plugin-dialog'
 import { useFileManager } from '../../composables/useFileManager'
 import { useLibraryStore } from '../../stores/library'
+import { useI18n } from 'vue-i18n'
 import type { Download } from '../../types'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   item: Download
@@ -22,7 +25,6 @@ const showDeleteConfirm = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
 
 function handleClickOutside(e: MouseEvent) {
-  // メニュー内のクリックなら閉じない
   if (menuRef.value && menuRef.value.contains(e.target as Node)) {
     return
   }
@@ -30,7 +32,6 @@ function handleClickOutside(e: MouseEvent) {
 }
 
 onMounted(() => {
-  // nextTickで遅延させて、右クリックイベント自体で即閉じるのを防ぐ
   nextTick(() => {
     document.addEventListener('click', handleClickOutside, true)
     document.addEventListener('contextmenu', handleClickOutside, true)
@@ -57,7 +58,7 @@ async function handleDelete(toTrash: boolean) {
 
 async function handleMove() {
   if (!props.item.file_path) {
-    await message('ファイルパスが記録されていないため移動できません。', { title: 'エラー', kind: 'error' })
+    await message(t('file_actions.no_path_error'), { title: t('common.error'), kind: 'error' })
     emit('close')
     return
   }
@@ -65,7 +66,7 @@ async function handleMove() {
   const selected = await open({
     directory: true,
     multiple: false,
-    title: '移動先フォルダを選択',
+    title: t('file_actions.move_title'),
   })
 
   if (selected) {
@@ -76,7 +77,7 @@ async function handleMove() {
       await moveFile(sourcePath, destPath, props.item.id)
       await libraryStore.loadItems()
     } catch (e) {
-      await message(`ファイルの移動に失敗しました: ${e}`, { title: 'エラー', kind: 'error' })
+      await message(t('file_actions.move_error', { error: e }), { title: t('common.error'), kind: 'error' })
     }
   }
   emit('close')
@@ -106,36 +107,36 @@ function handleAddToPlaylist() {
        @contextmenu.stop.prevent>
     <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
             @click="handleReveal">
-      Finderで表示
+      {{ t('file_actions.reveal') }}
     </button>
     <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
             @click="handleMove">
-      移動...
+      {{ t('file_actions.move') }}
     </button>
     <div class="border-t border-[var(--color-separator)] my-1" />
     <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
             @click="handleFavorite">
-      {{ item.is_favorite ? 'お気に入り解除' : 'お気に入りに追加' }}
+      {{ item.is_favorite ? t('file_actions.unfavorite') : t('file_actions.favorite') }}
     </button>
     <button class="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
             @click="handleAddToPlaylist">
-      プレイリストに追加...
+      {{ t('file_actions.add_to_playlist') }}
     </button>
     <div class="border-t border-[var(--color-separator)] my-1" />
     <template v-if="!showDeleteConfirm">
       <button class="w-full text-left px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"
               @click="showDeleteConfirm = true">
-        削除
+        {{ t('file_actions.delete') }}
       </button>
     </template>
     <template v-else>
       <button class="w-full text-left px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"
               @click="handleDelete(true)">
-        ゴミ箱に移動
+        {{ t('file_actions.trash') }}
       </button>
       <button class="w-full text-left px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 font-medium"
               @click="handleDelete(false)">
-        完全に削除
+        {{ t('file_actions.delete_permanently') }}
       </button>
     </template>
   </div>

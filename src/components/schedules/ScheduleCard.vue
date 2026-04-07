@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { Schedule } from '../../types'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   schedule: Schedule
@@ -16,8 +19,8 @@ const emit = defineEmits<{
 }>()
 
 function formatDate(iso: string | null): string {
-  if (!iso) return 'なし'
-  return new Date(iso).toLocaleString('ja-JP')
+  if (!iso) return t('schedules.never')
+  return new Date(iso).toLocaleString()
 }
 
 const parsedOptions = computed(() => {
@@ -56,18 +59,18 @@ const isBusy = computed(() => !!props.isChecking || !!props.isStartupChecking ||
         </svg>
         {{ schedule.cron_expr }}
       </span>
-      <span class="meta-item">次回: {{ formatDate(schedule.next_run_at) }}</span>
-      <span v-if="schedule.last_run_at" class="meta-item">前回: {{ formatDate(schedule.last_run_at) }}</span>
-      <span v-if="schedule.is_channel" class="badge-channel">チャンネル監視</span>
-      <span v-if="props.isStartupChecking" class="badge-startup-check">起動時確認</span>
+      <span class="meta-item">{{ t('schedules.next_run_at', { date: formatDate(schedule.next_run_at) }) }}</span>
+      <span v-if="schedule.last_run_at" class="meta-item">{{ t('schedules.last_run_at', { date: formatDate(schedule.last_run_at) }) }}</span>
+      <span v-if="schedule.is_channel" class="badge-channel">{{ t('schedules.channel_badge') }}</span>
+      <span v-if="props.isStartupChecking" class="badge-startup-check">{{ t('schedules.startup_checking_badge') }}</span>
     </div>
 
     <div v-if="props.isChecking || schedule.is_running || schedule.last_run_status" class="last-run-status">
-      <span v-if="props.isChecking && !schedule.is_running" class="status-badge status-checking">確認中</span>
-      <span v-else-if="schedule.is_running" class="status-badge status-running">ダウンロード中</span>
-      <span v-else-if="schedule.last_run_status === 'completed'" class="status-badge status-completed">ダウンロード済み</span>
-      <span v-else-if="schedule.last_run_status === 'no_new'" class="status-badge status-no-new">新着なし</span>
-      <span v-else-if="schedule.last_run_status === 'stopped'" class="status-badge status-stopped">停止しました</span>
+      <span v-if="props.isChecking && !schedule.is_running" class="status-badge status-checking">{{ t('schedules.status_checking') }}</span>
+      <span v-else-if="schedule.is_running" class="status-badge status-running">{{ t('schedules.status_running') }}</span>
+      <span v-else-if="schedule.last_run_status === 'completed'" class="status-badge status-completed">{{ t('schedules.status_completed') }}</span>
+      <span v-else-if="schedule.last_run_status === 'no_new'" class="status-badge status-no-new">{{ t('schedules.status_no_new') }}</span>
+      <span v-else-if="schedule.last_run_status === 'stopped'" class="status-badge status-stopped">{{ t('schedules.status_stopped') }}</span>
     </div>
 
     <div v-if="schedule.last_error" class="card-error">
@@ -76,8 +79,7 @@ const isBusy = computed(() => !!props.isChecking || !!props.isStartupChecking ||
     </div>
 
     <div class="card-actions">
-      <!-- 実行中: 停止ボタン / 停止中: 実行ボタン -->
-      <button v-if="schedule.is_running" class="btn-action btn-stop" @click="emit('stop', schedule.id)" title="停止">
+      <button v-if="schedule.is_running" class="btn-action btn-stop" @click="emit('stop', schedule.id)" :title="t('schedules.stop')">
         <svg viewBox="0 0 16 16" fill="currentColor" class="action-icon">
           <path d="M5 3.5h6A1.5 1.5 0 0112.5 5v6a1.5 1.5 0 01-1.5 1.5H5A1.5 1.5 0 013.5 11V5A1.5 1.5 0 015 3.5z"/>
         </svg>
@@ -88,18 +90,18 @@ const isBusy = computed(() => !!props.isChecking || !!props.isStartupChecking ||
         :class="{ 'btn-disabled': isBusy }"
         :disabled="isBusy"
         @click="emit('runNow', schedule.id)"
-        :title="isBusy ? '確認中' : '今すぐ実行'"
+        :title="isBusy ? t('schedules.checking_title') : t('schedules.run_now_title')"
       >
         <svg viewBox="0 0 16 16" fill="currentColor" class="action-icon">
           <path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z"/>
         </svg>
       </button>
-      <button class="btn-action" @click="emit('edit', schedule)" title="編集">
+      <button class="btn-action" @click="emit('edit', schedule)" :title="t('schedules.edit')">
         <svg viewBox="0 0 16 16" fill="currentColor" class="action-icon">
           <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.293l6.5-6.5zm-9.761 5.175l-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 015 12.5V12h-.5a.5.5 0 01-.5-.5V11h-.5a.5.5 0 01-.468-.325z"/>
         </svg>
       </button>
-      <button class="btn-action btn-danger" @click="emit('delete', schedule.id)" title="削除">
+      <button class="btn-action btn-danger" @click="emit('delete', schedule.id)" :title="t('schedules.delete')">
         <svg viewBox="0 0 16 16" fill="currentColor" class="action-icon">
           <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
           <path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/>

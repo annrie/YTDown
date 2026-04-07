@@ -3,10 +3,12 @@ import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { ask } from '@tauri-apps/plugin-dialog'
+import { useI18n } from 'vue-i18n'
 import { useImagesStore } from '../../stores/images'
 import type { ImageRecord } from '../../types'
 import ImageSlideshow from './ImageSlideshow.vue'
 
+const { t } = useI18n()
 const imagesStore = useImagesStore()
 
 const thumbnailSize = ref(150)
@@ -47,8 +49,8 @@ function openSlideshow(sessionId: number, startIndex = 0) {
 }
 
 async function handleDeleteSession(sessionId: number) {
-  const confirmed = await ask('このセッションの履歴を削除しますか？\n\nダウンロード済みの画像ファイルは残ります。', {
-    title: '履歴削除',
+  const confirmed = await ask(t('images.delete_session_confirm'), {
+    title: t('images.delete_session_dialog_title'),
     kind: 'warning',
   })
   if (confirmed) {
@@ -73,10 +75,10 @@ function getImageSrc(record: ImageRecord): string {
   <div class="flex flex-col h-full p-4 overflow-y-auto">
     <!-- Header with size slider -->
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-medium text-neutral-800 dark:text-neutral-200">画像ギャラリー</h2>
+      <h2 class="text-lg font-medium text-neutral-800 dark:text-neutral-200">{{ t('images.gallery_title') }}</h2>
       <div class="flex items-center gap-3">
         <label class="flex items-center gap-2 text-sm text-neutral-500">
-          <span class="text-xs">小</span>
+          <span class="text-xs">{{ t('images.size_small') }}</span>
           <input
             v-model.number="thumbnailSize"
             type="range"
@@ -85,7 +87,7 @@ function getImageSrc(record: ImageRecord): string {
             step="10"
             class="w-24 accent-blue-500"
           />
-          <span class="text-xs">大</span>
+          <span class="text-xs">{{ t('images.size_large') }}</span>
         </label>
       </div>
     </div>
@@ -97,7 +99,7 @@ function getImageSrc(record: ImageRecord): string {
     >
       <div class="text-center">
         <div class="text-4xl mb-2">📂</div>
-        <p>ダウンロードした画像はありません</p>
+        <p>{{ t('images.no_images') }}</p>
       </div>
     </div>
 
@@ -111,10 +113,10 @@ function getImageSrc(record: ImageRecord): string {
         <div class="flex items-center gap-2 min-w-0">
           <span class="text-sm">{{ expandedSessionId === session.id ? '▼' : '▶' }}</span>
           <span class="text-sm font-medium truncate">{{ session.site_name || session.source_url }}</span>
-          <span class="text-xs text-neutral-400 shrink-0">{{ session.image_count }}枚</span>
+          <span class="text-xs text-neutral-400 shrink-0">{{ t('images.image_count', { count: session.image_count }) }}</span>
           <button
             class="ml-1 px-1.5 py-0.5 text-xs rounded text-neutral-400 hover:bg-red-500 hover:text-white shrink-0"
-            title="セッションと画像ファイルを削除"
+            :title="t('images.delete_session_tooltip')"
             @click.stop="handleDeleteSession(session.id)"
           >
             ✕
@@ -125,7 +127,7 @@ function getImageSrc(record: ImageRecord): string {
             class="px-2 py-1 text-xs rounded bg-blue-500 text-white hover:bg-blue-600"
             @click.stop="openSlideshow(session.id)"
           >
-            ▶ スライドショー
+            ▶ {{ t('images.slideshow') }}
           </button>
         </div>
       </div>

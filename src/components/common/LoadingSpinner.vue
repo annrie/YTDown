@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 defineProps<{ size?: 'sm' | 'md' | 'lg' }>()
+const { t } = useI18n()
 </script>
 
 <template>
@@ -9,7 +11,7 @@ defineProps<{ size?: 'sm' | 'md' | 'lg' }>()
       size === 'lg' ? 'w-6 h-6' : size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
     ]"
     fill="none" viewBox="0 0 24 24"
-    aria-label="読み込み中"
+    :aria-label="t('common.loading')"
   >
     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
     <path class="opacity-75" fill="currentColor"

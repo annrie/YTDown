@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useI18n } from 'vue-i18n'
 import type { UrlHistoryEntry } from '../../types'
 
 const props = defineProps<{
@@ -11,6 +12,7 @@ const emit = defineEmits<{
   select: [url: string]
 }>()
 
+const { t } = useI18n()
 const open = ref(false)
 const items = ref<UrlHistoryEntry[]>([])
 const dropdownRef = ref<HTMLElement | null>(null)
@@ -60,7 +62,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
       ref="buttonRef"
       @click.stop="toggle"
       class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-500 hover:text-[var(--color-accent)]"
-      title="URL履歴"
+      :title="t('url_history.title')"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -76,7 +78,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
         class="fixed w-80 max-h-64 overflow-y-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-[var(--color-separator)] z-[9999]"
       >
         <div v-if="items.length === 0" class="px-3 py-4 text-center text-xs text-neutral-400">
-          履歴がありません
+          {{ t('url_history.empty') }}
         </div>
         <button
           v-for="item in items"

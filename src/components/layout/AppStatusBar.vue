@@ -54,7 +54,7 @@ const statusText = computed(() => {
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <span v-if="libraryCount > 0">{{ libraryCount }} アイテム</span>
+      <span v-if="libraryCount > 0">{{ t('statusbar.library_count', { count: libraryCount }) }}</span>
       <span v-if="ytdlpInfo">
         yt-dlp {{ ytdlpInfo.version }}
         <span v-if="ytdlpInfo.update_available" class="text-orange-500 ml-1" :title="t('general.ytdlp_update_available')">●</span>

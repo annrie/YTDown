@@ -79,7 +79,7 @@ async function handleBrowseBackground(mode: 'light' | 'dark') {
   const selected = await open({
     multiple: false,
     title: mode === 'light' ? t('general.background_light') : t('general.background_dark'),
-    filters: [{ name: '画像', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
+    filters: [{ name: t('general.image_filter'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
   })
   if (selected && typeof selected === 'string') {
     const key = mode === 'light' ? 'background_image_light' : 'background_image_dark'

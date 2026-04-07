@@ -4,8 +4,11 @@ import { useSchedulesStore } from '../../stores/schedules'
 import { usePresetsStore } from '../../stores/presets'
 import { useSettingsStore } from '../../stores/settings'
 import { useDownload } from '../../composables/useDownload'
+import { useI18n } from 'vue-i18n'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
 import ErrorAlert from '../common/ErrorAlert.vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   open: boolean
@@ -20,11 +23,10 @@ const schedulesStore = useSchedulesStore()
 const presetsStore = usePresetsStore()
 const settingsStore = useSettingsStore()
 
-// State
 const url = ref('')
 const name = ref('')
 const frequency = ref<'1h' | '6h' | '12h' | 'daily'>('daily')
-const dailyTime = ref('22:00') // Default
+const dailyTime = ref('22:00')
 const selectedPresetId = ref<number | ''>('')
 const skipInitial = ref(true)
 
@@ -48,7 +50,6 @@ watch(videoInfo, (info) => {
   }
 })
 
-// Reset state on open
 watch(() => props.open, (isOpen) => {
   if (isOpen) {
     url.value = ''
@@ -115,7 +116,7 @@ async function handleSubmit() {
     channel_id: videoInfo.value?.channel_id || '',
   } as any
 
-  const finalName = name.value.trim() || 'チャンネル監視'
+  const finalName = name.value.trim() || t('channel_monitor.default_name')
 
   try {
     await schedulesStore.createSchedule({
@@ -128,7 +129,7 @@ async function handleSubmit() {
     emit('start')
   } catch (e) {
     console.error('Failed to create channel monitor:', e)
-    alert('監視の登録に失敗しました: ' + e)
+    alert(`${t('channel_monitor.error_start')}: ${e}`)
   }
 }
 
@@ -144,7 +145,7 @@ function handleOverlayClick(e: MouseEvent) {
     <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl w-[480px] max-w-[90vw] flex flex-col">
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b border-[var(--color-separator)]">
-        <h2 class="text-base font-semibold">チャンネル監視の登録</h2>
+        <h2 class="text-base font-semibold">{{ t('channel_monitor.title') }}</h2>
         <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition" @click="emit('close')">
           <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -155,17 +156,17 @@ function handleOverlayClick(e: MouseEvent) {
       <!-- Body -->
       <div class="p-5 flex flex-col gap-4">
         <p class="text-xs text-neutral-500 leading-relaxed mb-1">
-          指定したYouTubeチャンネル（または再生リスト）を定期的に確認し、新しい動画の自動ダウンロードを行います。
+          {{ t('channel_monitor.description') }}
         </p>
-        
+
         <!-- URL Input -->
         <div>
-          <label class="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">チャンネル URL <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">{{ t('channel_monitor.url') }} <span class="text-red-500">*</span></label>
           <div class="relative">
             <input
               v-model="url"
               type="url"
-              placeholder="https://www.youtube.com/@channel..."
+              :placeholder="t('channel_monitor.url_placeholder')"
               class="w-full h-9 px-3 rounded-md bg-neutral-100 dark:bg-neutral-900 border border-transparent focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] outline-none text-sm transition-all"
               autofocus
             />
@@ -178,15 +179,15 @@ function handleOverlayClick(e: MouseEvent) {
 
         <!-- Frequency -->
         <div>
-          <label class="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">確認の間隔</label>
+          <label class="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">{{ t('channel_monitor.interval') }}</label>
           <div class="flex items-center gap-3">
             <select v-model="frequency" class="h-9 px-2 rounded-md bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm outline-none focus:border-[var(--color-accent)]">
-              <option value="1h">1時間ごと</option>
-              <option value="6h">6時間ごと</option>
-              <option value="12h">12時間ごと</option>
-              <option value="daily">毎日（指定時間）</option>
+              <option value="1h">{{ t('channel_monitor.freq_1h') }}</option>
+              <option value="6h">{{ t('channel_monitor.freq_6h') }}</option>
+              <option value="12h">{{ t('channel_monitor.freq_12h') }}</option>
+              <option value="daily">{{ t('channel_monitor.freq_daily') }}</option>
             </select>
-            
+
             <input
               v-if="frequency === 'daily'"
               v-model="dailyTime"
@@ -198,12 +199,12 @@ function handleOverlayClick(e: MouseEvent) {
 
         <!-- Preset -->
         <div>
-          <label class="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">ダウンロードプリセット</label>
+          <label class="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">{{ t('channel_monitor.preset') }}</label>
           <select
             v-model="selectedPresetId"
             class="w-full h-9 px-2 rounded-md bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm outline-none focus:border-[var(--color-accent)]"
           >
-            <option value="">グローバル設定を使用</option>
+            <option value="">{{ t('channel_monitor.preset_global') }}</option>
             <option v-for="preset in presetsStore.presets" :key="preset.id" :value="preset.id">
               {{ preset.name }}
             </option>
@@ -214,18 +215,18 @@ function handleOverlayClick(e: MouseEvent) {
         <label class="flex items-start gap-3 cursor-pointer select-none">
           <input type="checkbox" v-model="skipInitial" class="mt-0.5 w-4 h-4 rounded accent-[var(--color-accent)]" />
           <div>
-            <span class="text-sm font-medium">初回は既存の動画をスキップ</span>
-            <p class="text-xs text-neutral-500 mt-0.5">ONにすると、登録日以前にアップされた動画は取得しません</p>
+            <span class="text-sm font-medium">{{ t('channel_monitor.skip_initial') }}</span>
+            <p class="text-xs text-neutral-500 mt-0.5">{{ t('channel_monitor.skip_initial_hint') }}</p>
           </div>
         </label>
 
         <!-- Name (Optional) -->
         <div>
-          <label class="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">登録名 (任意)</label>
+          <label class="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">{{ t('channel_monitor.name_optional') }}</label>
           <input
             v-model="name"
             type="text"
-            placeholder="空白の場合はチャンネルURLが使用されます"
+            :placeholder="t('channel_monitor.name_placeholder')"
             class="w-full h-9 px-3 rounded-md bg-neutral-100 dark:bg-neutral-900 border border-transparent focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] outline-none text-sm transition-all"
           />
           <!-- Avatar Preview -->
@@ -245,14 +246,14 @@ function handleOverlayClick(e: MouseEvent) {
           class="px-4 py-2 rounded-md text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition"
           @click="emit('close')"
         >
-          キャンセル
+          {{ t('common.cancel') }}
         </button>
         <button
           class="px-5 py-2 rounded-md text-sm font-medium bg-[var(--color-accent)] text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
           :disabled="!isValid"
           @click="handleSubmit"
         >
-          監視を開始
+          {{ t('channel_monitor.start') }}
         </button>
       </div>
     </div>

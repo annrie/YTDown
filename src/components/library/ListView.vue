@@ -2,9 +2,12 @@
 import { ref, computed, watch } from 'vue'
 import { useLibraryStore } from '../../stores/library'
 import { useFileManager } from '../../composables/useFileManager'
+import { useI18n } from 'vue-i18n'
 import type { Download } from '../../types'
 import FileActions from './FileActions.vue'
 import SelectionBar from './SelectionBar.vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{ items: Download[] }>()
 
@@ -76,7 +79,7 @@ function formatFileSize(bytes: number | null): string {
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
-  return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
 function extractFileName(filePath: string | null): string {
@@ -101,18 +104,18 @@ function extractFileName(filePath: string | null): string {
           <th class="px-3 py-2 w-8"></th>
           <th class="px-3 py-2 cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-300"
               @click="toggleSort('title')">
-            タイトル{{ sortIndicator('title') }}
+            {{ t('library.col_title') }}{{ sortIndicator('title') }}
           </th>
           <th class="px-3 py-2 cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-300 w-32"
               @click="toggleSort('site')">
-            サイト{{ sortIndicator('site') }}
+            {{ t('library.col_site') }}{{ sortIndicator('site') }}
           </th>
-          <th class="px-3 py-2 w-24">フォーマット</th>
-          <th class="px-3 py-2 w-48">ファイル名</th>
-          <th class="px-3 py-2 w-24">サイズ</th>
+          <th class="px-3 py-2 w-24">{{ t('library.col_format') }}</th>
+          <th class="px-3 py-2 w-48">{{ t('library.col_filename') }}</th>
+          <th class="px-3 py-2 w-24">{{ t('library.col_size') }}</th>
           <th class="px-3 py-2 cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-300 w-28"
               @click="toggleSort('created_at')">
-            日付{{ sortIndicator('created_at') }}
+            {{ t('library.col_date') }}{{ sortIndicator('created_at') }}
           </th>
         </tr>
       </thead>
@@ -156,7 +159,7 @@ function extractFileName(filePath: string | null): string {
     </table>
 
     <div v-if="sortedItems.length === 0" class="p-8 text-center text-neutral-400 text-sm">
-      ライブラリにアイテムがありません
+      {{ t('library.empty_items') }}
     </div>
 
     <FileActions

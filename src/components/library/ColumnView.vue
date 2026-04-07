@@ -2,12 +2,14 @@
 import { ref, computed } from 'vue'
 import { useLibraryStore } from '../../stores/library'
 import { useFileManager } from '../../composables/useFileManager'
+import { useI18n } from 'vue-i18n'
 import type { Download } from '../../types'
 import FileActions from './FileActions.vue'
 import SelectionBar from './SelectionBar.vue'
 
 const props = defineProps<{ items: Download[] }>()
 
+const { t } = useI18n()
 const libraryStore = useLibraryStore()
 const { revealInFinder } = useFileManager()
 
@@ -22,7 +24,7 @@ const contextMenu = ref<{ show: boolean; x: number; y: number; item: Download | 
 const siteList = computed(() => {
   const sites = new Map<string, number>()
   for (const item of props.items) {
-    const site = item.site ?? '不明'
+    const site = item.site ?? t('library.unknown')
     sites.set(site, (sites.get(site) ?? 0) + 1)
   }
   return [...sites.entries()].map(([name, count]) => ({ name, count }))
@@ -33,9 +35,9 @@ const channelList = computed(() => {
   if (!selectedSite.value) return []
   const channels = new Map<string, { name: string; id: string | null; count: number }>()
   for (const item of props.items) {
-    const site = item.site ?? '不明'
+    const site = item.site ?? t('library.unknown')
     if (site !== selectedSite.value) continue
-    const channelName = item.channel ?? '不明'
+    const channelName = item.channel ?? t('library.unknown')
     const key = item.channel_id ?? channelName
     const existing = channels.get(key)
     if (existing) {
@@ -51,8 +53,8 @@ const channelList = computed(() => {
 const videoList = computed(() => {
   if (!selectedSite.value || !selectedChannel.value) return []
   return props.items.filter(item => {
-    const site = item.site ?? '不明'
-    const channelKey = item.channel_id ?? item.channel ?? '不明'
+    const site = item.site ?? t('library.unknown')
+    const channelKey = item.channel_id ?? item.channel ?? t('library.unknown')
     return site === selectedSite.value && channelKey === selectedChannel.value
   })
 })
@@ -89,10 +91,10 @@ function closeContextMenu() {
     <!-- Column 1: Sites -->
     <div class="w-1/3 border-r border-[var(--color-separator)] overflow-y-auto">
       <div class="px-2 py-1.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider border-b border-[var(--color-separator)]">
-        サイト
+        {{ t('library.col_site') }}
       </div>
       <div v-if="siteList.length === 0" class="p-4 text-xs text-neutral-400 text-center">
-        データなし
+        {{ t('library.col_no_data') }}
       </div>
       <button v-for="site in siteList" :key="site.name"
               class="w-full text-left px-3 py-1.5 text-sm flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
@@ -106,13 +108,13 @@ function closeContextMenu() {
     <!-- Column 2: Channels -->
     <div class="w-1/3 border-r border-[var(--color-separator)] overflow-y-auto">
       <div class="px-2 py-1.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider border-b border-[var(--color-separator)]">
-        チャンネル
+        {{ t('library.col_channel') }}
       </div>
       <div v-if="!selectedSite" class="p-4 text-xs text-neutral-400 text-center">
-        サイトを選択してください
+        {{ t('library.select_site') }}
       </div>
       <div v-else-if="channelList.length === 0" class="p-4 text-xs text-neutral-400 text-center">
-        チャンネルなし
+        {{ t('library.no_channels') }}
       </div>
       <button v-for="ch in channelList" :key="ch.id ?? ch.name"
               class="w-full text-left px-3 py-1.5 text-sm flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
@@ -126,13 +128,13 @@ function closeContextMenu() {
     <!-- Column 3: Videos -->
     <div class="w-1/3 overflow-y-auto">
       <div class="px-2 py-1.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider border-b border-[var(--color-separator)]">
-        動画
+        {{ t('library.col_video') }}
       </div>
       <div v-if="!selectedChannel" class="p-4 text-xs text-neutral-400 text-center">
-        チャンネルを選択してください
+        {{ t('library.select_channel') }}
       </div>
       <div v-else-if="videoList.length === 0" class="p-4 text-xs text-neutral-400 text-center">
-        動画なし
+        {{ t('library.no_videos') }}
       </div>
       <div v-for="item in videoList" :key="item.id"
            class="px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-default border-b border-[var(--color-separator)]"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { ScrapedImage } from '../../types'
 import ImageThumbnail from './ImageThumbnail.vue'
 
@@ -12,6 +13,8 @@ defineEmits<{
   'select-all': []
   'deselect-all': []
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -19,9 +22,9 @@ defineEmits<{
     <!-- Selection toolbar -->
     <div class="flex items-center justify-between mb-3 text-sm">
       <span class="text-neutral-500 dark:text-neutral-400">
-        {{ images.length }} 枚の画像が見つかりました
+        {{ t('images.found_count', { count: images.length }) }}
         <span v-if="selectedIds.size > 0" class="text-blue-500 font-medium">
-          （{{ selectedIds.size }} 枚選択中）
+          {{ t('images.selected_count_label', { count: selectedIds.size }) }}
         </span>
       </span>
       <div class="flex gap-2">
@@ -29,13 +32,13 @@ defineEmits<{
           class="px-2 py-1 text-xs rounded bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600"
           @click="$emit('select-all')"
         >
-          全選択
+          {{ t('images.select_all') }}
         </button>
         <button
           class="px-2 py-1 text-xs rounded bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600"
           @click="$emit('deselect-all')"
         >
-          全解除
+          {{ t('images.deselect_all') }}
         </button>
       </div>
     </div>

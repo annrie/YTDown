@@ -2,11 +2,14 @@
 import { ref } from 'vue'
 import { useLibraryStore } from '../../stores/library'
 import { useFileManager } from '../../composables/useFileManager'
+import { useI18n } from 'vue-i18n'
 import type { Download } from '../../types'
 import FileActions from './FileActions.vue'
 import SelectionBar from './SelectionBar.vue'
 
 defineProps<{ items: Download[] }>()
+
+const { t } = useI18n()
 
 const libraryStore = useLibraryStore()
 const { revealInFinder } = useFileManager()
@@ -44,7 +47,7 @@ function formatDuration(secs: number | null): string {
   <div>
     <SelectionBar />
     <div v-if="items.length === 0" class="p-8 text-center text-neutral-400 text-sm">
-      ライブラリにアイテムがありません
+      {{ t('library.empty_items') }}
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
@@ -81,7 +84,7 @@ function formatDuration(secs: number | null): string {
           <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center z-10">
             <button class="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1 bg-white/90 dark:bg-neutral-800/90 rounded-md text-xs font-medium"
                     @click.stop="handleDoubleClick(item)">
-              開く
+              {{ t('common.open') }}
             </button>
           </div>
         </div>
