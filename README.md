@@ -59,6 +59,7 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
 ### General
 
 - **Custom background** — Set separate wallpapers for light and dark mode
+- **Multilingual UI** — Interface available in 8 languages: Japanese, English, German, Spanish, French, Korean, Portuguese (Brazil), Traditional Chinese
 
 ### Platform Support
 
@@ -124,6 +125,7 @@ pnpm tauri build
 | Backend | Rust, Tauri v2, SQLite (rusqlite) |
 | Frontend | Vue 3 (Composition API), TypeScript, Pinia |
 | Styling | Tailwind CSS v4 |
+| Internationalization | vue-i18n v10 (8 locales) |
 | Video engine | yt-dlp |
 | Image processing | Rust image crate (scraping, WebP conversion) |
 
@@ -192,6 +194,7 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
 #### 全般
 
 - **背景画像のカスタマイズ** — ライトモード・ダークモードそれぞれに壁紙を設定可能
+- **多言語対応** — 日本語・英語・ドイツ語・スペイン語・フランス語・韓国語・ポルトガル語（ブラジル）・繁体字中国語の 8 言語に対応
 
 ### プラットフォーム対応状況
 
