@@ -42,7 +42,8 @@
     "images_gallery": "Galería",
     "schedules": "Gestor de programaciones",
     "channel_monitor": "Añadir monitor de canal",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "history": "Historial"
   },
   "statusbar": {
     "active_count": "{count} en curso",

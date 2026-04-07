@@ -42,7 +42,8 @@
     "images_gallery": "Gallery",
     "schedules": "Schedule Manager",
     "channel_monitor": "Add Channel Monitor",
-    "settings": "Settings"
+    "settings": "Settings",
+    "history": "History"
   },
   "statusbar": {
     "active_count": "{count} active",

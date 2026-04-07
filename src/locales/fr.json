@@ -42,7 +42,8 @@
     "images_gallery": "Galerie",
     "schedules": "Gestionnaire de planif.",
     "channel_monitor": "Ajouter un suivi de chaîne",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "history": "Historique"
   },
   "statusbar": {
     "active_count": "{count} en cours",

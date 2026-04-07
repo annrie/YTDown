@@ -42,7 +42,8 @@
     "images_gallery": "갤러리",
     "schedules": "예약 관리",
     "channel_monitor": "채널 모니터 추가",
-    "settings": "설정"
+    "settings": "설정",
+    "history": "기록"
   },
   "statusbar": {
     "active_count": "{count}개 진행 중",

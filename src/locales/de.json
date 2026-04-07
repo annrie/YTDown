@@ -42,7 +42,8 @@
     "images_gallery": "Galerie",
     "schedules": "Zeitplanverwaltung",
     "channel_monitor": "Kanalüberwachung hinzufügen",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "history": "Verlauf"
   },
   "statusbar": {
     "active_count": "{count} aktiv",

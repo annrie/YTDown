@@ -42,7 +42,8 @@
     "images_gallery": "Galeria",
     "schedules": "Gerenciador de agend.",
     "channel_monitor": "Adicionar monit. de canal",
-    "settings": "Configurações"
+    "settings": "Configurações",
+    "history": "Histórico"
   },
   "statusbar": {
     "active_count": "{count} em andamento",
