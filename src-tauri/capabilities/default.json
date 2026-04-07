@@ -68,6 +68,14 @@
     "allow-list-rules",
     "allow-create-rule",
     "allow-update-rule",
-    "allow-delete-rule"
+    "allow-delete-rule",
+    "allow-list-history",
+    "allow-delete-history-entry",
+    "allow-clear-history",
+    "allow-list-auto-preset-rules",
+    "allow-create-auto-preset-rule",
+    "allow-update-auto-preset-rule",
+    "allow-delete-auto-preset-rule",
+    "allow-resolve-preset-for-url"
   ]
 }

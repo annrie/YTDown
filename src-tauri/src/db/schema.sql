@@ -131,6 +131,26 @@ CREATE TABLE IF NOT EXISTS schedules (
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS download_history (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  url          TEXT NOT NULL,
+  title        TEXT,
+  site         TEXT,
+  file_path    TEXT,
+  completed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_download_history_completed_at
+  ON download_history(completed_at DESC);
+
+CREATE TABLE IF NOT EXISTS auto_preset_rules (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  domain     TEXT NOT NULL UNIQUE,
+  preset_id  INTEGER NOT NULL REFERENCES download_presets(id) ON DELETE CASCADE,
+  enabled    INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS download_presets (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   name            TEXT NOT NULL UNIQUE,

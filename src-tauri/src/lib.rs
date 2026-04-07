@@ -150,6 +150,16 @@ pub fn run() {
             commands::rules::create_rule,
             commands::rules::update_rule,
             commands::rules::delete_rule,
+            // Download History
+            commands::download_history::list_history,
+            commands::download_history::delete_history_entry,
+            commands::download_history::clear_history,
+            // Auto Preset Rules
+            commands::auto_preset::list_auto_preset_rules,
+            commands::auto_preset::create_auto_preset_rule,
+            commands::auto_preset::update_auto_preset_rule,
+            commands::auto_preset::delete_auto_preset_rule,
+            commands::auto_preset::resolve_preset_for_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

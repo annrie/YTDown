@@ -9,6 +9,7 @@ import { useDownloadsStore, type PlaylistItemInfo } from '../../stores/downloads
 import { useSettingsStore } from '../../stores/settings'
 import { useSchedulesStore } from '../../stores/schedules'
 import { usePresetsStore } from '../../stores/presets'
+import { useAutoPresetStore } from '../../stores/autoPreset'
 import { Cron } from 'croner'
 import type { DownloadOptions, PlaylistMode } from '../../types'
 
@@ -24,8 +25,10 @@ const downloadsStore = useDownloadsStore()
 const settingsStore = useSettingsStore()
 const schedulesStore = useSchedulesStore()
 const presetsStore = usePresetsStore()
+const autoPresetStore = useAutoPresetStore()
 
 const showSavePreset = ref(false)
+const autoPresetApplied = ref('')
 const savePresetName = ref('')
 const savePresetError = ref('')
 const selectedPresetId = ref<number | ''>('')
@@ -294,7 +297,7 @@ async function selectDirectory() {
 
 const LARGE_PLAYLIST_THRESHOLD = 50
 
-watch(() => props.open, (isOpen) => {
+watch(() => props.open, async (isOpen) => {
   if (isOpen && props.url) {
     fetchFormats(props.url)
     // Reset playlist state
@@ -314,12 +317,27 @@ watch(() => props.open, (isOpen) => {
     savePresetName.value = ''
     savePresetError.value = ''
 
-    // Attempt to automatically load the 'デフォルト' preset
-    if (!selectedPresetId.value) {
+    autoPresetApplied.value = ''
+
+    // Try auto-preset by URL domain first, then fall back to 'デフォルト'
+    const autoPreset = await autoPresetStore.resolvePresetForUrl(props.url)
+    if (autoPreset) {
+      selectedPresetId.value = autoPreset.id
+      embedThumbnail.value = autoPreset.embed_thumbnail
+      embedMetadata.value = autoPreset.embed_metadata
+      writeSubs.value = autoPreset.write_subs
+      embedSubs.value = autoPreset.embed_subs
+      embedChapters.value = autoPreset.embed_chapters
+      sponsorblock.value = autoPreset.sponsorblock
+      if (autoPreset.output_dir) {
+        settingsStore.updateSetting('download_dir', autoPreset.output_dir)
+      }
+      autoPresetApplied.value = t('auto_preset.auto_applied')
+    } else if (!selectedPresetId.value) {
+      // Attempt to automatically load the 'デフォルト' preset
       const defaultPreset = presetsStore.presets.find(p => p.name === 'デフォルト')
       if (defaultPreset) {
         selectedPresetId.value = defaultPreset.id
-        // Apply the preset's post-processing values immediately
         embedThumbnail.value = defaultPreset.embed_thumbnail
         embedMetadata.value = defaultPreset.embed_metadata
         writeSubs.value = defaultPreset.write_subs
@@ -655,6 +673,11 @@ function handleStart() {
               </button>
             </div>
             
+            <!-- Auto-preset notification -->
+            <div v-if="autoPresetApplied" class="text-xs text-[var(--color-accent)] mt-1 px-1">
+              ✓ {{ autoPresetApplied }}
+            </div>
+
             <!-- Save preset inline form -->
             <div v-if="showSavePreset" class="flex items-center gap-2 mt-2">
               <input

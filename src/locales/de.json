@@ -155,7 +155,11 @@
     "placeholder": "Eine URL pro Zeile...",
     "count": "{count} URLs",
     "start": "Stapel-Download starten",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "select_all": "Alle auswählen",
+    "deselect_all": "Auswahl aufheben",
+    "selected_count": "{count} ausgewählt",
+    "delete_selected": "Auswahl löschen ({count})"
   },
   "library": {
     "empty": "Bibliothek ist leer",
@@ -477,5 +481,24 @@
     "title": "URL-Verlauf",
     "empty": "Kein Verlauf",
     "clear": "Verlauf löschen"
+  },
+  "history": {
+    "title": "Download-Verlauf",
+    "empty": "Kein Verlauf",
+    "clear_all": "Alle löschen",
+    "clear_confirm": "Gesamten Download-Verlauf löschen?",
+    "redownload": "Erneut herunterladen",
+    "delete": "Löschen"
+  },
+  "auto_preset": {
+    "title": "Auto-Voreinstellung",
+    "empty": "Keine Regeln",
+    "add": "Regel hinzufügen",
+    "domain_label": "Domain",
+    "preset_label": "Voreinstellung",
+    "enabled": "Aktiviert",
+    "delete_confirm": "Diese Regel löschen?",
+    "domain_placeholder": "z.B. youtube.com",
+    "auto_applied": "Voreinstellung automatisch angewendet"
   }
 }

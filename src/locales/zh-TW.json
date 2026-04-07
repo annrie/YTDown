@@ -155,7 +155,11 @@
     "placeholder": "每行輸入一個 URL...",
     "count": "{count} 個 URL",
     "start": "開始批次下載",
-    "cancel": "取消"
+    "cancel": "取消",
+    "select_all": "全選",
+    "deselect_all": "取消全選",
+    "selected_count": "已選 {count} 項",
+    "delete_selected": "刪除所選 ({count})"
   },
   "library": {
     "empty": "媒體庫為空",
@@ -477,5 +481,24 @@
     "title": "URL 歷史記錄",
     "empty": "沒有歷史記錄",
     "clear": "清除歷史記錄"
+  },
+  "history": {
+    "title": "下載記錄",
+    "empty": "沒有記錄",
+    "clear_all": "全部清除",
+    "clear_confirm": "刪除所有下載記錄？",
+    "redownload": "重新下載",
+    "delete": "刪除"
+  },
+  "auto_preset": {
+    "title": "自動預設",
+    "empty": "沒有規則",
+    "add": "新增規則",
+    "domain_label": "網域",
+    "preset_label": "預設",
+    "enabled": "啟用",
+    "delete_confirm": "刪除此規則？",
+    "domain_placeholder": "例如: youtube.com",
+    "auto_applied": "已根據 URL 自動套用預設"
   }
 }

@@ -155,7 +155,11 @@
     "placeholder": "Uma URL por linha...",
     "count": "{count} URLs",
     "start": "Iniciar download em lote",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "select_all": "Selecionar tudo",
+    "deselect_all": "Desmarcar tudo",
+    "selected_count": "{count} selecionado(s)",
+    "delete_selected": "Excluir seleção ({count})"
   },
   "library": {
     "empty": "A biblioteca está vazia",
@@ -477,5 +481,24 @@
     "title": "Histórico de URL",
     "empty": "Sem histórico",
     "clear": "Limpar histórico"
+  },
+  "history": {
+    "title": "Histórico de downloads",
+    "empty": "Sem histórico",
+    "clear_all": "Limpar tudo",
+    "clear_confirm": "Excluir todo o histórico de downloads?",
+    "redownload": "Baixar novamente",
+    "delete": "Excluir"
+  },
+  "auto_preset": {
+    "title": "Predefinição automática",
+    "empty": "Sem regras",
+    "add": "Adicionar regra",
+    "domain_label": "Domínio",
+    "preset_label": "Predefinição",
+    "enabled": "Ativado",
+    "delete_confirm": "Excluir esta regra?",
+    "domain_placeholder": "ex. youtube.com",
+    "auto_applied": "Predefinição aplicada automaticamente com base na URL"
   }
 }

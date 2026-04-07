@@ -155,7 +155,11 @@
     "placeholder": "URLを1行ずつ入力...",
     "count": "{count} 件のURL",
     "start": "一括ダウンロード開始",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "select_all": "すべて選択",
+    "deselect_all": "すべて解除",
+    "selected_count": "{count} 件選択中",
+    "delete_selected": "選択を削除 ({count})"
   },
   "library": {
     "empty": "ライブラリは空です",
@@ -477,5 +481,24 @@
     "title": "URLの履歴",
     "empty": "履歴なし",
     "clear": "履歴をクリア"
+  },
+  "history": {
+    "title": "ダウンロード履歴",
+    "empty": "履歴なし",
+    "clear_all": "全削除",
+    "clear_confirm": "ダウンロード履歴を全削除しますか？",
+    "redownload": "再ダウンロード",
+    "delete": "削除"
+  },
+  "auto_preset": {
+    "title": "自動プリセット",
+    "empty": "ルールなし",
+    "add": "ルールを追加",
+    "domain_label": "ドメイン",
+    "preset_label": "プリセット",
+    "enabled": "有効",
+    "delete_confirm": "このルールを削除しますか？",
+    "domain_placeholder": "例: youtube.com",
+    "auto_applied": "URLに一致するプリセットを自動適用しました"
   }
 }

@@ -155,7 +155,11 @@
     "placeholder": "Enter one URL per line...",
     "count": "{count} URLs",
     "start": "Start batch download",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "select_all": "Select all",
+    "deselect_all": "Deselect all",
+    "selected_count": "{count} selected",
+    "delete_selected": "Delete selected ({count})"
   },
   "library": {
     "empty": "Library is empty",
@@ -477,5 +481,24 @@
     "title": "URL History",
     "empty": "No history",
     "clear": "Clear history"
+  },
+  "history": {
+    "title": "Download History",
+    "empty": "No history",
+    "clear_all": "Clear All",
+    "clear_confirm": "Delete all download history?",
+    "redownload": "Re-download",
+    "delete": "Delete"
+  },
+  "auto_preset": {
+    "title": "Auto Preset",
+    "empty": "No rules",
+    "add": "Add Rule",
+    "domain_label": "Domain",
+    "preset_label": "Preset",
+    "enabled": "Enabled",
+    "delete_confirm": "Delete this rule?",
+    "domain_placeholder": "e.g. youtube.com",
+    "auto_applied": "Preset auto-applied based on URL"
   }
 }

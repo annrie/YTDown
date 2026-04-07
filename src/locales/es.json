@@ -155,7 +155,11 @@
     "placeholder": "Una URL por línea...",
     "count": "{count} URL",
     "start": "Iniciar descarga en lote",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "select_all": "Seleccionar todo",
+    "deselect_all": "Deseleccionar todo",
+    "selected_count": "{count} seleccionado(s)",
+    "delete_selected": "Eliminar selección ({count})"
   },
   "library": {
     "empty": "La biblioteca está vacía",
@@ -477,5 +481,24 @@
     "title": "Historial de URL",
     "empty": "Sin historial",
     "clear": "Limpiar historial"
+  },
+  "history": {
+    "title": "Historial de descargas",
+    "empty": "Sin historial",
+    "clear_all": "Borrar todo",
+    "clear_confirm": "¿Eliminar todo el historial de descargas?",
+    "redownload": "Volver a descargar",
+    "delete": "Eliminar"
+  },
+  "auto_preset": {
+    "title": "Ajuste automático",
+    "empty": "Sin reglas",
+    "add": "Agregar regla",
+    "domain_label": "Dominio",
+    "preset_label": "Ajuste",
+    "enabled": "Habilitado",
+    "delete_confirm": "¿Eliminar esta regla?",
+    "domain_placeholder": "ej. youtube.com",
+    "auto_applied": "Ajuste aplicado automáticamente según la URL"
   }
 }
