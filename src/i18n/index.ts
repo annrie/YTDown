@@ -33,13 +33,14 @@ function detectLocale(): SupportedLocale {
   if (browserLang.startsWith('pt')) return 'pt-BR'
   if (browserLang.startsWith('de')) return 'de'
   if (browserLang.startsWith('ko')) return 'ko'
-  return 'ja'
+  if (browserLang.startsWith('en')) return 'en'
+  return 'en'
 }
 
 export const i18n = createI18n({
   legacy: false,
   locale: detectLocale(),
-  fallbackLocale: 'ja',
+  fallbackLocale: 'en',
   messages: {
     ja,
     en,
