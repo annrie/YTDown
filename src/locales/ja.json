@@ -257,7 +257,8 @@
     "import_dialog_title": "設定をインポート",
     "export_success": "エクスポートしました",
     "import_success": "インポート完了: 設定 {settings} 件、プリセット {presets} 件、ルール {rules} 件、スケジュール {schedules} 件",
-    "image_filter": "画像"
+    "image_filter": "画像",
+    "ytdlp_check_update": "アップデートを確認"
   },
   "format": {
     "title": "フォーマット設定",

@@ -257,7 +257,8 @@
     "import_dialog_title": "설정 가져오기",
     "export_success": "내보내기 완료",
     "import_success": "가져오기 완료: 설정 {settings}개, 프리셋 {presets}개, 규칙 {rules}개, 예약 {schedules}개",
-    "image_filter": "이미지"
+    "image_filter": "이미지",
+    "ytdlp_check_update": "업데이트 확인"
   },
   "format": {
     "title": "형식 설정",

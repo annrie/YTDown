@@ -257,7 +257,8 @@
     "import_dialog_title": "Importer les paramètres",
     "export_success": "Exporté avec succès",
     "import_success": "Import réussi: {settings} paramètres, {presets} préréglages, {rules} règles, {schedules} planifications",
-    "image_filter": "Images"
+    "image_filter": "Images",
+    "ytdlp_check_update": "Rechercher des mises à jour"
   },
   "format": {
     "title": "Paramètres de format",

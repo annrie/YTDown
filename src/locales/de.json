@@ -257,7 +257,8 @@
     "import_dialog_title": "Einstellungen importieren",
     "export_success": "Erfolgreich exportiert",
     "import_success": "Import abgeschlossen: {settings} Einstellungen, {presets} Voreinstellungen, {rules} Regeln, {schedules} Zeitpläne",
-    "image_filter": "Bilder"
+    "image_filter": "Bilder",
+    "ytdlp_check_update": "Nach Updates suchen"
   },
   "format": {
     "title": "Formateinstellungen",

@@ -257,7 +257,8 @@
     "import_dialog_title": "Importar configurações",
     "export_success": "Exportado com sucesso",
     "import_success": "Importação concluída: {settings} configurações, {presets} predefinições, {rules} regras, {schedules} agendamentos",
-    "image_filter": "Imagens"
+    "image_filter": "Imagens",
+    "ytdlp_check_update": "Verificar atualizações"
   },
   "format": {
     "title": "Configurações de formato",

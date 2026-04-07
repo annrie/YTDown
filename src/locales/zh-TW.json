@@ -257,7 +257,8 @@
     "import_dialog_title": "匯入設定",
     "export_success": "匯出成功",
     "import_success": "匯入完成: {settings} 項設定、{presets} 個預設集、{rules} 條規則、{schedules} 個排程",
-    "image_filter": "圖片"
+    "image_filter": "圖片",
+    "ytdlp_check_update": "檢查更新"
   },
   "format": {
     "title": "格式設定",
