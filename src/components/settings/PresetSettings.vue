@@ -3,8 +3,10 @@ import { ref, onMounted } from 'vue'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { homeDir } from '@tauri-apps/api/path'
 import { usePresetsStore } from '../../stores/presets'
+import { useI18n } from 'vue-i18n'
 import type { Preset } from '../../types'
 
+const { t } = useI18n()
 const store = usePresetsStore()
 
 const editingId = ref<number | null>(null)
@@ -91,16 +93,16 @@ async function saveForm() {
       showCreateForm.value = false
     }
   } catch (e) {
-    errorMsg.value = `保存失敗: ${e}`
+    errorMsg.value = t('presets.save_error', { error: e })
   }
 }
 
 async function onDelete(id: number) {
-  if (!confirm('このプリセットを削除しますか？')) return
+  if (!confirm(t('presets.delete_confirm'))) return
   try {
     await store.deletePreset(id)
   } catch (e) {
-    errorMsg.value = `削除失敗: ${e}`
+    errorMsg.value = t('presets.delete_error', { error: e })
   }
 }
 </script>
@@ -108,48 +110,48 @@ async function onDelete(id: number) {
 <template>
   <div>
     <div class="flex items-center justify-between mb-3">
-      <h3 class="text-base font-semibold">ダウンロードプリセット</h3>
+      <h3 class="text-base font-semibold">{{ t('presets.title') }}</h3>
       <button
         class="text-sm px-3 py-1 rounded border border-[var(--color-separator)] hover:bg-white/10"
         @click="startCreate"
       >
-        ＋ 新規作成
+        {{ t('presets.new_create') }}
       </button>
     </div>
 
     <!-- Create form (inline) -->
     <div v-if="showCreateForm" class="rounded border border-[var(--color-separator)] p-3 mb-4 space-y-2">
       <div>
-        <label class="text-xs">名前</label>
+        <label class="text-xs">{{ t('presets.name') }}</label>
         <input v-model="form.name" type="text" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1" />
       </div>
       <div class="mb-3">
-        <label class="text-xs">出力先ディレクトリ</label>
+        <label class="text-xs">{{ t('presets.output_dir') }}</label>
         <div class="flex gap-2 items-center mt-1">
           <input v-model="form.output_dir" type="text" class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm" placeholder="~/Downloads/YTDown/" />
-          <button @click="selectDirectory" class="px-3 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-opacity">参照...</button>
+          <button @click="selectDirectory" class="px-3 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-opacity">{{ t('common.browse') }}</button>
         </div>
       </div>
       <div class="flex flex-wrap gap-3 text-sm">
-        <label><input type="checkbox" v-model="form.embed_thumbnail" class="mr-1">サムネイル埋め込み</label>
-        <label><input type="checkbox" v-model="form.embed_metadata" class="mr-1">メタデータ埋め込み</label>
-        <label><input type="checkbox" v-model="form.write_subs" class="mr-1">字幕保存</label>
-        <label><input type="checkbox" v-model="form.embed_subs" class="mr-1">字幕埋め込み</label>
-        <label><input type="checkbox" v-model="form.embed_chapters" class="mr-1">チャプター埋め込み</label>
-        <label><input type="checkbox" v-model="form.sponsorblock" class="mr-1">SponsorBlock</label>
+        <label><input type="checkbox" v-model="form.embed_thumbnail" class="mr-1">{{ t('presets.embed_thumbnail') }}</label>
+        <label><input type="checkbox" v-model="form.embed_metadata" class="mr-1">{{ t('presets.embed_metadata') }}</label>
+        <label><input type="checkbox" v-model="form.write_subs" class="mr-1">{{ t('presets.write_subs') }}</label>
+        <label><input type="checkbox" v-model="form.embed_subs" class="mr-1">{{ t('presets.embed_subs') }}</label>
+        <label><input type="checkbox" v-model="form.embed_chapters" class="mr-1">{{ t('presets.embed_chapters') }}</label>
+        <label><input type="checkbox" v-model="form.sponsorblock" class="mr-1">{{ t('presets.sponsorblock') }}</label>
       </div>
       <div class="flex items-center gap-2 mt-2">
         <button class="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
-                :disabled="!form.name.trim()" @click="saveForm">保存</button>
+                :disabled="!form.name.trim()" @click="saveForm">{{ t('presets.save') }}</button>
         <button class="text-sm px-3 py-1 rounded border border-[var(--color-separator)] hover:bg-white/10"
-                @click="cancelForm">キャンセル</button>
+                @click="cancelForm">{{ t('presets.cancel') }}</button>
         <span v-if="errorMsg" class="text-xs text-red-400">{{ errorMsg }}</span>
       </div>
     </div>
 
     <!-- Preset list -->
     <div v-if="store.presets.length === 0 && !showCreateForm" class="text-sm text-neutral-500 py-4">
-      プリセットはありません
+      {{ t('presets.empty') }}
     </div>
 
     <div class="space-y-2">
@@ -158,29 +160,29 @@ async function onDelete(id: number) {
         <!-- Edit form (inline) -->
         <div v-if="editingId === preset.id" class="space-y-2">
           <div>
-            <label class="text-xs">名前</label>
+            <label class="text-xs">{{ t('presets.name') }}</label>
             <input v-model="form.name" type="text" class="w-full rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm mt-1" />
           </div>
           <div class="mb-3">
-            <label class="text-xs">出力先ディレクトリ</label>
+            <label class="text-xs">{{ t('presets.output_dir') }}</label>
             <div class="flex gap-2 items-center mt-1">
               <input v-model="form.output_dir" type="text" class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm" />
-              <button @click="selectDirectory" class="px-3 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-opacity">参照...</button>
+              <button @click="selectDirectory" class="px-3 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-opacity">{{ t('common.browse') }}</button>
             </div>
           </div>
           <div class="flex flex-wrap gap-3 text-sm">
-            <label><input type="checkbox" v-model="form.embed_thumbnail" class="mr-1">サムネイル埋め込み</label>
-            <label><input type="checkbox" v-model="form.embed_metadata" class="mr-1">メタデータ埋め込み</label>
-            <label><input type="checkbox" v-model="form.write_subs" class="mr-1">字幕保存</label>
-            <label><input type="checkbox" v-model="form.embed_subs" class="mr-1">字幕埋め込み</label>
-            <label><input type="checkbox" v-model="form.embed_chapters" class="mr-1">チャプター埋め込み</label>
-            <label><input type="checkbox" v-model="form.sponsorblock" class="mr-1">SponsorBlock</label>
+            <label><input type="checkbox" v-model="form.embed_thumbnail" class="mr-1">{{ t('presets.embed_thumbnail') }}</label>
+            <label><input type="checkbox" v-model="form.embed_metadata" class="mr-1">{{ t('presets.embed_metadata') }}</label>
+            <label><input type="checkbox" v-model="form.write_subs" class="mr-1">{{ t('presets.write_subs') }}</label>
+            <label><input type="checkbox" v-model="form.embed_subs" class="mr-1">{{ t('presets.embed_subs') }}</label>
+            <label><input type="checkbox" v-model="form.embed_chapters" class="mr-1">{{ t('presets.embed_chapters') }}</label>
+            <label><input type="checkbox" v-model="form.sponsorblock" class="mr-1">{{ t('presets.sponsorblock') }}</label>
           </div>
           <div class="flex items-center gap-2 mt-2">
             <button class="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
-                    :disabled="!form.name.trim()" @click="saveForm">保存</button>
+                    :disabled="!form.name.trim()" @click="saveForm">{{ t('presets.save') }}</button>
             <button class="text-sm px-3 py-1 rounded border border-[var(--color-separator)] hover:bg-white/10"
-                    @click="cancelForm">キャンセル</button>
+                    @click="cancelForm">{{ t('presets.cancel') }}</button>
             <span v-if="errorMsg" class="text-xs text-red-400">{{ errorMsg }}</span>
           </div>
         </div>
@@ -194,9 +196,9 @@ async function onDelete(id: number) {
           </div>
           <div class="flex gap-2">
             <button class="text-xs px-2 py-1 rounded border border-[var(--color-separator)] hover:bg-white/10"
-                    @click="startEdit(preset)">編集</button>
+                    @click="startEdit(preset)">{{ t('presets.edit') }}</button>
             <button class="text-xs px-2 py-1 rounded border border-red-400 text-red-400 hover:bg-red-400/10"
-                    @click="onDelete(preset.id)">削除</button>
+                    @click="onDelete(preset.id)">{{ t('common.delete') }}</button>
           </div>
         </div>
       </div>

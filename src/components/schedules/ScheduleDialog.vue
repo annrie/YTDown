@@ -3,6 +3,9 @@ import { ref, computed, watch } from 'vue'
 import { Cron } from 'croner'
 import type { Schedule } from '../../types'
 import { useSettingsStore } from '../../stores/settings'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   schedule?: Schedule | null
@@ -49,12 +52,12 @@ watch(cronExpr, (expr) => {
     const runs: string[] = []
     let next = job.nextRun()
     for (let i = 0; i < 5 && next; i++) {
-      runs.push(next.toLocaleString('ja-JP'))
+      runs.push(next.toLocaleString())
       next = job.nextRun(next)
     }
     nextRuns.value = runs
   } catch {
-    cronError.value = '無効なcron式です'
+    cronError.value = t('schedules.invalid_cron')
     nextRuns.value = []
   }
 }, { immediate: true })
@@ -80,31 +83,31 @@ function onSave() {
 <template>
   <div class="dialog-overlay" @click.self="emit('cancel')">
     <div class="dialog">
-      <h2 class="dialog-title">{{ schedule ? 'スケジュールを編集' : 'スケジュールを追加' }}</h2>
+      <h2 class="dialog-title">{{ schedule ? t('schedules.dialog_title_edit') : t('schedules.dialog_title_add') }}</h2>
 
       <div class="field">
-        <label class="label">名前</label>
-        <input v-model="name" class="input" placeholder="例: 深夜バックアップ" />
+        <label class="label">{{ t('schedules.schedule_name') }}</label>
+        <input v-model="name" class="input" :placeholder="t('schedules.schedule_name')" />
       </div>
 
       <div class="field">
-        <label class="label">URL</label>
+        <label class="label">{{ t('schedules.schedule_url') }}</label>
         <input v-model="url" class="input" placeholder="https://..." />
       </div>
 
       <div class="field">
         <label class="label toggle-label">
           <input type="checkbox" v-model="isChannel" />
-          <span>チャンネル監視（新着のみ）</span>
+          <span>{{ t('schedules.channel_mode') }}</span>
         </label>
       </div>
 
       <div class="field">
-        <label class="label">cron式</label>
+        <label class="label">{{ t('schedules.schedule_cron') }}</label>
         <input v-model="cronExpr" class="input font-mono" placeholder="0 9 * * *" />
         <p v-if="cronError" class="error-text">{{ cronError }}</p>
         <div v-if="nextRuns.length" class="next-runs">
-          <p class="next-runs-label">次回5回の実行予定:</p>
+          <p class="next-runs-label">{{ t('schedules.next_runs_preview') }}</p>
           <ul>
             <li v-for="(run, i) in nextRuns" :key="i">{{ run }}</li>
           </ul>
@@ -112,9 +115,9 @@ function onSave() {
       </div>
 
       <div class="dialog-actions">
-        <button class="btn btn-cancel" @click="emit('cancel')">キャンセル</button>
+        <button class="btn btn-cancel" @click="emit('cancel')">{{ t('schedules.cancel') }}</button>
         <button class="btn btn-save" :disabled="!isValid" @click="onSave">
-          {{ schedule ? '保存' : 'スケジュール登録' }}
+          {{ schedule ? t('schedules.save') : t('schedules.add') }}
         </button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { convertFileSrc } from '@tauri-apps/api/core'
+import { useI18n } from 'vue-i18n'
 import type { ImageRecord } from '../../types'
 
 const props = defineProps<{
@@ -14,6 +15,7 @@ const emit = defineEmits<{
   'reveal-in-finder': [filePath: string]
 }>()
 
+const { t } = useI18n()
 const currentIndex = ref(0)
 const playing = ref(false)
 const interval = ref(3)
@@ -183,17 +185,17 @@ onUnmounted(() => {
             class="bg-black/50 px-3 py-1.5 rounded-lg text-white text-sm hover:bg-black/70"
             @click="togglePlay"
           >
-            {{ playing ? '⏸' : '▶' }} {{ interval }}秒
+            {{ playing ? '⏸' : '▶' }} {{ t('images.seconds_unit', { n: interval }) }}
           </button>
           <select
             :value="interval"
             class="bg-black/50 px-2 py-1.5 rounded-lg text-white text-sm border-none"
             @change="setInterval_(Number(($event.target as HTMLSelectElement).value))"
           >
-            <option value="1">1秒</option>
-            <option value="3">3秒</option>
-            <option value="5">5秒</option>
-            <option value="10">10秒</option>
+            <option value="1">{{ t('images.seconds_unit', { n: 1 }) }}</option>
+            <option value="3">{{ t('images.seconds_unit', { n: 3 }) }}</option>
+            <option value="5">{{ t('images.seconds_unit', { n: 5 }) }}</option>
+            <option value="10">{{ t('images.seconds_unit', { n: 10 }) }}</option>
           </select>
           <button
             v-if="currentImage?.file_path"

@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { homeDir } from '@tauri-apps/api/path'
+import { useI18n } from 'vue-i18n'
 import { useDownload } from '../../composables/useDownload'
 import { useDownloadsStore, type PlaylistItemInfo } from '../../stores/downloads'
 import { useSettingsStore } from '../../stores/settings'
@@ -17,6 +18,7 @@ const emit = defineEmits<{
   start: [url: string, options: DownloadOptions]
 }>()
 
+const { t } = useI18n()
 const { videoInfo, loading, error, fetchFormats } = useDownload()
 const downloadsStore = useDownloadsStore()
 const settingsStore = useSettingsStore()
@@ -50,13 +52,13 @@ const scheduleCronExpr = ref('0 9 * * *')
 const scheduleIsChannel = ref(false)
 
 const scheduleCronError = computed(() => {
-  try { new Cron(scheduleCronExpr.value); return '' } catch { return '無効なcron式です' }
+  try { new Cron(scheduleCronExpr.value); return '' } catch { return t('download_dialog.invalid_cron') }
 })
 
 const scheduleNextRun = computed(() => {
   try {
     const job = new Cron(scheduleCronExpr.value)
-    return job.nextRun()?.toLocaleString('ja-JP') ?? ''
+    return job.nextRun()?.toLocaleString() ?? ''
   } catch { return '' }
 })
 
@@ -104,8 +106,8 @@ function handleScheduleRegister() {
     options_json: JSON.stringify(options),
     is_channel: scheduleIsChannel.value,
   }).catch(e => {
-    scheduleError.value = `登録失敗: ${e}`
-    console.error('スケジュール登録失敗:', e)
+    scheduleError.value = t('download_dialog.register_error', { error: e })
+    console.error('Schedule registration failed:', e)
   })
 }
 
@@ -130,7 +132,7 @@ async function handleSavePreset() {
     showSavePreset.value = false
     savePresetName.value = ''
   } catch (e) {
-    savePresetError.value = `保存失敗: ${e}`
+    savePresetError.value = t('presets.save_error', { error: e })
   }
 }
 
@@ -143,7 +145,7 @@ async function handleInstallYtdlp() {
     // Retry fetching formats after install
     fetchFormats(props.url)
   } catch (e) {
-    error.value = `インストール失敗: ${e}`
+    error.value = t('download_dialog.install_error', { error: e })
   } finally {
     installing.value = false
   }
@@ -211,13 +213,18 @@ function formatDuration(seconds: number): string {
 
 function formatUploadDate(yyyymmdd: string): string {
   if (yyyymmdd.length !== 8) return yyyymmdd
-  return `${yyyymmdd.slice(0, 4)}年${parseInt(yyyymmdd.slice(4, 6))}月${parseInt(yyyymmdd.slice(6, 8))}日`
+  const year = parseInt(yyyymmdd.slice(0, 4))
+  const month = parseInt(yyyymmdd.slice(4, 6)) - 1
+  const day = parseInt(yyyymmdd.slice(6, 8))
+  return new Date(year, month, day).toLocaleDateString()
 }
 
 function formatViewCount(n: number): string {
-  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}億回視聴`
-  if (n >= 10_000) return `${(n / 10_000).toFixed(1)}万回視聴`
-  return `${n.toLocaleString()}回視聴`
+  const formatted = new Intl.NumberFormat(undefined, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(n)
+  return `${formatted} ${t('download_dialog.view_count_suffix')}`
 }
 
 const subtitleInfo = computed(() => {
@@ -240,10 +247,10 @@ const subtitleInfo = computed(() => {
 const subtitleWarning = computed(() => {
   if (!(writeSubs.value || embedSubs.value)) return ''
   if (!subtitleInfo.value.hasAny) {
-    return 'この動画では利用可能な字幕が見つかっていません。字幕設定を有効にしても追加ファイルや埋め込みは行われません。'
+    return t('download_dialog.subtitle_warning_none')
   }
   if (embedSubs.value && mediaType.value === 'audio') {
-    return '字幕埋め込みは動画コンテナ向けです。音声のみダウンロードでは字幕は埋め込まれません。'
+    return t('download_dialog.subtitle_warning_audio')
   }
   return ''
 })
@@ -338,7 +345,7 @@ watch(playlistMode, async (mode) => {
         playlistPreviewLoaded.value = true
       }
     } catch (e) {
-      playlistFetchError.value = `プレイリスト取得に失敗しました: ${e}`
+      playlistFetchError.value = t('download_dialog.playlist_fetch_error', { error: e })
     }
   }
 })
@@ -358,7 +365,7 @@ async function retryPlaylistFetch() {
       playlistPreviewLoaded.value = true
     }
   } catch (e) {
-    playlistFetchError.value = `プレイリスト取得に失敗しました: ${e}`
+    playlistFetchError.value = t('download_dialog.playlist_fetch_error', { error: e })
   }
 }
 
@@ -407,7 +414,7 @@ function handleStart() {
     <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl w-[560px] max-h-[80vh] flex flex-col">
       <!-- Header (fixed) -->
       <div class="flex items-center justify-between p-4 border-b border-[var(--color-separator)] flex-shrink-0">
-        <h2 class="text-lg font-semibold">ダウンロード</h2>
+        <h2 class="text-lg font-semibold">{{ t('download_dialog.title') }}</h2>
         <button @click="emit('close')" class="text-neutral-400 hover:text-neutral-600">&times;</button>
       </div>
 
@@ -415,7 +422,7 @@ function handleStart() {
       <div class="flex-1 overflow-auto">
         <!-- Loading state -->
         <div v-if="loading" class="p-8 text-center text-neutral-500">
-          情報を取得中...
+          {{ t('download_dialog.loading_info') }}
         </div>
 
         <!-- Error state -->
@@ -423,7 +430,7 @@ function handleStart() {
           <p class="text-red-500">{{ error }}</p>
           <button v-if="isYtdlpMissing" @click="handleInstallYtdlp" :disabled="installing"
                   class="mt-4 px-4 py-2 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
-            {{ installing ? 'インストール中...' : 'yt-dlp をインストール' }}
+            {{ installing ? t('download_dialog.installing') : t('download_dialog.install_ytdlp') }}
           </button>
         </div>
 
@@ -449,7 +456,7 @@ function handleStart() {
                   👁 {{ formatViewCount(videoInfo.view_count) }}
                 </span>
                 <span v-if="videoInfo.chapters.length > 0">
-                  📑 {{ videoInfo.chapters.length }} チャプター
+                  📑 {{ videoInfo.chapters.length }} {{ t('download_dialog.chapters') }}
                 </span>
               </div>
             </div>
@@ -459,7 +466,7 @@ function handleStart() {
           <details v-if="videoInfo.chapters.length > 0"
                    class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40">
             <summary class="px-3 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300 cursor-pointer select-none list-none flex items-center justify-between">
-              <span>チャプター ({{ videoInfo.chapters.length }})</span>
+              <span>{{ t('download_dialog.chapters_label', { count: videoInfo.chapters.length }) }}</span>
               <span class="text-neutral-400">▼</span>
             </summary>
             <ul class="px-3 pb-2 space-y-0.5 max-h-32 overflow-y-auto">
@@ -472,33 +479,33 @@ function handleStart() {
           </details>
 
           <div class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40 px-3 py-2">
-            <p class="text-xs font-semibold text-neutral-600 dark:text-neutral-300">字幕の利用可否</p>
+            <p class="text-xs font-semibold text-neutral-600 dark:text-neutral-300">{{ t('download_dialog.subtitle_available') }}</p>
             <p v-if="subtitleInfo.hasAny" class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               <span v-if="subtitleInfo.manual.length > 0">
-                手動字幕: {{ subtitleInfo.manual.join(', ') }}
+                {{ t('download_dialog.manual_sub') }}: {{ subtitleInfo.manual.join(', ') }}
               </span>
               <span v-else>
-                手動字幕: なし
+                {{ t('download_dialog.manual_sub') }}: {{ t('common.none') }}
               </span>
               <span v-if="subtitleInfo.automatic.length > 0">
-                / 自動字幕: {{ subtitleInfo.automatic.join(', ') }}
+                / {{ t('download_dialog.subtitle_auto_label') }}: {{ subtitleInfo.automatic.join(', ') }}
               </span>
               <span v-else>
-                / 自動字幕: なし
+                / {{ t('download_dialog.subtitle_auto_label') }}: {{ t('common.none') }}
               </span>
             </p>
             <p v-else class="mt-1 text-xs text-amber-600 dark:text-amber-400">
-              この動画では利用可能な字幕が見つかっていません。
+              {{ t('download_dialog.no_subtitle_available') }}
             </p>
           </div>
 
           <!-- Playlist mode selector -->
           <div v-if="isPlaylistUrl" class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-            <p class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2">プレイリストが検出されました</p>
+            <p class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2">{{ t('download_dialog.playlist_detected') }}</p>
 
             <!-- Channel upload list warning -->
             <p v-if="isChannelUploadList" class="text-xs text-amber-600 dark:text-amber-400 mb-2">
-              ⚠ このリストはチャンネルの全動画一覧です。「すべて」を選択すると大量の動画がダウンロードされます。
+              {{ t('download_dialog.channel_upload_warning') }}
             </p>
 
             <div class="flex gap-2">
@@ -509,8 +516,8 @@ function handleStart() {
                   : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-600'"
                 @click="playlistMode = 'single'"
               >
-                1件のみ
-                <span class="block text-xs opacity-75 mt-0.5">この動画だけ</span>
+                {{ t('download_dialog.playlist_single_label') }}
+                <span class="block text-xs opacity-75 mt-0.5">{{ t('download_dialog.playlist_single_desc') }}</span>
               </button>
               <button
                 class="flex-1 px-3 py-2 rounded-md text-sm transition-colors"
@@ -519,18 +526,18 @@ function handleStart() {
                   : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-600'"
                 @click="playlistMode = 'all'; playlistConfirmed = false"
               >
-                すべて
-                <span class="block text-xs opacity-75 mt-0.5">リスト全件ダウンロード</span>
+                {{ t('download_dialog.playlist_all_label') }}
+                <span class="block text-xs opacity-75 mt-0.5">{{ t('download_dialog.playlist_all_desc') }}</span>
               </button>
             </div>
 
             <!-- Playlist fetching indicator -->
             <div v-if="playlistMode === 'all' && downloadsStore.playlistFetching" class="mt-3 flex items-center gap-2">
               <div class="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-              <span class="text-xs text-neutral-500">プレイリスト情報を取得中...</span>
+              <span class="text-xs text-neutral-500">{{ t('download_dialog.fetching_playlist') }}</span>
               <button @click="handleCancelPlaylistFetch"
                       class="ml-auto px-2 py-1 text-xs rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
-                中止
+                {{ t('download_dialog.abort') }}
               </button>
             </div>
 
@@ -539,30 +546,30 @@ function handleStart() {
               <p class="flex-1 text-xs text-red-500">{{ playlistFetchError }}</p>
               <button @click="retryPlaylistFetch"
                       class="px-2 py-1 text-xs rounded bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors flex-shrink-0">
-                再試行
+                {{ t('common.retry') }}
               </button>
             </div>
 
             <!-- Playlist item count preview -->
             <div v-if="playlistMode === 'all' && playlistPreviewLoaded && playlistItems.length > 0" class="mt-3">
               <p class="text-xs text-neutral-600 dark:text-neutral-400">
-                <span class="font-semibold">{{ playlistItems.length }}件</span> の動画が見つかりました
+                {{ t('download_dialog.playlist_found', { count: playlistItems.length }) }}
               </p>
 
               <!-- Large playlist confirmation -->
               <div v-if="playlistItems.length >= LARGE_PLAYLIST_THRESHOLD && !playlistConfirmed"
                    class="mt-2 p-2 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                 <p class="text-xs text-amber-700 dark:text-amber-300 mb-2">
-                  ⚠ {{ playlistItems.length }}件は大量です。本当にすべてダウンロードしますか？
+                  {{ t('download_dialog.playlist_large_warning', { count: playlistItems.length }) }}
                 </p>
                 <div class="flex gap-2">
                   <button @click="playlistConfirmed = true"
                           class="px-3 py-1 text-xs rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors">
-                    すべてダウンロード
+                    {{ t('download_dialog.download_all') }}
                   </button>
                   <button @click="playlistMode = 'single'"
                           class="px-3 py-1 text-xs rounded bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors">
-                    この動画のみ
+                    {{ t('download_dialog.this_only') }}
                   </button>
                 </div>
               </div>
@@ -575,23 +582,23 @@ function handleStart() {
                     class="px-4 py-1.5 rounded-md text-sm transition-colors"
                     :class="mediaType === type_ ? 'bg-[var(--color-accent)] text-white' : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600'"
                     @click="mediaType = type_">
-              {{ type_ === 'video' ? '映像' : '音声' }}
+              {{ type_ === 'video' ? t('download_dialog.media_video') : t('download_dialog.media_audio') }}
             </button>
           </div>
 
           <!-- Format & Quality -->
           <div class="grid grid-cols-2 gap-4 mb-3">
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">フォーマット</label>
+              <label class="block text-xs text-neutral-500 mb-1">{{ t('download_dialog.format') }}</label>
               <select v-model="selectedFormat" class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm">
                 <option v-for="f in availableFormats" :key="f" :value="f">{{ f.toUpperCase() }}</option>
               </select>
             </div>
             <div v-if="mediaType === 'video'">
-              <label class="block text-xs text-neutral-500 mb-1">画質</label>
+              <label class="block text-xs text-neutral-500 mb-1">{{ t('download_dialog.quality_label') }}</label>
               <select v-model="selectedQuality" class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm">
                 <option v-for="q in qualities" :key="q" :value="q">
-                  {{ q === 'best' ? '最高画質' : q + 'p' }}
+                  {{ q === 'best' ? t('download_dialog.best') : q + 'p' }}
                 </option>
               </select>
             </div>
@@ -599,13 +606,13 @@ function handleStart() {
 
           <!-- Output Directory -->
           <div class="mb-3">
-            <label class="block text-xs text-neutral-500 mb-1">出力先ディレクトリ</label>
+            <label class="block text-xs text-neutral-500 mb-1">{{ t('download_dialog.output_dir') }}</label>
             <div class="flex gap-2">
               <input :value="settingsStore.settings.download_dir" disabled
                      class="flex-1 h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm opacity-70" />
               <button @click="selectDirectory" 
                       class="px-3 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-opacity">
-                選択...
+                {{ t('download_dialog.select') }}
               </button>
             </div>
           </div>
@@ -614,7 +621,7 @@ function handleStart() {
           <div class="mb-5">
             <label class="flex items-center gap-2 text-sm">
               <input type="checkbox" v-model="useCustomFormat" />
-              カスタムフォーマット指定
+              {{ t('download_dialog.custom_format_label') }}
             </label>
             <input v-if="useCustomFormat" v-model="customFormat" placeholder="bestvideo+bestaudio/best"
                    class="mt-1 w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm font-mono" />
@@ -625,7 +632,7 @@ function handleStart() {
           <!-- Post-process options (Preset Group) -->
           <div class="space-y-3">
             <div class="flex items-center justify-between">
-              <p class="text-xs text-neutral-500 font-semibold">詳細設定 (プリセット管理)</p>
+              <p class="text-xs text-neutral-500 font-semibold">{{ t('download_dialog.advanced_label') }}</p>
             </div>
 
             <!-- Preset row -->
@@ -635,7 +642,7 @@ function handleStart() {
                 class="flex-1 rounded border-none bg-transparent px-2 py-1 text-sm outline-none"
                 @change="applyPreset"
               >
-                <option value="">適応するプリセットを選択…</option>
+                <option value="">{{ t('download_dialog.preset_select_placeholder') }}</option>
                 <option v-for="p in presetsStore.presets" :key="p.id" :value="p.id">
                   {{ p.name }}
                 </option>
@@ -644,7 +651,7 @@ function handleStart() {
                 class="text-xs px-3 py-1.5 rounded-md bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors"
                 @click="showSavePreset = !showSavePreset"
               >
-                保存
+                {{ t('common.save') }}
               </button>
             </div>
             
@@ -653,7 +660,7 @@ function handleStart() {
               <input
                 v-model="savePresetName"
                 type="text"
-                placeholder="新しいプリセット名"
+                :placeholder="t('download_dialog.preset_name_new')"
                 class="flex-1 h-8 rounded border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 px-2 py-1 text-sm"
                 @keyup.enter="handleSavePreset"
               />
@@ -669,19 +676,19 @@ function handleStart() {
 
             <div class="grid grid-cols-2 gap-2 pt-2">
               <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" v-model="embedThumbnail" /> サムネイル埋め込み
+                <input type="checkbox" v-model="embedThumbnail" /> {{ t('download_dialog.embed_thumbnail') }}
               </label>
               <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" v-model="embedMetadata" /> メタデータ埋め込み
+                <input type="checkbox" v-model="embedMetadata" /> {{ t('download_dialog.embed_metadata') }}
               </label>
               <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" v-model="writeSubs" /> 字幕ダウンロード
+                <input type="checkbox" v-model="writeSubs" /> {{ t('download_dialog.write_subs') }}
               </label>
               <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" v-model="embedSubs" /> 字幕埋め込み
+                <input type="checkbox" v-model="embedSubs" /> {{ t('download_dialog.embed_subs') }}
               </label>
               <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" v-model="embedChapters" /> チャプター埋め込み
+                <input type="checkbox" v-model="embedChapters" /> {{ t('download_dialog.embed_chapters') }}
               </label>
               <label class="flex items-center gap-2 text-sm">
                 <input type="checkbox" v-model="sponsorblock" /> SponsorBlock
@@ -701,41 +708,41 @@ function handleStart() {
         <div>
           <label class="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" v-model="showScheduleMode" />
-            <span>スケジュール実行</span>
+            <span>{{ t('download_dialog.schedule_mode_toggle') }}</span>
           </label>
         </div>
 
         <!-- インラインスケジュールフォーム -->
         <div v-if="showScheduleMode" class="flex flex-col gap-2 pt-2 border-t border-[var(--color-separator)]">
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">スケジュール名</label>
-            <input v-model="scheduleName" class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm" placeholder="例: 毎朝ダウンロード" />
+            <label class="block text-xs text-neutral-500 mb-1">{{ t('download_dialog.schedule_name') }}</label>
+            <input v-model="scheduleName" class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm" :placeholder="t('download_dialog.schedule_name_placeholder')" />
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">cron式</label>
+            <label class="block text-xs text-neutral-500 mb-1">{{ t('download_dialog.schedule_cron') }}</label>
             <input v-model="scheduleCronExpr" class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm font-mono" placeholder="0 9 * * *" />
             <p v-if="scheduleCronError" class="text-xs text-red-500 mt-0.5">{{ scheduleCronError }}</p>
-            <p v-else-if="scheduleNextRun" class="text-xs text-neutral-400 mt-0.5">次回: {{ scheduleNextRun }}</p>
+            <p v-else-if="scheduleNextRun" class="text-xs text-neutral-400 mt-0.5">{{ t('download_dialog.schedule_next', { time: scheduleNextRun }) }}</p>
           </div>
           <label class="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" v-model="scheduleIsChannel" />
-            <span>チャンネル監視（新着のみ）</span>
+            <span>{{ t('download_dialog.channel_schedule') }}</span>
           </label>
         </div>
 
         <div class="flex justify-end gap-2">
           <button @click="emit('close')" class="px-4 py-1.5 rounded-md text-sm bg-neutral-100 dark:bg-neutral-700">
-            キャンセル
+            {{ t('common.cancel') }}
           </button>
           <button v-if="!showScheduleMode" @click="handleStart"
                   :disabled="loading || !!error || needsPlaylistConfirmation || (playlistMode === 'all' && downloadsStore.playlistFetching)"
                   class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
-            ダウンロード開始
+            {{ t('download_dialog.start') }}
           </button>
           <button v-else @click="handleScheduleRegister"
                   :disabled="!isScheduleValid"
                   class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
-            スケジュール登録
+            {{ t('download_dialog.register_schedule') }}
           </button>
         </div>
       </div>
