@@ -5,39 +5,17 @@ mod scheduler;
 mod state;
 mod ytdlp;
 
-fn escape_applescript_string(value: &str) -> String {
-    value
-        .replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace(['\r', '\n'], " ")
-}
-
-/// Send a macOS native notification via osascript.
-pub(crate) fn notify(title: &str, body: &str) {
-    let script = format!(
-        r#"display notification "{}" with title "{}""#,
-        escape_applescript_string(body),
-        escape_applescript_string(title)
-    );
-    match std::process::Command::new("osascript")
-        .args(["-e", &script])
-        .output()
-    {
-        Ok(output) if !output.status.success() => {
-            eprintln!(
-                "[YTDown] osascript notification failed: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            );
-        }
-        Err(error) => {
-            eprintln!("[YTDown] failed to launch osascript: {error}");
-        }
-        Ok(_) => {}
+/// Send a notification by emitting a Tauri event to the frontend.
+/// The frontend handles it via the Web Notification API.
+pub(crate) fn notify(app: &tauri::AppHandle, title: &str, body: &str) {
+    let payload = serde_json::json!({ "title": title, "body": body });
+    if let Err(e) = app.emit("native-notification", payload) {
+        eprintln!("[YTDown] failed to emit notification event: {e}");
     }
 }
 
 use state::AppState;
-use tauri::{Listener, Manager};
+use tauri::{Emitter, Listener, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

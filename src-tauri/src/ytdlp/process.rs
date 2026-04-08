@@ -552,7 +552,7 @@ pub async fn start_download(
                 let body = current_title
                     .as_deref()
                     .unwrap_or("ダウンロードが完了しました");
-                crate::notify("YTDown", body);
+                crate::notify(&app_clone, "YTDown", body);
             }
         }
     });

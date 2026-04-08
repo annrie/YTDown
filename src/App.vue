@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { ViewMode, SidebarSection, DownloadOptions } from './types'
 import { useDownloadsStore } from './stores/downloads'
@@ -517,6 +518,15 @@ onMounted(async () => {
     libraryStore.loadItems()
   })
   await libraryStore.loadItems()
+  // Request notification permission and listen for backend notifications
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission()
+  }
+  await listen<{ title: string; body: string }>('native-notification', (event) => {
+    if (Notification.permission === 'granted') {
+      new Notification(event.payload.title, { body: event.payload.body })
+    }
+  })
   document.addEventListener('keydown', handleKeydown)
   window.addEventListener('open-download-dialog', handleOpenDownloadDialog)
   window.addEventListener('open-batch-dialog', handleOpenBatchDialog)

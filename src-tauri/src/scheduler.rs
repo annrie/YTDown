@@ -317,7 +317,7 @@ pub async fn cancel_job(app: &AppHandle, schedule_id: i64) {
     }
 }
 
-/// macOS 通知を送信
-fn send_notification(_app: &AppHandle, title: &str, body: &str) {
-    crate::notify(title, body);
+/// ネイティブ通知を送信
+fn send_notification(app: &AppHandle, title: &str, body: &str) {
+    crate::notify(app, title, body);
 }
