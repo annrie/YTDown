@@ -1,6 +1,8 @@
+pub mod auto_preset;
 pub mod browser;
 pub mod cookies;
 pub mod download;
+pub mod download_history;
 pub mod file_ops;
 pub mod formats;
 pub mod history;

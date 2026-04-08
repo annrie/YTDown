@@ -3,7 +3,6 @@ import { ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../../stores/settings'
 import { open } from '@tauri-apps/plugin-dialog'
-import { openUrl } from '@tauri-apps/plugin-opener'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -43,8 +42,8 @@ async function handleBrowseCookieFile() {
   }
 }
 
-function openFullDiskAccessSettings() {
-  openUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles')
+async function openFullDiskAccessSettings() {
+  await invoke('open_system_settings')
 }
 </script>
 

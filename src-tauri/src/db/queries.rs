@@ -725,3 +725,127 @@ pub fn delete_preset(conn: &Connection, id: i64) -> SqlResult<()> {
     conn.execute("DELETE FROM download_presets WHERE id = ?1", params![id])?;
     Ok(())
 }
+
+// === Download History ===
+
+pub fn insert_history_entry(
+    conn: &Connection,
+    url: &str,
+    title: Option<&str>,
+    site: Option<&str>,
+    file_path: Option<&str>,
+) -> SqlResult<i64> {
+    conn.execute(
+        "INSERT INTO download_history (url, title, site, file_path) VALUES (?1, ?2, ?3, ?4)",
+        params![url, title, site, file_path],
+    )?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn list_history(conn: &Connection, limit: Option<i64>) -> SqlResult<Vec<HistoryEntry>> {
+    let lim = limit.unwrap_or(200);
+    let mut stmt = conn.prepare(
+        "SELECT id, url, title, site, file_path, completed_at
+         FROM download_history ORDER BY completed_at DESC LIMIT ?1",
+    )?;
+    let rows = stmt.query_map(params![lim], |row| {
+        Ok(HistoryEntry {
+            id: row.get(0)?,
+            url: row.get(1)?,
+            title: row.get(2)?,
+            site: row.get(3)?,
+            file_path: row.get(4)?,
+            completed_at: row.get(5)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn delete_history_entry(conn: &Connection, id: i64) -> SqlResult<()> {
+    conn.execute("DELETE FROM download_history WHERE id = ?1", params![id])?;
+    Ok(())
+}
+
+pub fn clear_history(conn: &Connection) -> SqlResult<()> {
+    conn.execute("DELETE FROM download_history", [])?;
+    Ok(())
+}
+
+// === Auto Preset Rules ===
+
+pub fn list_auto_preset_rules(conn: &Connection) -> SqlResult<Vec<AutoPresetRule>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, domain, preset_id, enabled, created_at FROM auto_preset_rules ORDER BY id",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(AutoPresetRule {
+            id: row.get(0)?,
+            domain: row.get(1)?,
+            preset_id: row.get(2)?,
+            enabled: row.get::<_, i64>(3)? != 0,
+            created_at: row.get(4)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn insert_auto_preset_rule(
+    conn: &Connection,
+    domain: &str,
+    preset_id: i64,
+    enabled: bool,
+) -> SqlResult<i64> {
+    conn.execute(
+        "INSERT INTO auto_preset_rules (domain, preset_id, enabled) VALUES (?1, ?2, ?3)",
+        params![domain, preset_id, enabled as i64],
+    )?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn update_auto_preset_rule(
+    conn: &Connection,
+    id: i64,
+    domain: &str,
+    preset_id: i64,
+    enabled: bool,
+) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE auto_preset_rules SET domain=?1, preset_id=?2, enabled=?3 WHERE id=?4",
+        params![domain, preset_id, enabled as i64, id],
+    )?;
+    Ok(())
+}
+
+pub fn delete_auto_preset_rule(conn: &Connection, id: i64) -> SqlResult<()> {
+    conn.execute("DELETE FROM auto_preset_rules WHERE id = ?1", params![id])?;
+    Ok(())
+}
+
+pub fn find_preset_for_domain(conn: &Connection, domain: &str) -> SqlResult<Option<Preset>> {
+    let mut stmt = conn.prepare(
+        "SELECT p.id, p.name, p.format, p.quality, p.output_dir,
+                p.embed_thumbnail, p.embed_metadata, p.write_subs,
+                p.embed_subs, p.embed_chapters, p.sponsorblock, p.created_at
+         FROM auto_preset_rules r
+         JOIN download_presets p ON p.id = r.preset_id
+         WHERE r.enabled = 1 AND r.domain = ?1
+         LIMIT 1",
+    )?;
+    stmt.query_row(params![domain], |row| {
+        Ok(Preset {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            format: row.get(2)?,
+            quality: row.get(3)?,
+            output_dir: row.get(4)?,
+            embed_thumbnail: row.get::<_, i64>(5)? != 0,
+            embed_metadata: row.get::<_, i64>(6)? != 0,
+            write_subs: row.get::<_, i64>(7)? != 0,
+            embed_subs: row.get::<_, i64>(8)? != 0,
+            embed_chapters: row.get::<_, i64>(9)? != 0,
+            sponsorblock: row.get::<_, i64>(10)? != 0,
+            created_at: row.get(11)?,
+        })
+    })
+    .optional()
+}

@@ -42,7 +42,8 @@
     "images_gallery": "Galerie",
     "schedules": "Gestionnaire de planif.",
     "channel_monitor": "Ajouter un suivi de chaîne",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "history": "Historique"
   },
   "statusbar": {
     "active_count": "{count} en cours",
@@ -155,7 +156,12 @@
     "placeholder": "Une URL par ligne...",
     "count": "{count} URL",
     "start": "Démarrer le lot",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "select_all": "Tout sélectionner",
+    "deselect_all": "Tout désélectionner",
+    "selected_count": "{count} sélectionné(s)",
+    "delete_selected": "Supprimer la sélection ({count})",
+    "load_file": "Charger depuis un fichier"
   },
   "library": {
     "empty": "La bibliothèque est vide",
@@ -252,7 +258,8 @@
     "import_dialog_title": "Importer les paramètres",
     "export_success": "Exporté avec succès",
     "import_success": "Import réussi: {settings} paramètres, {presets} préréglages, {rules} règles, {schedules} planifications",
-    "image_filter": "Images"
+    "image_filter": "Images",
+    "ytdlp_check_update": "Rechercher des mises à jour"
   },
   "format": {
     "title": "Paramètres de format",
@@ -477,5 +484,27 @@
     "title": "Historique des URL",
     "empty": "Aucun historique",
     "clear": "Effacer l'historique"
+  },
+  "history": {
+    "title": "Historique des téléchargements",
+    "empty": "Aucun historique",
+    "clear_all": "Tout effacer",
+    "clear_confirm": "Supprimer tout l'historique des téléchargements ?",
+    "redownload": "Re-télécharger",
+    "delete": "Supprimer",
+    "export": "Exporter",
+    "download_all": "Tout télécharger",
+    "export_title": "Exporter l'historique"
+  },
+  "auto_preset": {
+    "title": "Préréglage automatique",
+    "empty": "Aucune règle",
+    "add": "Ajouter une règle",
+    "domain_label": "Domaine",
+    "preset_label": "Préréglage",
+    "enabled": "Activé",
+    "delete_confirm": "Supprimer cette règle ?",
+    "domain_placeholder": "ex. youtube.com",
+    "auto_applied": "Préréglage appliqué automatiquement selon l'URL"
   }
 }

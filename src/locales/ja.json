@@ -42,7 +42,8 @@
     "images_gallery": "ギャラリー",
     "schedules": "スケジュール管理",
     "channel_monitor": "チャンネル監視追加",
-    "settings": "設定"
+    "settings": "設定",
+    "history": "履歴"
   },
   "statusbar": {
     "active_count": "進行中 {count} 件",
@@ -155,7 +156,12 @@
     "placeholder": "URLを1行ずつ入力...",
     "count": "{count} 件のURL",
     "start": "一括ダウンロード開始",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "select_all": "すべて選択",
+    "deselect_all": "すべて解除",
+    "selected_count": "{count} 件選択中",
+    "delete_selected": "選択を削除 ({count})",
+    "load_file": "ファイルから読み込み"
   },
   "library": {
     "empty": "ライブラリは空です",
@@ -252,7 +258,8 @@
     "import_dialog_title": "設定をインポート",
     "export_success": "エクスポートしました",
     "import_success": "インポート完了: 設定 {settings} 件、プリセット {presets} 件、ルール {rules} 件、スケジュール {schedules} 件",
-    "image_filter": "画像"
+    "image_filter": "画像",
+    "ytdlp_check_update": "アップデートを確認"
   },
   "format": {
     "title": "フォーマット設定",
@@ -477,5 +484,27 @@
     "title": "URLの履歴",
     "empty": "履歴なし",
     "clear": "履歴をクリア"
+  },
+  "history": {
+    "title": "ダウンロード履歴",
+    "empty": "履歴なし",
+    "clear_all": "全削除",
+    "clear_confirm": "ダウンロード履歴を全削除しますか？",
+    "redownload": "再ダウンロード",
+    "delete": "削除",
+    "export": "エクスポート",
+    "download_all": "全ダウンロード",
+    "export_title": "履歴をエクスポート"
+  },
+  "auto_preset": {
+    "title": "自動プリセット",
+    "empty": "ルールなし",
+    "add": "ルールを追加",
+    "domain_label": "ドメイン",
+    "preset_label": "プリセット",
+    "enabled": "有効",
+    "delete_confirm": "このルールを削除しますか？",
+    "domain_placeholder": "例: youtube.com",
+    "auto_applied": "URLに一致するプリセットを自動適用しました"
   }
 }

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useSettingsStore } from '../../stores/settings'
-import { useYtdlp } from '../../composables/useYtdlp'
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from 'vue-i18n'
@@ -9,12 +8,6 @@ import { SUPPORTED_LOCALES, setLocale, type SupportedLocale } from '../../i18n'
 
 const { t } = useI18n()
 const settingsStore = useSettingsStore()
-const { info: ytdlpInfo, loading: ytdlpLoading, loadInfo: loadYtdlpInfo } = useYtdlp()
-
-onMounted(() => {
-  loadYtdlpInfo()
-})
-
 // Backup / Restore
 const backupBusy = ref(false)
 const backupMsg = ref<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -226,42 +219,6 @@ function handleLanguageChange(locale: string) {
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- yt-dlp info -->
-    <div>
-      <label class="block text-sm font-medium mb-1">{{ t('general.ytdlp_section') }}</label>
-      <div class="p-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm space-y-1">
-        <div v-if="ytdlpLoading" class="text-neutral-500">{{ t('common.loading') }}</div>
-        <template v-else-if="ytdlpInfo">
-          <div class="flex justify-between">
-            <span class="text-neutral-500">{{ t('general.ytdlp_version') }}</span>
-            <span>{{ ytdlpInfo.version }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-neutral-500">{{ t('general.ytdlp_path_label') }}</span>
-            <span class="font-mono text-xs truncate ml-4">{{ ytdlpInfo.path }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-neutral-500">{{ t('general.ytdlp_managed') }}</span>
-            <span>{{ ytdlpInfo.managed_by === 'homebrew' ? t('general.ytdlp_homebrew') : ytdlpInfo.managed_by === 'bundled' ? t('general.ytdlp_bundled') : t('general.ytdlp_manual') }}</span>
-          </div>
-          <div v-if="ytdlpInfo.update_available" class="mt-2 text-xs text-orange-600 dark:text-orange-400">
-            {{ t('general.ytdlp_update_available') }}
-          </div>
-        </template>
-        <div v-else class="text-red-500">{{ t('general.ytdlp_not_found') }}</div>
-      </div>
-    </div>
-
-    <!-- yt-dlp path override -->
-    <div>
-      <label class="block text-sm font-medium mb-1">{{ t('general.ytdlp_path_override') }}</label>
-      <input :value="settingsStore.settings.ytdlp_path"
-             @input="settingsStore.updateSetting('ytdlp_path', ($event.target as HTMLInputElement).value)"
-             class="w-full h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-             :placeholder="t('general.ytdlp_path_placeholder')" />
-      <p class="text-xs text-neutral-400 mt-1">{{ t('general.ytdlp_path_hint') }}</p>
     </div>
 
     <!-- Backup / Restore -->

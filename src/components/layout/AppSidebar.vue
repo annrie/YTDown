@@ -163,6 +163,15 @@ function isLibraryExpanded() {
     <!-- Settings pinned to bottom -->
     <div class="sidebar-footer">
       <div class="section-divider" />
+      <button class="sidebar-item" :class="{ active: isActive('history') }"
+              @click="emit('update:currentSection', 'history')">
+        <span class="item-indicator" />
+        <svg class="item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="item-label">{{ t('sidebar.history') }}</span>
+      </button>
       <button class="sidebar-item settings-item" :class="{ active: isActive('settings') }"
               @click="emit('update:currentSection', 'settings')">
         <span class="item-indicator" />

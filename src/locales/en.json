@@ -42,7 +42,8 @@
     "images_gallery": "Gallery",
     "schedules": "Schedule Manager",
     "channel_monitor": "Add Channel Monitor",
-    "settings": "Settings"
+    "settings": "Settings",
+    "history": "History"
   },
   "statusbar": {
     "active_count": "{count} active",
@@ -155,7 +156,12 @@
     "placeholder": "Enter one URL per line...",
     "count": "{count} URLs",
     "start": "Start batch download",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "select_all": "Select all",
+    "deselect_all": "Deselect all",
+    "selected_count": "{count} selected",
+    "delete_selected": "Delete selected ({count})",
+    "load_file": "Load from File"
   },
   "library": {
     "empty": "Library is empty",
@@ -252,7 +258,8 @@
     "import_dialog_title": "Import Settings",
     "export_success": "Exported successfully",
     "import_success": "Import complete: {settings} settings, {presets} presets, {rules} rules, {schedules} schedules",
-    "image_filter": "Images"
+    "image_filter": "Images",
+    "ytdlp_check_update": "Check for Updates"
   },
   "format": {
     "title": "Format Settings",
@@ -477,5 +484,27 @@
     "title": "URL History",
     "empty": "No history",
     "clear": "Clear history"
+  },
+  "history": {
+    "title": "Download History",
+    "empty": "No history",
+    "clear_all": "Clear All",
+    "clear_confirm": "Delete all download history?",
+    "redownload": "Re-download",
+    "delete": "Delete",
+    "export": "Export",
+    "download_all": "Download All",
+    "export_title": "Export History"
+  },
+  "auto_preset": {
+    "title": "Auto Preset",
+    "empty": "No rules",
+    "add": "Add Rule",
+    "domain_label": "Domain",
+    "preset_label": "Preset",
+    "enabled": "Enabled",
+    "delete_confirm": "Delete this rule?",
+    "domain_placeholder": "e.g. youtube.com",
+    "auto_applied": "Preset auto-applied based on URL"
   }
 }

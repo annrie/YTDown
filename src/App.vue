@@ -33,6 +33,9 @@ import ImageGalleryView from './components/images/ImageGalleryView.vue'
 // Schedule components
 import ScheduleView from './components/schedules/ScheduleView.vue'
 
+// History component
+import HistoryView from './components/history/HistoryView.vue'
+
 // Settings components
 import GeneralSettings from './components/settings/GeneralSettings.vue'
 import FormatSettings from './components/settings/FormatSettings.vue'
@@ -84,6 +87,7 @@ const sectionLabel = computed(() => {
     'images-download': t('images.download_title'),
     'images-gallery': t('images.gallery_title'),
     'schedules': t('sidebar.section_schedule'),
+    'history': t('history.title'),
     'settings': t('settings.title'),
   }
   return labels[currentSection.value] ?? currentSection.value
@@ -464,6 +468,20 @@ async function handleTextCaptureDrop(event: DragEvent) {
   }, 0)
 }
 
+// Redownload from history
+function handleOpenDownloadDialog(event: Event) {
+  const { url } = (event as CustomEvent<{ url: string }>).detail
+  downloadUrl.value = url
+  showDownloadDialog.value = true
+}
+
+// Batch redownload from history
+function handleOpenBatchDialog(event: Event) {
+  const { urls } = (event as CustomEvent<{ urls: string[] }>).detail
+  droppedBatchUrls.value = urls
+  showBatchDialog.value = true
+}
+
 // Keyboard shortcuts
 function handleKeydown(e: KeyboardEvent) {
   if (e.metaKey && e.key === ',') {
@@ -500,6 +518,8 @@ onMounted(async () => {
   })
   await libraryStore.loadItems()
   document.addEventListener('keydown', handleKeydown)
+  window.addEventListener('open-download-dialog', handleOpenDownloadDialog)
+  window.addEventListener('open-batch-dialog', handleOpenBatchDialog)
   document.addEventListener('dragover', preventNativeDropNavigation, true)
   document.addEventListener('drop', preventNativeDropNavigation, true)
   window.addEventListener('dragenter', handleDragEnter)
@@ -526,6 +546,8 @@ onMounted(async () => {
 onUnmounted(() => {
   downloadsStore.cleanup()
   document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('open-download-dialog', handleOpenDownloadDialog)
+  window.removeEventListener('open-batch-dialog', handleOpenBatchDialog)
   document.removeEventListener('dragover', preventNativeDropNavigation, true)
   document.removeEventListener('drop', preventNativeDropNavigation, true)
   window.removeEventListener('dragenter', handleDragEnter)
@@ -605,6 +627,11 @@ onUnmounted(() => {
           <!-- Schedules -->
           <template v-else-if="currentSection === 'schedules'">
             <ScheduleView />
+          </template>
+
+          <!-- History -->
+          <template v-else-if="currentSection === 'history'">
+            <HistoryView />
           </template>
 
           <!-- Settings -->

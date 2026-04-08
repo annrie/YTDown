@@ -47,6 +47,7 @@
     "allow-update-ytdlp",
     "allow-get-browser-url",
     "allow-check-safari-access",
+    "allow-open-system-settings",
     "allow-scrape-images",
     "allow-download-images",
     "allow-list-image-sessions",
@@ -67,6 +68,17 @@
     "allow-list-rules",
     "allow-create-rule",
     "allow-update-rule",
-    "allow-delete-rule"
+    "allow-delete-rule",
+    "allow-list-history",
+    "allow-delete-history-entry",
+    "allow-clear-history",
+    "allow-list-auto-preset-rules",
+    "allow-create-auto-preset-rule",
+    "allow-update-auto-preset-rule",
+    "allow-delete-auto-preset-rule",
+    "allow-resolve-preset-for-url",
+    "allow-read-text-file",
+    "allow-extract-urls-from-paths",
+    "allow-write-text-file"
   ]
 }

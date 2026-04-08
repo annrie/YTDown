@@ -3,11 +3,13 @@ import { ref, onMounted } from 'vue'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { homeDir } from '@tauri-apps/api/path'
 import { usePresetsStore } from '../../stores/presets'
+import { useAutoPresetStore } from '../../stores/autoPreset'
 import { useI18n } from 'vue-i18n'
 import type { Preset } from '../../types'
 
 const { t } = useI18n()
 const store = usePresetsStore()
+const autoPresetStore = useAutoPresetStore()
 
 const editingId = ref<number | null>(null)
 const showCreateForm = ref(false)
@@ -31,7 +33,37 @@ function blankForm(): Omit<Preset, 'id' | 'created_at'> {
 
 const form = ref(blankForm())
 
-onMounted(() => store.fetchPresets())
+// Auto-preset rule state
+const newRuleDomain = ref('')
+const newRulePresetId = ref<number | ''>('')
+const ruleError = ref('')
+
+onMounted(() => {
+  store.fetchPresets()
+  autoPresetStore.fetchRules()
+})
+
+async function addRule() {
+  ruleError.value = ''
+  const domain = newRuleDomain.value.trim()
+  if (!domain || !newRulePresetId.value) return
+  try {
+    await autoPresetStore.createRule(domain, newRulePresetId.value as number, true)
+    newRuleDomain.value = ''
+    newRulePresetId.value = ''
+  } catch (e) {
+    ruleError.value = String(e)
+  }
+}
+
+async function toggleRule(id: number, domain: string, presetId: number, enabled: boolean) {
+  await autoPresetStore.updateRule(id, domain, presetId, !enabled)
+}
+
+async function deleteRule(id: number) {
+  if (!confirm(t('auto_preset.delete_confirm'))) return
+  await autoPresetStore.deleteRule(id)
+}
 
 function startCreate() {
   form.value = blankForm()
@@ -200,6 +232,59 @@ async function onDelete(id: number) {
             <button class="text-xs px-2 py-1 rounded border border-red-400 text-red-400 hover:bg-red-400/10"
                     @click="onDelete(preset.id)">{{ t('common.delete') }}</button>
           </div>
+        </div>
+      </div>
+    </div>
+    <!-- Auto Preset Rules Section -->
+    <div class="mt-6 pt-6 border-t border-[var(--color-separator)]">
+      <h3 class="text-base font-semibold mb-3">{{ t('auto_preset.title') }}</h3>
+
+      <!-- Add new rule -->
+      <div class="flex items-center gap-2 mb-3">
+        <input
+          v-model="newRuleDomain"
+          type="text"
+          :placeholder="t('auto_preset.domain_placeholder')"
+          class="flex-1 rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm"
+          @keyup.enter="addRule"
+        />
+        <select
+          v-model="newRulePresetId"
+          class="rounded border border-[var(--color-separator)] bg-transparent px-2 py-1 text-sm"
+        >
+          <option value="">{{ t('auto_preset.preset_label') }}...</option>
+          <option v-for="p in store.presets" :key="p.id" :value="p.id">{{ p.name }}</option>
+        </select>
+        <button
+          class="text-sm px-3 py-1 rounded bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-40"
+          :disabled="!newRuleDomain.trim() || !newRulePresetId"
+          @click="addRule"
+        >{{ t('auto_preset.add') }}</button>
+      </div>
+      <span v-if="ruleError" class="text-xs text-red-400">{{ ruleError }}</span>
+
+      <!-- Rule list -->
+      <div v-if="autoPresetStore.rules.length === 0" class="text-sm text-neutral-500 py-2">
+        {{ t('auto_preset.empty') }}
+      </div>
+      <div class="space-y-1">
+        <div v-for="rule in autoPresetStore.rules" :key="rule.id"
+             class="flex items-center gap-2 rounded border border-[var(--color-separator)] px-3 py-2">
+          <span class="flex-1 text-sm font-mono">{{ rule.domain }}</span>
+          <span class="text-xs text-neutral-400 truncate max-w-[120px]">
+            {{ store.presets.find(p => p.id === rule.preset_id)?.name ?? '?' }}
+          </span>
+          <button
+            class="text-xs px-2 py-0.5 rounded border"
+            :class="rule.enabled
+              ? 'border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+              : 'border-neutral-400 text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'"
+            @click="toggleRule(rule.id, rule.domain, rule.preset_id, rule.enabled)"
+          >{{ rule.enabled ? t('auto_preset.enabled') : t('common.disabled') }}</button>
+          <button
+            class="text-xs px-2 py-0.5 rounded border border-red-400 text-red-400 hover:bg-red-400/10"
+            @click="deleteRule(rule.id)"
+          >{{ t('common.delete') }}</button>
         </div>
       </div>
     </div>

@@ -42,7 +42,8 @@
     "images_gallery": "갤러리",
     "schedules": "예약 관리",
     "channel_monitor": "채널 모니터 추가",
-    "settings": "설정"
+    "settings": "설정",
+    "history": "기록"
   },
   "statusbar": {
     "active_count": "{count}개 진행 중",
@@ -155,7 +156,12 @@
     "placeholder": "URL을 한 줄씩 입력...",
     "count": "URL {count}개",
     "start": "일괄 다운로드 시작",
-    "cancel": "취소"
+    "cancel": "취소",
+    "select_all": "모두 선택",
+    "deselect_all": "선택 해제",
+    "selected_count": "{count}개 선택됨",
+    "delete_selected": "선택 삭제 ({count})",
+    "load_file": "파일에서 불러오기"
   },
   "library": {
     "empty": "라이브러리가 비어 있습니다",
@@ -252,7 +258,8 @@
     "import_dialog_title": "설정 가져오기",
     "export_success": "내보내기 완료",
     "import_success": "가져오기 완료: 설정 {settings}개, 프리셋 {presets}개, 규칙 {rules}개, 예약 {schedules}개",
-    "image_filter": "이미지"
+    "image_filter": "이미지",
+    "ytdlp_check_update": "업데이트 확인"
   },
   "format": {
     "title": "형식 설정",
@@ -477,5 +484,27 @@
     "title": "URL 기록",
     "empty": "기록 없음",
     "clear": "기록 지우기"
+  },
+  "history": {
+    "title": "다운로드 기록",
+    "empty": "기록 없음",
+    "clear_all": "모두 삭제",
+    "clear_confirm": "다운로드 기록을 모두 삭제하시겠습니까?",
+    "redownload": "다시 다운로드",
+    "delete": "삭제",
+    "export": "내보내기",
+    "download_all": "전체 다운로드",
+    "export_title": "기록 내보내기"
+  },
+  "auto_preset": {
+    "title": "자동 프리셋",
+    "empty": "규칙 없음",
+    "add": "규칙 추가",
+    "domain_label": "도메인",
+    "preset_label": "프리셋",
+    "enabled": "활성화",
+    "delete_confirm": "이 규칙을 삭제하시겠습니까?",
+    "domain_placeholder": "예: youtube.com",
+    "auto_applied": "URL에 따라 프리셋이 자동 적용되었습니다"
   }
 }

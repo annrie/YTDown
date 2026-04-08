@@ -69,6 +69,25 @@ pub struct Schedule {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoryEntry {
+    pub id: i64,
+    pub url: String,
+    pub title: Option<String>,
+    pub site: Option<String>,
+    pub file_path: Option<String>,
+    pub completed_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutoPresetRule {
+    pub id: i64,
+    pub domain: String,
+    pub preset_id: i64,
+    pub enabled: bool,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Preset {
     pub id: i64,
     pub name: String,

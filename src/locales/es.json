@@ -42,7 +42,8 @@
     "images_gallery": "Galería",
     "schedules": "Gestor de programaciones",
     "channel_monitor": "Añadir monitor de canal",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "history": "Historial"
   },
   "statusbar": {
     "active_count": "{count} en curso",
@@ -155,7 +156,12 @@
     "placeholder": "Una URL por línea...",
     "count": "{count} URL",
     "start": "Iniciar descarga en lote",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "select_all": "Seleccionar todo",
+    "deselect_all": "Deseleccionar todo",
+    "selected_count": "{count} seleccionado(s)",
+    "delete_selected": "Eliminar selección ({count})",
+    "load_file": "Cargar desde archivo"
   },
   "library": {
     "empty": "La biblioteca está vacía",
@@ -252,7 +258,8 @@
     "import_dialog_title": "Importar ajustes",
     "export_success": "Exportado correctamente",
     "import_success": "Importación completada: {settings} ajustes, {presets} preajustes, {rules} reglas, {schedules} programaciones",
-    "image_filter": "Imágenes"
+    "image_filter": "Imágenes",
+    "ytdlp_check_update": "Buscar actualizaciones"
   },
   "format": {
     "title": "Ajustes de formato",
@@ -477,5 +484,27 @@
     "title": "Historial de URL",
     "empty": "Sin historial",
     "clear": "Limpiar historial"
+  },
+  "history": {
+    "title": "Historial de descargas",
+    "empty": "Sin historial",
+    "clear_all": "Borrar todo",
+    "clear_confirm": "¿Eliminar todo el historial de descargas?",
+    "redownload": "Volver a descargar",
+    "delete": "Eliminar",
+    "export": "Exportar",
+    "download_all": "Descargar todo",
+    "export_title": "Exportar historial"
+  },
+  "auto_preset": {
+    "title": "Ajuste automático",
+    "empty": "Sin reglas",
+    "add": "Agregar regla",
+    "domain_label": "Dominio",
+    "preset_label": "Ajuste",
+    "enabled": "Habilitado",
+    "delete_confirm": "¿Eliminar esta regla?",
+    "domain_placeholder": "ej. youtube.com",
+    "auto_applied": "Ajuste aplicado automáticamente según la URL"
   }
 }

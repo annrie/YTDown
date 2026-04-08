@@ -42,7 +42,8 @@
     "images_gallery": "圖庫",
     "schedules": "排程管理",
     "channel_monitor": "新增頻道監控",
-    "settings": "設定"
+    "settings": "設定",
+    "history": "記錄"
   },
   "statusbar": {
     "active_count": "進行中 {count} 件",
@@ -155,7 +156,12 @@
     "placeholder": "每行輸入一個 URL...",
     "count": "{count} 個 URL",
     "start": "開始批次下載",
-    "cancel": "取消"
+    "cancel": "取消",
+    "select_all": "全選",
+    "deselect_all": "取消全選",
+    "selected_count": "已選 {count} 項",
+    "delete_selected": "刪除所選 ({count})",
+    "load_file": "從檔案載入"
   },
   "library": {
     "empty": "媒體庫為空",
@@ -252,7 +258,8 @@
     "import_dialog_title": "匯入設定",
     "export_success": "匯出成功",
     "import_success": "匯入完成: {settings} 項設定、{presets} 個預設集、{rules} 條規則、{schedules} 個排程",
-    "image_filter": "圖片"
+    "image_filter": "圖片",
+    "ytdlp_check_update": "檢查更新"
   },
   "format": {
     "title": "格式設定",
@@ -477,5 +484,27 @@
     "title": "URL 歷史記錄",
     "empty": "沒有歷史記錄",
     "clear": "清除歷史記錄"
+  },
+  "history": {
+    "title": "下載記錄",
+    "empty": "沒有記錄",
+    "clear_all": "全部清除",
+    "clear_confirm": "刪除所有下載記錄？",
+    "redownload": "重新下載",
+    "delete": "刪除",
+    "export": "匯出",
+    "download_all": "全部下載",
+    "export_title": "匯出歷史記錄"
+  },
+  "auto_preset": {
+    "title": "自動預設",
+    "empty": "沒有規則",
+    "add": "新增規則",
+    "domain_label": "網域",
+    "preset_label": "預設",
+    "enabled": "啟用",
+    "delete_confirm": "刪除此規則？",
+    "domain_placeholder": "例如: youtube.com",
+    "auto_applied": "已根據 URL 自動套用預設"
   }
 }

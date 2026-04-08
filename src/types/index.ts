@@ -146,6 +146,7 @@ export type SidebarSection =
   | 'images-download'
   | 'images-gallery'
   | 'schedules'
+  | 'history'
   | 'settings'
 
 export interface AppSettings {
@@ -251,6 +252,23 @@ export interface Schedule {
   last_run_at: string | null
   next_run_at: string | null
   last_run_status: 'completed' | 'no_new' | 'stopped' | null
+  created_at: string
+}
+
+export interface HistoryEntry {
+  id: number
+  url: string
+  title: string | null
+  site: string | null
+  file_path: string | null
+  completed_at: string
+}
+
+export interface AutoPresetRule {
+  id: number
+  domain: string
+  preset_id: number
+  enabled: boolean
   created_at: string
 }
 

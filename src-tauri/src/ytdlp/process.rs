@@ -346,6 +346,7 @@ pub async fn start_download(
     let stderr = child.stderr.take().ok_or("Failed to capture stderr")?;
     let app_clone = app.clone();
     let output_dir = config.output_dir.clone();
+    let download_url = args.last().cloned().unwrap_or_default(); // URL is the last arg
 
     // Collect stderr file paths and error messages in shared containers
     let stderr_file_path = std::sync::Arc::new(tokio::sync::Mutex::new(None::<String>));
@@ -505,6 +506,29 @@ pub async fn start_download(
                                 );
                             }
                         }
+                    }
+
+                    // Record completed download in history
+                    if status.success() {
+                        let hist_path = final_file_path.as_deref().or_else(|| {
+                            // Try latest file if direct path not found
+                            None
+                        });
+                        // Get site from downloads table
+                        let site: Option<String> = db
+                            .query_row(
+                                "SELECT site FROM downloads WHERE id = ?1",
+                                rusqlite::params![download_id],
+                                |row| row.get(0),
+                            )
+                            .ok();
+                        let _ = crate::db::queries::insert_history_entry(
+                            &db,
+                            &download_url,
+                            current_title.as_deref(),
+                            site.as_deref(),
+                            hist_path,
+                        );
                     }
 
                     // Force WAL checkpoint so readers see the update immediately

@@ -42,7 +42,8 @@
     "images_gallery": "Galerie",
     "schedules": "Zeitplanverwaltung",
     "channel_monitor": "Kanalüberwachung hinzufügen",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "history": "Verlauf"
   },
   "statusbar": {
     "active_count": "{count} aktiv",
@@ -155,7 +156,12 @@
     "placeholder": "Eine URL pro Zeile...",
     "count": "{count} URLs",
     "start": "Stapel-Download starten",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "select_all": "Alle auswählen",
+    "deselect_all": "Auswahl aufheben",
+    "selected_count": "{count} ausgewählt",
+    "delete_selected": "Auswahl löschen ({count})",
+    "load_file": "Aus Datei laden"
   },
   "library": {
     "empty": "Bibliothek ist leer",
@@ -252,7 +258,8 @@
     "import_dialog_title": "Einstellungen importieren",
     "export_success": "Erfolgreich exportiert",
     "import_success": "Import abgeschlossen: {settings} Einstellungen, {presets} Voreinstellungen, {rules} Regeln, {schedules} Zeitpläne",
-    "image_filter": "Bilder"
+    "image_filter": "Bilder",
+    "ytdlp_check_update": "Nach Updates suchen"
   },
   "format": {
     "title": "Formateinstellungen",
@@ -477,5 +484,27 @@
     "title": "URL-Verlauf",
     "empty": "Kein Verlauf",
     "clear": "Verlauf löschen"
+  },
+  "history": {
+    "title": "Download-Verlauf",
+    "empty": "Kein Verlauf",
+    "clear_all": "Alle löschen",
+    "clear_confirm": "Gesamten Download-Verlauf löschen?",
+    "redownload": "Erneut herunterladen",
+    "delete": "Löschen",
+    "export": "Exportieren",
+    "download_all": "Alle herunterladen",
+    "export_title": "Verlauf exportieren"
+  },
+  "auto_preset": {
+    "title": "Auto-Voreinstellung",
+    "empty": "Keine Regeln",
+    "add": "Regel hinzufügen",
+    "domain_label": "Domain",
+    "preset_label": "Voreinstellung",
+    "enabled": "Aktiviert",
+    "delete_confirm": "Diese Regel löschen?",
+    "domain_placeholder": "z.B. youtube.com",
+    "auto_applied": "Voreinstellung automatisch angewendet"
   }
 }

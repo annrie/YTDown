@@ -29,6 +29,8 @@ onMounted(() => { void loadInfo() })
         <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <span class="text-neutral-500">{{ t('general.ytdlp_version') }}</span>
           <span class="font-mono">{{ ytdlpInfo.version }}</span>
+          <span class="text-neutral-500">{{ t('general.ytdlp_path_label') }}</span>
+          <span class="font-mono truncate" :title="ytdlpInfo.path">{{ ytdlpInfo.path }}</span>
           <span class="text-neutral-500">{{ t('general.ytdlp_managed') }}</span>
           <span>{{ ytdlpInfo.managed_by === 'homebrew' ? t('general.ytdlp_homebrew') : ytdlpInfo.managed_by === 'bundled' ? t('general.ytdlp_bundled') : t('general.ytdlp_manual') }}</span>
           <template v-if="ytdlpInfo.latest_version">
@@ -54,8 +56,8 @@ onMounted(() => { void loadInfo() })
         <div class="flex gap-2">
           <button @click="checkUpdate"
                   :disabled="checking"
-                  class="px-3 py-1.5 text-xs rounded-md bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 transition-colors">
-            {{ checking ? t('common.loading') : t('general.ytdlp_update_available') }}
+                  class="px-3 py-1.5 text-xs rounded-md bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 transition-colors">
+            {{ checking ? t('common.loading') : t('general.ytdlp_check_update') }}
           </button>
           <button v-if="ytdlpInfo.update_available && ytdlpInfo.managed_by === 'bundled'"
                   @click="performUpdate"
@@ -72,6 +74,16 @@ onMounted(() => { void loadInfo() })
       </template>
 
       <div v-else class="text-xs text-red-400">{{ t('general.ytdlp_not_found') }}</div>
+    </div>
+
+    <!-- yt-dlp path override -->
+    <div>
+      <label class="block text-sm font-medium mb-1">{{ t('general.ytdlp_path_override') }}</label>
+      <input :value="settingsStore.settings.ytdlp_path"
+             @input="settingsStore.updateSetting('ytdlp_path', ($event.target as HTMLInputElement).value)"
+             class="w-full h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+             :placeholder="t('general.ytdlp_path_placeholder')" />
+      <p class="text-xs text-neutral-400 mt-1">{{ t('general.ytdlp_path_hint') }}</p>
     </div>
 
     <!-- Boolean options -->
