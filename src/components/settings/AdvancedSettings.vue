@@ -54,7 +54,7 @@ onMounted(() => { void loadInfo() })
         <div class="flex gap-2">
           <button @click="checkUpdate"
                   :disabled="checking"
-                  class="px-3 py-1.5 text-xs rounded-md bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 transition-colors">
+                  class="px-3 py-1.5 text-xs rounded-md bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 transition-colors">
             {{ checking ? t('common.loading') : t('general.ytdlp_check_update') }}
           </button>
           <button v-if="ytdlpInfo.update_available && ytdlpInfo.managed_by === 'bundled'"
