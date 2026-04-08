@@ -76,6 +76,9 @@
     "allow-create-auto-preset-rule",
     "allow-update-auto-preset-rule",
     "allow-delete-auto-preset-rule",
-    "allow-resolve-preset-for-url"
+    "allow-resolve-preset-for-url",
+    "allow-read-text-file",
+    "allow-extract-urls-from-paths",
+    "allow-write-text-file"
   ]
 }

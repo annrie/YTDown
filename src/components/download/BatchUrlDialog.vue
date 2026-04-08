@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
@@ -13,17 +14,26 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const MAX_URLS = 10
+const MIN_SLOTS = 10
 
 interface UrlItem { url: string; selected: boolean }
-const items = ref<UrlItem[]>(Array.from({ length: MAX_URLS }, () => ({ url: '', selected: false })))
+const items = ref<UrlItem[]>(makeSlots(MIN_SLOTS))
 const fetchingBrowserUrl = ref(false)
 
-function applyInitialUrls(nextUrls: string[]) {
-  items.value = Array.from({ length: MAX_URLS }, (_, i) => ({
-    url: nextUrls[i] ?? '',
+function makeSlots(count: number): UrlItem[] {
+  return Array.from({ length: count }, () => ({ url: '', selected: false }))
+}
+
+function ensureSlots(urls: string[]) {
+  const needed = Math.max(MIN_SLOTS, urls.length + 2)
+  items.value = Array.from({ length: needed }, (_, i) => ({
+    url: urls[i] ?? '',
     selected: false,
   }))
+}
+
+function applyInitialUrls(nextUrls: string[]) {
+  ensureSlots(nextUrls)
 }
 
 watch(() => props.open, (isOpen) => {
@@ -55,6 +65,44 @@ async function addBrowserUrl() {
   }
 }
 
+async function loadFromFile() {
+  const path = await openDialog({
+    title: t('batch_url_dialog.load_file'),
+    multiple: false,
+    filters: [
+      { name: 'JSON / Text', extensions: ['json', 'txt'] },
+    ],
+  })
+  if (!path || typeof path !== 'string') return
+  try {
+    const text = await invoke<string>('read_text_file', { path })
+    let urls: string[] = []
+    try {
+      const parsed = JSON.parse(text)
+      if (Array.isArray(parsed)) {
+        urls = parsed.map((item: unknown) => {
+          if (typeof item === 'string') return item
+          if (item && typeof item === 'object' && 'url' in item) return (item as { url: string }).url
+          return ''
+        }).filter(Boolean)
+      }
+    } catch {
+      urls = text.split(/\n/).map(l => l.trim()).filter(l => l.startsWith('http'))
+    }
+    if (urls.length === 0) return
+    const existing = items.value.filter(i => i.url.trim()).map(i => i.url)
+    ensureSlots([...existing, ...urls])
+    let slot = items.value.findIndex(i => !i.url.trim())
+    for (const url of urls) {
+      if (slot === -1) break
+      items.value[slot].url = url
+      slot = items.value.findIndex((i, idx) => idx > slot && !i.url.trim())
+    }
+  } catch (e) {
+    console.error('Failed to load file:', e)
+  }
+}
+
 const validUrls = computed(() =>
   items.value.filter(i => i.url.trim().length > 0).map(i => i.url)
 )
@@ -72,9 +120,9 @@ function toggleSelectAll() {
 
 function deleteSelected() {
   const remaining = items.value.filter(i => !i.selected || i.url.trim() === '')
-    .map(i => ({ url: i.url, selected: false }))
-  const blanks = Array.from({ length: MAX_URLS - remaining.length }, () => ({ url: '', selected: false }))
-  items.value = [...remaining, ...blanks]
+    .map(i => i.url)
+    .filter(Boolean)
+  ensureSlots(remaining)
 }
 
 function handlePaste(index: number, e: ClipboardEvent) {
@@ -82,14 +130,18 @@ function handlePaste(index: number, e: ClipboardEvent) {
   const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean)
   if (lines.length > 1) {
     e.preventDefault()
-    for (let i = 0; i < lines.length && index + i < MAX_URLS; i++) {
+    const needed = index + lines.length
+    while (items.value.length < needed) {
+      items.value.push({ url: '', selected: false })
+    }
+    for (let i = 0; i < lines.length; i++) {
       items.value[index + i].url = lines[i]
     }
   }
 }
 
 function clearAll() {
-  items.value = Array.from({ length: MAX_URLS }, () => ({ url: '', selected: false }))
+  items.value = makeSlots(MIN_SLOTS)
 }
 
 function removeUrl(index: number) {
@@ -112,7 +164,7 @@ function handleStart() {
       <div class="flex items-center justify-between p-4 border-b border-[var(--color-separator)]">
         <div>
           <h2 class="text-lg font-semibold">{{ t('batch_url_dialog.title') }}</h2>
-          <p class="text-xs text-neutral-500 mt-0.5">{{ t('batch_url_dialog.count', { count: MAX_URLS }) }}</p>
+          <p class="text-xs text-neutral-500 mt-0.5">{{ t('batch_url_dialog.count', { count: items.length }) }}</p>
         </div>
         <button @click="emit('close')" class="text-neutral-400 hover:text-neutral-600 text-xl">&times;</button>
       </div>
@@ -167,6 +219,13 @@ function handleStart() {
           <button @click="clearAll" class="px-3 py-1.5 rounded-md text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700">
             {{ t('download_queue.clear_completed') }}
           </button>
+          <button @click="loadFromFile"
+                  class="px-3 py-1.5 rounded-md text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            {{ t('batch_url_dialog.load_file') }}
+          </button>
           <button @click="addBrowserUrl" :disabled="fetchingBrowserUrl"
                   class="px-3 py-1.5 rounded-md text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-[var(--color-accent)] disabled:opacity-50 flex items-center gap-1 transition-colors">
             <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': fetchingBrowserUrl }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +236,7 @@ function handleStart() {
           </button>
         </div>
         <div class="flex items-center gap-3">
-          <span class="text-xs text-neutral-500">{{ validUrls.length }} / {{ MAX_URLS }}</span>
+          <span class="text-xs text-neutral-500">{{ validUrls.length }} / {{ items.length }}</span>
           <button @click="emit('close')" class="px-4 py-1.5 rounded-md text-sm bg-neutral-100 dark:bg-neutral-700">
             {{ t('common.cancel') }}
           </button>

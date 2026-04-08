@@ -160,7 +160,8 @@
     "select_all": "Select all",
     "deselect_all": "Deselect all",
     "selected_count": "{count} selected",
-    "delete_selected": "Delete selected ({count})"
+    "delete_selected": "Delete selected ({count})",
+    "load_file": "Load from File"
   },
   "library": {
     "empty": "Library is empty",
@@ -490,7 +491,10 @@
     "clear_all": "Clear All",
     "clear_confirm": "Delete all download history?",
     "redownload": "Re-download",
-    "delete": "Delete"
+    "delete": "Delete",
+    "export": "Export",
+    "download_all": "Download All",
+    "export_title": "Export History"
   },
   "auto_preset": {
     "title": "Auto Preset",

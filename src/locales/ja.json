@@ -160,7 +160,8 @@
     "select_all": "すべて選択",
     "deselect_all": "すべて解除",
     "selected_count": "{count} 件選択中",
-    "delete_selected": "選択を削除 ({count})"
+    "delete_selected": "選択を削除 ({count})",
+    "load_file": "ファイルから読み込み"
   },
   "library": {
     "empty": "ライブラリは空です",
@@ -490,7 +491,10 @@
     "clear_all": "全削除",
     "clear_confirm": "ダウンロード履歴を全削除しますか？",
     "redownload": "再ダウンロード",
-    "delete": "削除"
+    "delete": "削除",
+    "export": "エクスポート",
+    "download_all": "全ダウンロード",
+    "export_title": "履歴をエクスポート"
   },
   "auto_preset": {
     "title": "自動プリセット",

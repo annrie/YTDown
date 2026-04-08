@@ -93,6 +93,17 @@ pub async fn read_text_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub async fn write_text_file(path: String, contents: String) -> Result<(), String> {
+    if let Some(parent) = std::path::Path::new(&path).parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+    fs::write(&path, contents.as_bytes())
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn extract_urls_from_paths(paths: Vec<String>) -> Result<Vec<String>, String> {
     let mut urls = Vec::new();
     let mut seen = std::collections::HashSet::new();

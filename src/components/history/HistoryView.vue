@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { confirm } from '@tauri-apps/plugin-dialog'
+import { confirm, save } from '@tauri-apps/plugin-dialog'
 import { useI18n } from 'vue-i18n'
 import { useDownloadHistoryStore } from '../../stores/downloadHistory'
+import { invoke } from '@tauri-apps/api/core'
 
 const { t } = useI18n()
 const historyStore = useDownloadHistoryStore()
@@ -22,8 +23,23 @@ async function handleClearAll() {
 }
 
 function handleRedownload(url: string) {
-  // Dispatch a custom event to open DownloadDialog with the URL pre-filled
   window.dispatchEvent(new CustomEvent('open-download-dialog', { detail: { url } }))
+}
+
+function handleRedownloadAll() {
+  const urls = historyStore.entries.map(e => e.url)
+  window.dispatchEvent(new CustomEvent('open-batch-dialog', { detail: { urls } }))
+}
+
+async function handleExport() {
+  const path = await save({
+    title: t('history.export_title'),
+    defaultPath: 'ytdown-history.json',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  if (!path) return
+  const data = JSON.stringify(historyStore.entries, null, 2)
+  await invoke('write_text_file', { path, contents: data })
 }
 
 function formatDate(dt: string) {
@@ -39,11 +55,20 @@ function formatDate(dt: string) {
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-separator)]">
       <h2 class="text-sm font-semibold">{{ t('history.title') }}</h2>
-      <button v-if="historyStore.entries.length > 0"
-              @click="handleClearAll"
-              class="text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-        {{ t('history.clear_all') }}
-      </button>
+      <div v-if="historyStore.entries.length > 0" class="flex gap-2">
+        <button @click="handleExport"
+                class="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 px-2 py-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors">
+          {{ t('history.export') }}
+        </button>
+        <button @click="handleRedownloadAll"
+                class="text-xs text-[var(--color-accent)] hover:opacity-80 px-2 py-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors">
+          {{ t('history.download_all') }}
+        </button>
+        <button @click="handleClearAll"
+                class="text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          {{ t('history.clear_all') }}
+        </button>
+      </div>
     </div>
 
     <!-- Empty -->

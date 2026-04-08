@@ -160,7 +160,8 @@
     "select_all": "全選",
     "deselect_all": "取消全選",
     "selected_count": "已選 {count} 項",
-    "delete_selected": "刪除所選 ({count})"
+    "delete_selected": "刪除所選 ({count})",
+    "load_file": "從檔案載入"
   },
   "library": {
     "empty": "媒體庫為空",
@@ -490,7 +491,10 @@
     "clear_all": "全部清除",
     "clear_confirm": "刪除所有下載記錄？",
     "redownload": "重新下載",
-    "delete": "刪除"
+    "delete": "刪除",
+    "export": "匯出",
+    "download_all": "全部下載",
+    "export_title": "匯出歷史記錄"
   },
   "auto_preset": {
     "title": "自動預設",

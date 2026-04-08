@@ -99,6 +99,7 @@ pub fn run() {
             // File operations
             commands::file_ops::extract_urls_from_paths,
             commands::file_ops::read_text_file,
+            commands::file_ops::write_text_file,
             commands::file_ops::move_file,
             commands::file_ops::delete_file,
             commands::file_ops::reveal_in_finder,

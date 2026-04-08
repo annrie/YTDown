@@ -160,7 +160,8 @@
     "select_all": "Tout sélectionner",
     "deselect_all": "Tout désélectionner",
     "selected_count": "{count} sélectionné(s)",
-    "delete_selected": "Supprimer la sélection ({count})"
+    "delete_selected": "Supprimer la sélection ({count})",
+    "load_file": "Charger depuis un fichier"
   },
   "library": {
     "empty": "La bibliothèque est vide",
@@ -490,7 +491,10 @@
     "clear_all": "Tout effacer",
     "clear_confirm": "Supprimer tout l'historique des téléchargements ?",
     "redownload": "Re-télécharger",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "export": "Exporter",
+    "download_all": "Tout télécharger",
+    "export_title": "Exporter l'historique"
   },
   "auto_preset": {
     "title": "Préréglage automatique",

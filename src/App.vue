@@ -475,6 +475,13 @@ function handleOpenDownloadDialog(event: Event) {
   showDownloadDialog.value = true
 }
 
+// Batch redownload from history
+function handleOpenBatchDialog(event: Event) {
+  const { urls } = (event as CustomEvent<{ urls: string[] }>).detail
+  droppedBatchUrls.value = urls
+  showBatchDialog.value = true
+}
+
 // Keyboard shortcuts
 function handleKeydown(e: KeyboardEvent) {
   if (e.metaKey && e.key === ',') {
@@ -512,6 +519,7 @@ onMounted(async () => {
   await libraryStore.loadItems()
   document.addEventListener('keydown', handleKeydown)
   window.addEventListener('open-download-dialog', handleOpenDownloadDialog)
+  window.addEventListener('open-batch-dialog', handleOpenBatchDialog)
   document.addEventListener('dragover', preventNativeDropNavigation, true)
   document.addEventListener('drop', preventNativeDropNavigation, true)
   window.addEventListener('dragenter', handleDragEnter)
@@ -539,6 +547,7 @@ onUnmounted(() => {
   downloadsStore.cleanup()
   document.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('open-download-dialog', handleOpenDownloadDialog)
+  window.removeEventListener('open-batch-dialog', handleOpenBatchDialog)
   document.removeEventListener('dragover', preventNativeDropNavigation, true)
   document.removeEventListener('drop', preventNativeDropNavigation, true)
   window.removeEventListener('dragenter', handleDragEnter)

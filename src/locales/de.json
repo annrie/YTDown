@@ -160,7 +160,8 @@
     "select_all": "Alle auswählen",
     "deselect_all": "Auswahl aufheben",
     "selected_count": "{count} ausgewählt",
-    "delete_selected": "Auswahl löschen ({count})"
+    "delete_selected": "Auswahl löschen ({count})",
+    "load_file": "Aus Datei laden"
   },
   "library": {
     "empty": "Bibliothek ist leer",
@@ -490,7 +491,10 @@
     "clear_all": "Alle löschen",
     "clear_confirm": "Gesamten Download-Verlauf löschen?",
     "redownload": "Erneut herunterladen",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "export": "Exportieren",
+    "download_all": "Alle herunterladen",
+    "export_title": "Verlauf exportieren"
   },
   "auto_preset": {
     "title": "Auto-Voreinstellung",
