@@ -183,23 +183,28 @@ pub fn update_download_file_path(
 }
 
 pub fn list_downloads(conn: &Connection, status_filter: Option<&str>) -> SqlResult<Vec<Download>> {
+    let hidden_filter = "AND (file_path IS NULL OR file_path NOT LIKE '%/.%')";
     let sql = match status_filter {
         Some(_) => {
-            "SELECT id, url, title, channel, channel_id, channel_url, site, thumbnail_url,
-                           format, quality, file_path, file_size, bytes_downloaded, duration,
-                           status, progress, pid, error_message, metadata_json,
-                           created_at, completed_at, is_favorite
-                    FROM downloads WHERE status = ?1 ORDER BY created_at DESC"
-        }
-        None => {
-            "SELECT id, url, title, channel, channel_id, channel_url, site, thumbnail_url,
+            format!(
+                "SELECT id, url, title, channel, channel_id, channel_url, site, thumbnail_url,
                         format, quality, file_path, file_size, bytes_downloaded, duration,
                         status, progress, pid, error_message, metadata_json,
                         created_at, completed_at, is_favorite
-                 FROM downloads ORDER BY created_at DESC"
+                 FROM downloads WHERE status = ?1 {hidden_filter} ORDER BY created_at DESC"
+            )
+        }
+        None => {
+            format!(
+                "SELECT id, url, title, channel, channel_id, channel_url, site, thumbnail_url,
+                        format, quality, file_path, file_size, bytes_downloaded, duration,
+                        status, progress, pid, error_message, metadata_json,
+                        created_at, completed_at, is_favorite
+                 FROM downloads WHERE 1=1 {hidden_filter} ORDER BY created_at DESC"
+            )
         }
     };
-    let mut stmt = conn.prepare(sql)?;
+    let mut stmt = conn.prepare(&sql)?;
     let rows = if let Some(status) = status_filter {
         stmt.query_map(params![status], row_to_download)?
     } else {

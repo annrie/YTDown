@@ -45,6 +45,10 @@ fn collect_media_files(root: &std::path::Path, max_depth: usize) -> Vec<std::pat
 
         for entry in entries.flatten() {
             let path = entry.path();
+            // Skip hidden files/directories (e.g. .DS_Store)
+            if path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with('.')) {
+                continue;
+            }
             if path.is_dir() {
                 if depth < max_depth {
                     visit(&path, depth + 1, max_depth, files);
