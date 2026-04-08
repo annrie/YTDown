@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { ViewMode, SidebarSection, DownloadOptions } from './types'
 import { useDownloadsStore } from './stores/downloads'
@@ -60,6 +60,20 @@ const isDraggingUrl = ref(false)
 const dropTextCapture = ref<HTMLTextAreaElement | null>(null)
 let dragDepth = 0
 let unlistenNativeDragDrop: null | (() => void) = null
+let unlistenNotification: UnlistenFn | null = null
+
+// Toast notification state
+interface ToastItem { id: number; title: string; body: string }
+const toasts = ref<ToastItem[]>([])
+let toastId = 0
+
+function showToast(title: string, body: string) {
+  const id = ++toastId
+  toasts.value.push({ id, title, body })
+  setTimeout(() => {
+    toasts.value = toasts.value.filter(t => t.id !== id)
+  }, 5000)
+}
 
 const downloadsStore = useDownloadsStore()
 const libraryStore = useLibraryStore()
@@ -518,14 +532,9 @@ onMounted(async () => {
     libraryStore.loadItems()
   })
   await libraryStore.loadItems()
-  // Request notification permission and listen for backend notifications
-  if (Notification.permission === 'default') {
-    await Notification.requestPermission()
-  }
-  await listen<{ title: string; body: string }>('native-notification', (event) => {
-    if (Notification.permission === 'granted') {
-      new Notification(event.payload.title, { body: event.payload.body })
-    }
+  // Listen for backend notifications and show as in-app toast
+  unlistenNotification = await listen<{ title: string; body: string }>('native-notification', (event) => {
+    showToast(event.payload.title, event.payload.body)
   })
   document.addEventListener('keydown', handleKeydown)
   window.addEventListener('open-download-dialog', handleOpenDownloadDialog)
@@ -566,6 +575,8 @@ onUnmounted(() => {
   window.removeEventListener('blur', resetUrlDragState)
   unlistenNativeDragDrop?.()
   unlistenNativeDragDrop = null
+  unlistenNotification?.()
+  unlistenNotification = null
   darkModeQuery?.removeEventListener('change', onDarkModeChange)
 })
 </script>
@@ -712,5 +723,37 @@ onUnmounted(() => {
       @close="showChannelMonitorDialog = false"
       @start="showChannelMonitorDialog = false; currentSection = 'schedules'"
     />
+
+    <!-- Toast notifications -->
+    <Teleport to="body">
+      <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+        <transition-group name="toast">
+          <div v-for="toast in toasts" :key="toast.id"
+               class="pointer-events-auto px-4 py-3 rounded-xl shadow-lg backdrop-blur-md
+                      bg-white/90 dark:bg-neutral-800/90 border border-neutral-200 dark:border-neutral-700
+                      min-w-[280px] max-w-[360px] animate-slide-in">
+            <p class="text-xs font-semibold text-neutral-800 dark:text-neutral-100">{{ toast.title }}</p>
+            <p class="text-xs text-neutral-600 dark:text-neutral-300 mt-0.5">{{ toast.body }}</p>
+          </div>
+        </transition-group>
+      </div>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.toast-enter-active {
+  transition: all 0.3s ease-out;
+}
+.toast-leave-active {
+  transition: all 0.3s ease-in;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+</style>
