@@ -3,6 +3,7 @@ name = "ytdown"
 version = "0.6.3"
 description = "macOS desktop app for downloading YouTube/media videos using yt-dlp"
 authors = ["annrie"]
+license = "MIT"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
