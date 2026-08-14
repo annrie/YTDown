@@ -287,3 +287,12 @@ pnpm install
 pnpm tauri dev      # 開発モード
 pnpm tauri build    # プロダクションビルド
 ```
+
+---
+
+## Responsible Use / 責任ある利用のお願い
+
+> [!IMPORTANT]
+> YTDown is a general-purpose downloader intended for content you have the right to save — your own uploads, works you are licensed to download, public-domain or Creative Commons media, and offline viewing where it is permitted. **Please respect copyright and each site's Terms of Service, and use YTDown only for content you are entitled to download.** You are responsible for how you use this tool.
+>
+> YTDown は、あなたが保存する権利を持つコンテンツのためのダウンローダーです（自分がアップロードした動画、ダウンロードが許諾された作品、パブリックドメインや Creative Commons のメディア、許可されたオフライン視聴など）。**著作権および各サイトの利用規約を尊重し、ダウンロードする権利を持つコンテンツにのみご利用ください。** 本ツールの使い方についての責任は利用者にあります。
