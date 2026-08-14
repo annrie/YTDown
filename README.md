@@ -14,6 +14,10 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/github/license/annrie/YTDown.svg" alt="License">
   </a>
+  <!-- Latest release -->
+  <a href="https://github.com/annrie/YTDown/releases/latest">
+    <img src="https://img.shields.io/github/v/release/annrie/YTDown.svg" alt="Latest release">
+  </a>
   <!-- Downloads total -->
   <a href="https://github.com/annrie/YTDown/releases">
     <img src="https://img.shields.io/github/downloads/annrie/YTDown/total.svg" alt="Total downloads">
