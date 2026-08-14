@@ -160,6 +160,24 @@ pub fn update_download_title(conn: &Connection, id: i64, title: &str) -> SqlResu
     Ok(())
 }
 
+pub fn update_download_thumbnail(conn: &Connection, id: i64, thumbnail: &str) -> SqlResult<()> {
+    conn.execute(
+        "UPDATE downloads SET thumbnail_url = ?1 WHERE id = ?2",
+        params![thumbnail, id],
+    )?;
+    Ok(())
+}
+
+/// 現在の thumbnail_url を返す（空文字/NULLは None）
+pub fn get_download_thumbnail(conn: &Connection, id: i64) -> SqlResult<Option<String>> {
+    conn.query_row(
+        "SELECT thumbnail_url FROM downloads WHERE id = ?1",
+        params![id],
+        |row| row.get::<_, Option<String>>(0),
+    )
+    .map(|value| value.filter(|v| !v.trim().is_empty()))
+}
+
 pub fn update_download_pid(conn: &Connection, id: i64, pid: Option<i64>) -> SqlResult<()> {
     conn.execute(
         "UPDATE downloads SET pid = ?1 WHERE id = ?2",

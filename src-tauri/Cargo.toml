@@ -37,3 +37,8 @@ scraper = "0.20"
 image = { version = "0.25", features = ["webp"] }
 url = "2"
 uuid = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# 前面ブラウザ検出（CGWindowListCopyWindowInfo）。tauri経由で既にツリーに存在する版に合わせる
+core-graphics = "0.25"
+core-foundation = "0.10"

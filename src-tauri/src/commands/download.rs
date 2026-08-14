@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 /// YouTube URL判定
-fn is_youtube_url(url: &str) -> bool {
+pub(crate) fn is_youtube_url(url: &str) -> bool {
     url.contains("youtube.com/") || url.contains("youtu.be/") || url.contains("youtube.com/shorts/")
 }
 
@@ -21,6 +21,22 @@ fn output_template_for(url: &str) -> String {
     } else {
         "%(title)s.%(ext)s".to_string()
     }
+}
+
+/// 手動タイトルをファイル名に使える形へ無害化する。
+/// パス区切り・yt-dlpテンプレート記号(%)・予約文字を除き、拡張子テンプレートを付ける。
+fn output_template_for_title(title: &str) -> String {
+    let sanitized: String = title
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | ':' | '%' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+            c if c.is_control() => '_',
+            c => c,
+        })
+        .collect();
+    let trimmed = sanitized.trim().trim_matches('.').trim();
+    let base = if trimmed.is_empty() { "video" } else { trimmed };
+    format!("{base}.%(ext)s")
 }
 
 /// Read cookie settings from DB (scoped lock)
@@ -73,7 +89,18 @@ pub struct DownloadOptions {
     #[serde(default)]
     pub proxy: String,
     #[serde(default)]
+    pub stream_url: String,
+    #[serde(default = "default_auto_detect_media")]
+    pub auto_detect_media: bool,
+    #[serde(default)]
+    pub http_referer: String,
+    #[serde(default)]
+    pub http_user_agent: String,
+    #[serde(default)]
     pub extra_args: String,
+    /// 手動指定タイトル（空でなければファイル名・DBタイトルに使う）
+    #[serde(default)]
+    pub custom_title: String,
     /// チャンネル監視: 初回実行時に既存動画をスキップする
     #[serde(default)]
     pub skip_initial: bool,
@@ -81,6 +108,10 @@ pub struct DownloadOptions {
 
 fn default_retries() -> u32 {
     10
+}
+
+fn default_auto_detect_media() -> bool {
+    true
 }
 
 fn non_empty(s: String) -> Option<String> {
@@ -92,7 +123,68 @@ fn non_empty(s: String) -> Option<String> {
 }
 
 fn parse_extra_args(s: &str) -> Vec<String> {
-    s.split_whitespace().map(|s| s.to_string()).collect()
+    let mut args = Vec::new();
+    let mut current = String::new();
+    let mut quote = None;
+    let mut escaped = false;
+
+    for ch in s.chars() {
+        if escaped {
+            current.push(ch);
+            escaped = false;
+            continue;
+        }
+        if ch == '\\' {
+            escaped = true;
+            continue;
+        }
+        if let Some(active_quote) = quote {
+            if ch == active_quote {
+                quote = None;
+            } else {
+                current.push(ch);
+            }
+            continue;
+        }
+        match ch {
+            '"' | '\'' => quote = Some(ch),
+            ch if ch.is_whitespace() => {
+                if !current.is_empty() {
+                    args.push(std::mem::take(&mut current));
+                }
+            }
+            _ => current.push(ch),
+        }
+    }
+
+    if !current.is_empty() {
+        args.push(current);
+    }
+    args
+}
+
+async fn resolve_download_target(
+    url: &str,
+    auto_detect_media: bool,
+    http_referer: Option<String>,
+    http_user_agent: Option<String>,
+) -> (String, Option<String>, Option<String>) {
+    // probeは特殊サイト向け。YouTubeはyt-dlpのネイティブ抽出に任せる
+    if !auto_detect_media || is_youtube_url(url) {
+        return (url.to_string(), http_referer, http_user_agent);
+    }
+
+    match crate::media_probe::resolve_embedded_media(url, http_user_agent.as_deref()).await {
+        Ok(Some(media)) => {
+            let referer = http_referer.or(media.referer);
+            (media.media_url, referer, http_user_agent)
+        }
+        Ok(None) => (url.to_string(), http_referer, http_user_agent),
+        Err(err) => {
+            eprintln!("[YTDown] media probe failed for {url}: {err}");
+            (url.to_string(), http_referer, http_user_agent)
+        }
+    }
 }
 
 fn normalize_channel_download_url(url: &str, is_channel: bool) -> String {
@@ -543,12 +635,13 @@ pub async fn start_download(
     }; // ytdlp_path_lock dropped here
 
     // Insert download record to DB
+    let custom_title = non_empty(options.custom_title.clone());
     let download_id = {
         let db = state.db.lock().await;
         crate::db::queries::insert_download(
             &db,
             &url,
-            None,
+            custom_title.as_deref(),
             None,
             None,
             None,
@@ -575,13 +668,36 @@ pub async fn start_download(
         .map_err(|e| format!("Failed to create output dir: {}", e))?;
 
     let (cookie_browser, cookie_file) = get_cookie_settings(&state).await;
-    let output_template = output_template_for(&url);
+    // 手動タイトル指定時はそれをファイル名に使う（yt-dlpが%(title)sを取得できない特殊サイト向け）
+    let output_template = match custom_title.as_deref() {
+        Some(title) => output_template_for_title(title),
+        None => output_template_for(&url),
+    };
 
     let extra_args = parse_extra_args(&options.extra_args);
+    let user_agent = non_empty(options.http_user_agent);
+    let explicit_referer = non_empty(options.http_referer);
+    let manual_stream_url = non_empty(options.stream_url);
+    let (download_url, referer, user_agent) = if let Some(stream_url) = manual_stream_url {
+        // mainのURLがストリームURL自身の場合はRefererに流用しない（自己参照は無意味）
+        let referer = explicit_referer.or_else(|| (stream_url != url).then(|| url.clone()));
+        (stream_url, referer, user_agent)
+    } else {
+        resolve_download_target(
+            &url,
+            options.auto_detect_media,
+            explicit_referer,
+            user_agent,
+        )
+        .await
+    };
+    let generic_impersonate = options.auto_detect_media
+        && !is_youtube_url(&download_url)
+        && !crate::media_probe::is_direct_media_url(&download_url);
 
     let config = DownloadConfig {
         ytdlp_path: bin.path.to_string_lossy().to_string(),
-        url,
+        url: download_url,
         format: options.format,
         quality: options.quality,
         output_dir,
@@ -605,6 +721,10 @@ pub async fn start_download(
         recode_video: non_empty(options.recode_video),
         retries: options.retries,
         proxy: non_empty(options.proxy),
+        referer,
+        user_agent,
+        generic_impersonate,
+        custom_title,
         extra_args,
     };
 
@@ -749,6 +869,12 @@ pub async fn resume_download(
                     recode_video: None,
                     retries: 10,
                     proxy: None,
+                    // 既知の制限: probe由来のreferer/User-Agent/impersonateは永続化して
+                    // いないため、referer必須ストリームの再開は403になり得る
+                    referer: None,
+                    user_agent: None,
+                    generic_impersonate: false,
+                    custom_title: None,
                     extra_args: Vec::new(),
                 };
 
@@ -805,6 +931,9 @@ pub async fn run_download_internal(
     let (cookie_browser, cookie_file) = get_cookie_settings(&state).await;
     let output_template = output_template_for(&normalized_url);
     let extra_args = parse_extra_args(&options.extra_args);
+    let http_referer = non_empty(options.http_referer.clone());
+    let http_user_agent = non_empty(options.http_user_agent.clone());
+    let manual_stream_url = non_empty(options.stream_url.clone());
     let cutoff_date = if is_channel {
         schedule_cutoff_date(&last_run_at, options.skip_initial)
     } else {
@@ -812,6 +941,7 @@ pub async fn run_download_internal(
     };
     let last_run_ts = last_run_timestamp(&last_run_at);
     let mut target_urls = vec![normalized_url.clone()];
+    let mut referer = http_referer.clone();
 
     if is_channel {
         if let Some(ref cutoff_date) = cutoff_date {
@@ -882,6 +1012,22 @@ pub async fn run_download_internal(
 
             target_urls = recent_urls;
         }
+    } else if let Some(stream_url) = manual_stream_url {
+        // mainのURLがストリームURL自身の場合はRefererに流用しない（自己参照は無意味）
+        if referer.is_none() && stream_url != normalized_url {
+            referer = Some(normalized_url.clone());
+        }
+        target_urls = vec![stream_url];
+    } else {
+        let (resolved_url, resolved_referer, _) = resolve_download_target(
+            &normalized_url,
+            options.auto_detect_media,
+            http_referer,
+            http_user_agent.clone(),
+        )
+        .await;
+        target_urls = vec![resolved_url];
+        referer = resolved_referer;
     }
 
     // Build args (no progress/newline flags — just run to completion)
@@ -1009,6 +1155,23 @@ pub async fn run_download_internal(
     if let Some(ref proxy) = non_empty(options.proxy.clone()) {
         args.extend(["--proxy".to_string(), proxy.clone()]);
     }
+    if let Some(ref value) = referer {
+        args.extend(["--referer".to_string(), value.clone()]);
+    }
+    if let Some(ref value) = http_user_agent {
+        args.extend(["--user-agent".to_string(), value.clone()]);
+    }
+    if !is_channel
+        && options.auto_detect_media
+        && target_urls
+            .iter()
+            .any(|url| !is_youtube_url(url) && !crate::media_probe::is_direct_media_url(url))
+    {
+        args.extend([
+            "--extractor-args".to_string(),
+            "generic:impersonate".to_string(),
+        ]);
+    }
     args.extend(extra_args.iter().cloned());
 
     // Channel incremental: keep a per-schedule archive to avoid duplicate downloads.
@@ -1027,47 +1190,67 @@ pub async fn run_download_internal(
     // Capture output file path via --print
     args.extend(["--print".to_string(), "after_move:filepath".to_string()]);
 
-    let child = tokio::process::Command::new(&ytdlp_path)
-        .args(&args)
-        .env("PATH", process::augmented_path_env())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to spawn yt-dlp: {}", e))?;
+    // Cloudflareアンチボット失敗時は generic:impersonate 付きで一度だけ再試行する
+    let mut attempt_args = args;
+    let mut impersonate_retried = attempt_args
+        .iter()
+        .any(|arg| arg == "generic:impersonate");
+    loop {
+        let child = tokio::process::Command::new(&ytdlp_path)
+            .args(&attempt_args)
+            .env("PATH", process::augmented_path_env())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn yt-dlp: {}", e))?;
 
-    if let Some(sid) = schedule_id {
-        let state = app.state::<crate::state::AppState>();
-        {
-            let db = state.db.lock().await;
-            let _ = crate::db::queries::set_schedule_running(&db, sid, true);
+        if let Some(sid) = schedule_id {
+            let state = app.state::<crate::state::AppState>();
+            {
+                let db = state.db.lock().await;
+                let _ = crate::db::queries::set_schedule_running(&db, sid, true);
+            }
+            let _ = app.emit("schedule-updated", sid);
+
+            if let Some(pid) = child.id() {
+                let mut pids = state.running_schedule_pids.lock().await;
+                pids.insert(sid, pid);
+            }
         }
-        let _ = app.emit("schedule-updated", sid);
 
-        if let Some(pid) = child.id() {
+        let output = child
+            .wait_with_output()
+            .await
+            .map_err(|e| format!("Failed to wait for yt-dlp: {}", e))?;
+
+        if let Some(sid) = schedule_id {
+            let state = app.state::<crate::state::AppState>();
             let mut pids = state.running_schedule_pids.lock().await;
-            pids.insert(sid, pid);
+            pids.remove(&sid);
         }
-    }
 
-    let output = child
-        .wait_with_output()
-        .await
-        .map_err(|e| format!("Failed to wait for yt-dlp: {}", e))?;
+        let file_path = extract_first_output_line(&output.stdout);
 
-    if let Some(sid) = schedule_id {
-        let state = app.state::<crate::state::AppState>();
-        let mut pids = state.running_schedule_pids.lock().await;
-        pids.remove(&sid);
-    }
+        if output.status.success() {
+            return Ok(file_path);
+        }
+        if is_no_new_channel_result(&output.status, &output.stdout, &output.stderr, is_channel) {
+            return Ok(None);
+        }
 
-    let file_path = extract_first_output_line(&output.stdout);
-
-    if output.status.success() {
-        Ok(file_path)
-    } else if is_no_new_channel_result(&output.status, &output.stdout, &output.stderr, is_channel) {
-        Ok(None)
-    } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
+        if !impersonate_retried && process::is_cloudflare_impersonate_error(&stderr) {
+            eprintln!(
+                "[YTDown] Cloudflare 403 detected; retrying scheduled download with generic:impersonate"
+            );
+            impersonate_retried = true;
+            attempt_args.extend([
+                "--extractor-args".to_string(),
+                "generic:impersonate".to_string(),
+            ]);
+            continue;
+        }
+
         let stdout = String::from_utf8_lossy(&output.stdout);
         let code = output
             .status
@@ -1081,7 +1264,7 @@ pub async fn run_download_internal(
         } else {
             "(no output)".to_string()
         };
-        Err(format!("yt-dlp failed (exit {}): {}", code, detail))
+        return Err(format!("yt-dlp failed (exit {}): {}", code, detail));
     }
 }
 
@@ -1113,7 +1296,8 @@ pub async fn fetch_playlist_items(
 #[cfg(test)]
 mod tests {
     use super::{
-        latest_entry_is_definitely_not_new, parse_latest_channel_entry, LatestChannelEntry,
+        latest_entry_is_definitely_not_new, parse_extra_args, parse_latest_channel_entry,
+        LatestChannelEntry,
     };
     use std::collections::HashSet;
 
@@ -1171,5 +1355,13 @@ mod tests {
             "20260331",
             &HashSet::new()
         ));
+    }
+
+    #[test]
+    fn parses_quoted_extra_args() {
+        assert_eq!(
+            parse_extra_args(r#"--extractor-args "generic:impersonate" --no-playlist"#),
+            vec!["--extractor-args", "generic:impersonate", "--no-playlist"]
+        );
     }
 }

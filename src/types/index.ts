@@ -108,6 +108,11 @@ export interface DownloadOptions {
   recode_video: string
   retries: number
   proxy: string
+  stream_url: string
+  auto_detect_media: boolean
+  http_referer: string
+  http_user_agent: string
+  custom_title: string
   extra_args: string
 }
 
@@ -183,6 +188,9 @@ export interface AppSettings {
   recode_video: string
   retries: number
   proxy: string
+  auto_detect_media: boolean
+  http_referer: string
+  http_user_agent: string
   extra_args: string
 }
 

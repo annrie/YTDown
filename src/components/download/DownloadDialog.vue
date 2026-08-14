@@ -13,7 +13,7 @@ import { useAutoPresetStore } from '../../stores/autoPreset'
 import { Cron } from 'croner'
 import type { DownloadOptions, PlaylistMode } from '../../types'
 
-const props = defineProps<{ url: string; open: boolean }>()
+const props = defineProps<{ url: string; open: boolean; initialTitle?: string }>()
 const emit = defineEmits<{
   close: []
   start: [url: string, options: DownloadOptions]
@@ -88,7 +88,7 @@ function handleScheduleRegister() {
     embed_chapters: embedChapters.value,
     sponsorblock: sponsorblock.value,
     custom_format: useCustomFormat.value ? customFormat.value : null,
-    playlist_mode: isPlaylistUrl.value ? playlistMode.value : 'single',
+    playlist_mode: hasManualStreamUrl.value ? 'single' : (isPlaylistUrl.value ? playlistMode.value : 'single'),
     restrict_filenames: s.restrict_filenames,
     no_overwrites: s.no_overwrites,
     geo_bypass: s.geo_bypass,
@@ -99,6 +99,11 @@ function handleScheduleRegister() {
     recode_video: s.recode_video,
     retries: s.retries,
     proxy: s.proxy,
+    stream_url: streamUrl.value.trim(),
+    auto_detect_media: s.auto_detect_media,
+    http_referer: streamReferer.value.trim() || s.http_referer,
+    http_user_agent: s.http_user_agent,
+    custom_title: customTitle.value.trim(),
     extra_args: s.extra_args,
   }
   emit('close')
@@ -181,6 +186,19 @@ const sponsorblock = ref(false)
 const customFormat = ref('')
 const useCustomFormat = ref(false)
 const playlistMode = ref<PlaylistMode>('single')
+const streamUrl = ref('')
+const streamReferer = ref('')
+const manualStreamOpen = ref(false)
+const customTitle = ref('')
+const hasManualStreamUrl = computed(() => streamUrl.value.trim() !== '')
+
+function isDirectMediaUrl(url: string): boolean {
+  try {
+    return /\.(m3u8|mpd|mp4|m4v|mov|webm|mkv)$/.test(new URL(url).pathname.toLowerCase())
+  } catch {
+    return false
+  }
+}
 
 // Playlist preview state
 const playlistItems = ref<PlaylistItemInfo[]>([])
@@ -316,6 +334,19 @@ watch(() => props.open, async (isOpen) => {
     showSavePreset.value = false
     savePresetName.value = ''
     savePresetError.value = ''
+    // ブラウザから取得したページタイトルがあれば手動タイトル欄の初期値にする
+    customTitle.value = props.initialTitle?.trim() ?? ''
+    streamUrl.value = ''
+    // 空欄のままなら backend 側の自動選択（probe結果のreferer等）に委ねる。
+    // プリフィルすると常に明示refererとして送られ、自動選択を上書きしてしまう
+    streamReferer.value = ''
+    manualStreamOpen.value = false
+    // URL自体が直接メディア（m3u8等）なら手動ストリーム欄へプリフィルして開く。
+    // Referer必須のCDNが多く、情報取得が403でもRefererを入れてすぐ開始できるようにする
+    if (isDirectMediaUrl(props.url)) {
+      streamUrl.value = props.url
+      manualStreamOpen.value = true
+    }
 
     autoPresetApplied.value = ''
 
@@ -409,7 +440,7 @@ function handleStart() {
     embed_chapters: embedChapters.value,
     sponsorblock: sponsorblock.value,
     custom_format: useCustomFormat.value ? customFormat.value : null,
-    playlist_mode: isPlaylistUrl.value ? playlistMode.value : 'single',
+    playlist_mode: hasManualStreamUrl.value ? 'single' : (isPlaylistUrl.value ? playlistMode.value : 'single'),
     restrict_filenames: s.restrict_filenames,
     no_overwrites: s.no_overwrites,
     geo_bypass: s.geo_bypass,
@@ -420,6 +451,11 @@ function handleStart() {
     recode_video: s.recode_video,
     retries: s.retries,
     proxy: s.proxy,
+    stream_url: streamUrl.value.trim(),
+    auto_detect_media: s.auto_detect_media,
+    http_referer: streamReferer.value.trim() || s.http_referer,
+    http_user_agent: s.http_user_agent,
+    custom_title: customTitle.value.trim(),
     extra_args: s.extra_args,
   }
   emit('start', props.url, options)
@@ -438,13 +474,53 @@ function handleStart() {
 
       <!-- Scrollable content -->
       <div class="flex-1 overflow-auto">
+        <div class="p-4 pb-0 space-y-2">
+          <!-- 手動タイトル（ファイル名になる。yt-dlpがタイトルを取れない特殊サイト向け） -->
+          <div>
+            <label class="block text-xs text-neutral-500 mb-1">{{ t('download_dialog.custom_title') }}</label>
+            <input
+              v-model="customTitle"
+              class="w-full h-8 px-2 rounded-md bg-white dark:bg-neutral-800 text-sm border border-neutral-200 dark:border-neutral-700 outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+              :placeholder="t('download_dialog.custom_title_placeholder')"
+            />
+          </div>
+          <details :open="manualStreamOpen"
+                   @toggle="manualStreamOpen = ($event.target as HTMLDetailsElement).open"
+                   class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40">
+            <summary class="px-3 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300 cursor-pointer select-none">
+              {{ t('download_dialog.manual_stream_title') }}
+            </summary>
+            <div class="px-3 pb-3 space-y-2">
+              <div>
+                <label class="block text-xs text-neutral-500 mb-1">{{ t('download_dialog.manual_stream_url') }}</label>
+                <input
+                  v-model="streamUrl"
+                  class="w-full h-8 px-2 rounded-md bg-white dark:bg-neutral-800 text-sm font-mono border border-neutral-200 dark:border-neutral-700 outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                  :placeholder="t('download_dialog.manual_stream_url_placeholder')"
+                />
+              </div>
+              <div>
+                <label class="block text-xs text-neutral-500 mb-1">{{ t('download_dialog.manual_stream_referer') }}</label>
+                <input
+                  v-model="streamReferer"
+                  class="w-full h-8 px-2 rounded-md bg-white dark:bg-neutral-800 text-sm font-mono border border-neutral-200 dark:border-neutral-700 outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                  :placeholder="props.url"
+                />
+              </div>
+              <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                {{ t('download_dialog.manual_stream_hint') }}
+              </p>
+            </div>
+          </details>
+        </div>
+
         <!-- Loading state -->
-        <div v-if="loading" class="p-8 text-center text-neutral-500">
+        <div v-if="loading && !hasManualStreamUrl" class="p-8 text-center text-neutral-500">
           {{ t('download_dialog.loading_info') }}
         </div>
 
         <!-- Error state -->
-        <div v-else-if="error" class="p-8 text-center">
+        <div v-else-if="error && !hasManualStreamUrl" class="p-8 text-center">
           <p class="text-red-500">{{ error }}</p>
           <button v-if="isYtdlpMissing" @click="handleInstallYtdlp" :disabled="installing"
                   class="mt-4 px-4 py-2 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
@@ -452,10 +528,10 @@ function handleStart() {
           </button>
         </div>
 
-        <!-- Video info -->
-        <div v-else-if="videoInfo" class="p-4 space-y-4">
+        <!-- Video info（情報取得失敗でも手動ストリームURL入力時は設定項目を表示する） -->
+        <div v-else-if="videoInfo || hasManualStreamUrl" class="p-4 space-y-4">
           <!-- Thumbnail + Title -->
-          <div class="flex gap-4">
+          <div v-if="videoInfo" class="flex gap-4">
             <img v-if="videoInfo.thumbnail_url" :src="videoInfo.thumbnail_url"
                  class="w-40 h-24 object-cover rounded-lg flex-shrink-0" />
             <div class="min-w-0">
@@ -481,7 +557,7 @@ function handleStart() {
           </div>
 
           <!-- Chapters list (collapsible) -->
-          <details v-if="videoInfo.chapters.length > 0"
+          <details v-if="videoInfo && videoInfo.chapters.length > 0"
                    class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40">
             <summary class="px-3 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300 cursor-pointer select-none list-none flex items-center justify-between">
               <span>{{ t('download_dialog.chapters_label', { count: videoInfo.chapters.length }) }}</span>
@@ -496,7 +572,7 @@ function handleStart() {
             </ul>
           </details>
 
-          <div class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40 px-3 py-2">
+          <div v-if="videoInfo" class="rounded-lg border border-[var(--color-separator)] bg-neutral-50 dark:bg-neutral-900/40 px-3 py-2">
             <p class="text-xs font-semibold text-neutral-600 dark:text-neutral-300">{{ t('download_dialog.subtitle_available') }}</p>
             <p v-if="subtitleInfo.hasAny" class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               <span v-if="subtitleInfo.manual.length > 0">
@@ -758,7 +834,7 @@ function handleStart() {
             {{ t('common.cancel') }}
           </button>
           <button v-if="!showScheduleMode" @click="handleStart"
-                  :disabled="loading || !!error || needsPlaylistConfirmation || (playlistMode === 'all' && downloadsStore.playlistFetching)"
+                  :disabled="(!hasManualStreamUrl && (loading || !!error)) || needsPlaylistConfirmation || (playlistMode === 'all' && downloadsStore.playlistFetching)"
                   class="px-4 py-1.5 rounded-md text-sm bg-[var(--color-accent)] text-white disabled:opacity-50">
             {{ t('download_dialog.start') }}
           </button>

@@ -9,6 +9,25 @@
   Built with <strong>Tauri v2</strong> + <strong>Vue 3</strong> + <strong>yt-dlp</strong>.
 </p>
 
+<div align="center">
+  <!-- License -->
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/annrie/YTDown.svg" alt="License">
+  </a>
+  <!-- Downloads total -->
+  <a href="https://github.com/annrie/YTDown/releases">
+    <img src="https://img.shields.io/github/downloads/annrie/YTDown/total.svg" alt="Total downloads">
+  </a>
+  <!-- Downloads latest release -->
+  <a href="https://github.com/annrie/YTDown/releases/latest">
+    <img src="https://img.shields.io/github/downloads/annrie/YTDown/latest/total.svg" alt="Latest release downloads">
+  </a>
+  <!-- Stars -->
+  <a href="https://github.com/annrie/YTDown/stargazers">
+    <img src="https://img.shields.io/github/stars/annrie/YTDown.svg" alt="Stars">
+  </a>
+</div>
+
 <p align="center">
   <a href="#features">Features</a> · <a href="#installation">Installation</a> · <a href="#build-from-source">Build</a> · <a href="#日本語">日本語</a>
 </p>
@@ -44,6 +63,23 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
 - **Download notifications** — Show a desktop notification when downloads finish
 - **URL history** — Recent URLs are saved automatically and accessible via the clock icon
 - **Auto yt-dlp install** — If yt-dlp is not found, install it directly from the app
+
+### 🔒 Streaming Sites & Protected Content <sup>advanced</sup>
+
+> **Download from sites that stream via HLS (`.m3u8`) or sit behind anti-bot protection.**
+
+- **Auto-detect embedded media** — Paste the **page URL** and YTDown scans the page for embedded HLS/`.m3u8`/video URLs automatically (toggle in Advanced settings).
+- **Manual stream URL** — When a site serves a direct `.m3u8` that yt-dlp can't analyze, paste it into the collapsible **Manual stream URL** panel in the download dialog. Pasting a direct media URL opens and fills this panel for you.
+- **Referer** — Many CDNs require the source page as the `Referer`. Using the browser-capture button on a video page pre-fills the Referer field automatically.
+- **Cloudflare auto-retry** — When a download fails with a Cloudflare anti-bot 403, YTDown retries once automatically with `--extractor-args generic:impersonate`.
+- **PNG-disguised HLS recovery** — Some players disguise video segments as PNG images, which normally yields an unplayable file. YTDown detects this after download and automatically rebuilds a playable MP4.
+- **Manual title** — For sites where no title can be fetched, type one in the dialog (it becomes the filename). The browser-capture button also fills this from the page title automatically.
+
+> [!NOTE]
+> **A red "failed to fetch info" error can be normal.** Protected sites (e.g. Cloudflare-guarded pages) often block the metadata request. You can still download: paste the direct `.m3u8` into the **Manual stream URL** panel, set the **Referer** to the source page, and start. The error only means the *preview* couldn't load — not that the download will fail.
+
+> [!IMPORTANT]
+> **Known limitations for these sites:** thumbnails may be unavailable (the page's image can't be fetched through the protection), and resuming an interrupted stream download does not currently re-apply the Referer.
 
 ### 🖼 Image Download
 
@@ -179,6 +215,23 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
 - **完了通知** — ダウンロード完了時にデスクトップ通知を表示
 - **URL 履歴** — 直近の URL を自動保存、時計アイコンからすぐに呼び出し可能
 - **yt-dlp 自動インストール** — yt-dlp 未検出時、アプリ内からワンクリックでインストール
+
+#### 🔒 ストリーミングサイト・保護されたコンテンツ <sup>上級</sup>
+
+> **HLS（`.m3u8`）配信やアンチボット保護のあるサイトからダウンロードします。**
+
+- **埋め込みメディアの自動検出** — **ページの URL** を貼り付けると、ページ内の HLS/`.m3u8`/動画 URL を自動で探します（詳細設定でオン/オフ切替）。
+- **手動ストリーム URL** — yt-dlp が解析できない直接 `.m3u8` は、ダウンロードダイアログの折りたたみ **手動ストリーム URL** 欄に貼り付けます。直接メディア URL を貼ると自動でこの欄が開いて入力されます。
+- **Referer** — 多くの CDN は元ページを `Referer` として要求します。動画ページで「ブラウザから取得」ボタンを使うと Referer 欄が自動で埋まります。
+- **Cloudflare 自動リトライ** — Cloudflare のアンチボット 403 で失敗した場合、`--extractor-args generic:impersonate` を付けて自動的に一度だけ再試行します。
+- **PNG 偽装 HLS の自動復元** — 一部のプレイヤーは動画セグメントを PNG 画像に偽装しており、通常は再生できないファイルになります。YTDown はダウンロード後にこれを検出し、再生可能な MP4 へ自動で再構築します。
+- **手動タイトル** — タイトルを取得できないサイト向けに、ダイアログでタイトルを入力できます（ファイル名になります）。「ブラウザから取得」ボタンはページタイトルからこれを自動入力します。
+
+> [!NOTE]
+> **赤い「情報取得に失敗」エラーは正常なことがあります。** 保護されたサイト（Cloudflare 配下のページ等）はメタデータ取得をブロックすることがよくあります。それでもダウンロードは可能です。直接 `.m3u8` を **手動ストリーム URL** 欄に貼り、**Referer** に元ページを設定して開始してください。このエラーは *プレビュー* が読めなかっただけで、ダウンロードが失敗するという意味ではありません。
+
+> [!IMPORTANT]
+> **これらのサイトの既知の制限:** サムネイルは取得できないことがあります（保護を越えてページの画像を取得できないため）。また、中断したストリームダウンロードの再開時に Referer が再適用されません。
 
 #### 🖼 画像ダウンロード
 

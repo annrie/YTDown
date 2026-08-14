@@ -25,6 +25,7 @@
     "download": "ダウンロード",
     "batch": "一括",
     "fetch_browser_url": "ブラウザから取得",
+    "fetched_from": "「{browser}」からURLを取得しました",
     "view_list": "リスト",
     "view_grid": "グリッド",
     "view_column": "カラム"
@@ -52,6 +53,13 @@
   },
   "download_dialog": {
     "loading_info": "動画情報を取得中...",
+    "manual_stream_title": "手動ストリームURL",
+    "manual_stream_url": "ストリームURL",
+    "manual_stream_url_placeholder": "例: https://example.com/master.m3u8",
+    "manual_stream_referer": "Referer（元ページURL）",
+    "manual_stream_hint": "動画情報の取得に失敗しても、m3u8などの直接URLを入力するとダウンロードを開始できます。",
+    "custom_title": "タイトル（任意・ファイル名になります）",
+    "custom_title_placeholder": "空欄なら取得したタイトルを使用",
     "format": "フォーマット",
     "quality": "品質",
     "video_mp4": "動画 (MP4)",
@@ -307,6 +315,11 @@
     "retries": "リトライ回数",
     "proxy": "プロキシ",
     "proxy_placeholder": "例: http://proxy:8080",
+    "auto_detect_media": "ページ内のHLS/埋め込み動画URLを自動検出",
+    "http_referer": "Referer",
+    "http_referer_placeholder": "空欄なら検出元ページURLを自動使用",
+    "http_user_agent": "User-Agent",
+    "http_user_agent_placeholder": "空欄なら既定値",
     "extra_args": "追加yt-dlp引数",
     "extra_args_placeholder": "例: --no-playlist"
   },

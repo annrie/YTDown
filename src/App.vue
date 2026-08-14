@@ -55,6 +55,7 @@ const showDownloadDialog = ref(false)
 const showBatchDialog = ref(false)
 const showChannelMonitorDialog = ref(false)
 const downloadUrl = ref('')
+const downloadTitle = ref('')
 const droppedBatchUrls = ref<string[]>([])
 const isDraggingUrl = ref(false)
 const dropTextCapture = ref<HTMLTextAreaElement | null>(null)
@@ -158,8 +159,9 @@ const backgroundOverlayOpacity = computed(() => {
 const hasBackground = computed(() => !!activeBackgroundImage.value)
 
 // Handlers
-function handleSubmitUrl(url: string) {
+function handleSubmitUrl(url: string, title?: string) {
   downloadUrl.value = url
+  downloadTitle.value = title ?? ''
   showDownloadDialog.value = true
 }
 
@@ -198,6 +200,11 @@ async function handleBatchDownload(urls: string[]) {
     recode_video: s.recode_video,
     retries: s.retries,
     proxy: s.proxy,
+    stream_url: '',
+    auto_detect_media: s.auto_detect_media,
+    http_referer: s.http_referer,
+    http_user_agent: s.http_user_agent,
+    custom_title: '',
     extra_args: s.extra_args,
   }
   // Switch to active downloads immediately so user sees items appear
@@ -487,6 +494,7 @@ async function handleTextCaptureDrop(event: DragEvent) {
 function handleOpenDownloadDialog(event: Event) {
   const { url } = (event as CustomEvent<{ url: string }>).detail
   downloadUrl.value = url
+  downloadTitle.value = ''
   showDownloadDialog.value = true
 }
 
@@ -705,6 +713,7 @@ onUnmounted(() => {
     <DownloadDialog
       :url="downloadUrl"
       :open="showDownloadDialog"
+      :initial-title="downloadTitle"
       @close="showDownloadDialog = false"
       @start="handleStartDownload"
     />

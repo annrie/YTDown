@@ -1,6 +1,9 @@
 mod commands;
 mod db;
 mod images;
+mod media_probe;
+mod media_recovery;
+mod media_thumbnail;
 mod scheduler;
 mod state;
 mod ytdlp;

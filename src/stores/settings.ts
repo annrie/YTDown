@@ -35,13 +35,16 @@ const DEFAULTS: AppSettings = {
   recode_video: '',
   retries: 10,
   proxy: '',
+  auto_detect_media: true,
+  http_referer: '',
+  http_user_agent: '',
   extra_args: '',
 }
 
 const BOOLEAN_KEYS: (keyof AppSettings)[] = [
   'embed_thumbnail', 'embed_metadata', 'write_subs', 'embed_subs',
   'embed_chapters', 'sponsorblock', 'auto_classify',
-  'restrict_filenames', 'no_overwrites', 'geo_bypass',
+  'restrict_filenames', 'no_overwrites', 'geo_bypass', 'auto_detect_media',
 ]
 
 const INTEGER_KEYS: (keyof AppSettings)[] = [

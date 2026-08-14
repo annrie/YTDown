@@ -5,6 +5,7 @@ use tokio::process::Command;
 
 use super::parser::{parse_progress_line, parse_video_info, VideoInfo};
 
+#[derive(Clone)]
 pub struct DownloadConfig {
     pub ytdlp_path: String,
     pub url: String,
@@ -34,6 +35,11 @@ pub struct DownloadConfig {
     pub recode_video: Option<String>,
     pub retries: u32,
     pub proxy: Option<String>,
+    pub referer: Option<String>,
+    pub user_agent: Option<String>,
+    pub generic_impersonate: bool,
+    /// 手動指定タイトル。Someの場合yt-dlp由来のタイトルでDBを上書きしない
+    pub custom_title: Option<String>,
     pub extra_args: Vec<String>,
 }
 
@@ -57,21 +63,31 @@ pub async fn fetch_info(
     url: &str,
     cookie_browser: Option<&str>,
     cookie_file: Option<&str>,
+    referer: Option<&str>,
+    user_agent: Option<&str>,
+    generic_impersonate: bool,
 ) -> Result<VideoInfo, String> {
-    let mut args = vec!["--dump-json", "--no-download", "--no-playlist"];
-    let browser_owned;
-    let file_owned;
+    let mut args = vec![
+        "--dump-json".to_string(),
+        "--no-download".to_string(),
+        "--no-playlist".to_string(),
+    ];
     if let Some(browser) = cookie_browser {
-        args.push("--cookies-from-browser");
-        browser_owned = browser.to_string();
-        args.push(&browser_owned);
+        args.extend(["--cookies-from-browser".to_string(), browser.to_string()]);
     }
     if let Some(file) = cookie_file {
-        args.push("--cookies");
-        file_owned = file.to_string();
-        args.push(&file_owned);
+        args.extend(["--cookies".to_string(), file.to_string()]);
     }
-    args.push(url);
+    if let Some(value) = referer.filter(|value| !value.trim().is_empty()) {
+        args.extend(["--referer".to_string(), value.to_string()]);
+    }
+    if let Some(value) = user_agent.filter(|value| !value.trim().is_empty()) {
+        args.extend(["--user-agent".to_string(), value.to_string()]);
+    }
+    if generic_impersonate {
+        append_generic_impersonate_args(&mut args);
+    }
+    args.push(url.to_string());
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(30),
@@ -227,11 +243,22 @@ fn parse_playlist_json(stdout: &str) -> Vec<PlaylistItemInfo> {
 }
 
 /// Start a download, emitting progress events
+/// async再帰（モニタタスク内からのCloudflare再試行）のための型消去ヘルパ
+fn start_download_boxed(
+    app: AppHandle,
+    download_id: i64,
+    config: DownloadConfig,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<u32, String>> + Send + 'static>> {
+    Box::pin(start_download(app, download_id, config))
+}
+
 pub async fn start_download(
     app: AppHandle,
     download_id: i64,
     config: DownloadConfig,
 ) -> Result<u32, String> {
+    // Cloudflare検知時の自動再試行用（モニタタスクへ渡す）
+    let retry_config = config.clone();
     let mut args = vec![
         "--newline".to_string(),
         "--progress".to_string(),
@@ -326,6 +353,15 @@ pub async fn start_download(
     if let Some(ref proxy) = config.proxy {
         args.extend(["--proxy".to_string(), proxy.clone()]);
     }
+    if let Some(ref referer) = config.referer {
+        args.extend(["--referer".to_string(), referer.clone()]);
+    }
+    if let Some(ref user_agent) = config.user_agent {
+        args.extend(["--user-agent".to_string(), user_agent.clone()]);
+    }
+    if config.generic_impersonate {
+        append_generic_impersonate_args(&mut args);
+    }
     // Extra custom args
     args.extend(config.extra_args.iter().cloned());
 
@@ -373,14 +409,16 @@ pub async fn start_download(
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
         let mut final_file_path: Option<String> = None;
-        let mut current_title: Option<String> = None;
-        let mut title_saved = false;
+        // 手動タイトル指定時は、それを初期値にしてyt-dlp由来の上書きを抑止する
+        let keep_title = retry_config.custom_title.is_some();
+        let mut current_title: Option<String> = retry_config.custom_title.clone();
+        let mut title_saved = keep_title;
 
         while let Ok(Some(line)) = lines.next_line().await {
             // Extract title from --print "before_dl:YTDOWN_TITLE:%(title)s"
             if let Some(title) = line.strip_prefix("YTDOWN_TITLE:") {
                 let title = title.trim();
-                if !title.is_empty() && title != "NA" {
+                if !keep_title && !title.is_empty() && title != "NA" {
                     current_title = Some(title.to_string());
                     // Save title to DB immediately (once)
                     if !title_saved {
@@ -449,6 +487,32 @@ pub async fn start_download(
 
         // Wait for the child process to finish
         if let Ok(status) = child.wait().await {
+            // Cloudflareアンチボットによる失敗は generic:impersonate 付きで一度だけ自動再試行
+            if !status.success() && !retry_config.generic_impersonate {
+                let raw_errors = stderr_errors.lock().await.join("\n");
+                if is_cloudflare_impersonate_error(&raw_errors) {
+                    eprintln!(
+                        "[YTDown] Cloudflare 403 detected; retrying download {download_id} with generic:impersonate"
+                    );
+                    let mut retry = retry_config.clone();
+                    retry.generic_impersonate = true;
+                    match start_download_boxed(app_clone.clone(), download_id, retry).await {
+                        Ok(new_pid) => {
+                            // キャンセル/一時停止が新プロセスへ効くようpidを差し替える
+                            if let Some(state) = app_clone.try_state::<crate::state::AppState>() {
+                                let mut downloads = state.active_downloads.lock().await;
+                                if let Some(dl) = downloads.get_mut(&download_id) {
+                                    dl.pid = new_pid;
+                                }
+                            }
+                            return;
+                        }
+                        Err(err) => {
+                            eprintln!("[YTDown] impersonate retry failed to start: {err}");
+                        }
+                    }
+                }
+            }
             let final_status = if status.success() {
                 "completed"
             } else {
@@ -486,6 +550,7 @@ pub async fn start_download(
                     // Save file_path if detected and download succeeded
                     if status.success() {
                         if let Some(ref path) = final_file_path {
+                            recover_png_disguised_media(path);
                             let file_size = std::fs::metadata(path).ok().map(|m| m.len() as i64);
                             let _ = crate::db::queries::update_download_file_path(
                                 &db,
@@ -493,9 +558,11 @@ pub async fn start_download(
                                 path,
                                 file_size,
                             );
+                            ensure_local_thumbnail(&db, download_id, path);
                         } else {
                             // Fallback: try to find the file in output_dir
                             if let Some(path) = find_latest_file(&output_dir) {
+                                recover_png_disguised_media(&path);
                                 let file_size =
                                     std::fs::metadata(&path).ok().map(|m| m.len() as i64);
                                 let _ = crate::db::queries::update_download_file_path(
@@ -504,6 +571,7 @@ pub async fn start_download(
                                     &path,
                                     file_size,
                                 );
+                                ensure_local_thumbnail(&db, download_id, &path);
                             }
                         }
                     }
@@ -558,6 +626,45 @@ pub async fn start_download(
     });
 
     Ok(pid)
+}
+
+fn append_generic_impersonate_args(args: &mut Vec<String>) {
+    args.extend([
+        "--extractor-args".to_string(),
+        "generic:impersonate".to_string(),
+    ]);
+}
+
+/// PNG偽装HLS由来の再生不能MP4を検出したら復元する。失敗はログのみ（原ファイルは温存）。
+/// 通常ファイルは即座に素通りするので全ダウンロード完了後に呼んで良い。
+fn recover_png_disguised_media(path: &str) {
+    match crate::media_recovery::recover_if_png_disguised(std::path::Path::new(path)) {
+        Ok(true) => eprintln!("[YTDown] recovered PNG-disguised media: {path}"),
+        Ok(false) => {}
+        Err(err) => eprintln!("[YTDown] PNG-disguise recovery failed for {path}: {err}"),
+    }
+}
+
+/// サムネイル未取得（Cloudflare配下でog:imageが取れなかった等）なら、
+/// 落とした動画からフレームを抜いて data URI サムネイルを保存する。
+fn ensure_local_thumbnail(db: &rusqlite::Connection, download_id: i64, path: &str) {
+    match crate::db::queries::get_download_thumbnail(db, download_id) {
+        Ok(Some(_)) => {} // 既にサムネイルあり（YouTube等）
+        Ok(None) => {
+            if let Some(data_uri) = crate::media_thumbnail::generate_thumbnail_data_uri(path) {
+                let _ = crate::db::queries::update_download_thumbnail(db, download_id, &data_uri);
+            }
+        }
+        Err(err) => eprintln!("[YTDown] thumbnail check failed for {download_id}: {err}"),
+    }
+}
+
+/// yt-dlpのCloudflareアンチボット失敗（generic:impersonateで解決可能なもの）を判定する
+pub fn is_cloudflare_impersonate_error(err: &str) -> bool {
+    let lower = err.to_ascii_lowercase();
+    lower.contains("cloudflare")
+        && (lower.contains("anti-bot") || lower.contains("403"))
+        && lower.contains("generic:impersonate")
 }
 
 /// Extract file path from yt-dlp output lines like:

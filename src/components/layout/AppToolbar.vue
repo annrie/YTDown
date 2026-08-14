@@ -20,7 +20,7 @@ const isImageSection = computed(() =>
 const emit = defineEmits<{
   'update:currentView': [mode: ViewMode]
   'update:searchQuery': [query: string]
-  'submit-url': [url: string]
+  'submit-url': [url: string, title?: string]
   'open-batch': []
 }>()
 
@@ -28,14 +28,22 @@ const urlInput = ref('')
 const showSearch = ref(false)
 const fetchingBrowserUrl = ref(false)
 const browserUrlError = ref('')
+const browserUrlNotice = ref('')
+// ブラウザから取得したページタイトル。取得したURLに紐づく間だけ保持する
+const capturedTitle = ref('')
 
 async function fetchBrowserUrl() {
   fetchingBrowserUrl.value = true
   browserUrlError.value = ''
+  browserUrlNotice.value = ''
   try {
-    const url = await invoke<string>('get_browser_url')
-    if (url) {
-      urlInput.value = url
+    const result = await invoke<{ browser: string; url: string; title?: string }>('get_browser_url')
+    if (result.url) {
+      urlInput.value = result.url
+      capturedTitle.value = result.title ?? ''
+      // 意図しないブラウザ（背面の別ブラウザ等）から取得した事故に気づけるよう取得元を明示
+      browserUrlNotice.value = t('toolbar.fetched_from', { browser: result.browser })
+      setTimeout(() => { browserUrlNotice.value = '' }, 3000)
     }
   } catch (e) {
     browserUrlError.value = String(e)
@@ -45,11 +53,17 @@ async function fetchBrowserUrl() {
   }
 }
 
+// URLを手で編集したら、紐づいていたタイトルは無効化する
+function handleUrlInput() {
+  capturedTitle.value = ''
+}
+
 function handleSubmitUrl() {
   const url = urlInput.value.trim()
   if (url) {
-    emit('submit-url', url)
+    emit('submit-url', url, capturedTitle.value.trim() || undefined)
     urlInput.value = ''
+    capturedTitle.value = ''
   }
 }
 
@@ -110,11 +124,12 @@ function handleToolbarMousedown(e: MouseEvent) {
           class="flex-1 h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="isImageSection"
           @keydown="handleUrlKeydown"
+          @input="handleUrlInput"
         />
         <UrlHistoryDropdown
           v-if="!isImageSection"
           type="video"
-          @select="(url: string) => urlInput = url"
+          @select="(url: string) => { urlInput = url; capturedTitle = '' }"
         />
         <!-- ブラウザからURL取得ボタン -->
         <button
@@ -178,6 +193,16 @@ function handleToolbarMousedown(e: MouseEvent) {
       <div v-if="browserUrlError"
            class="fixed top-[var(--toolbar-height)] left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-red-500 text-white text-sm rounded-lg shadow-xl z-[9999]">
         {{ browserUrlError }}
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- ブラウザURL取得元の通知バナー -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div v-if="browserUrlNotice"
+           class="fixed top-[var(--toolbar-height)] left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg shadow-xl z-[9999]">
+        {{ browserUrlNotice }}
       </div>
     </Transition>
   </Teleport>

@@ -25,6 +25,7 @@
     "download": "Herunterladen",
     "batch": "Stapel",
     "fetch_browser_url": "Aus Browser abrufen",
+    "fetched_from": "URL von {browser} übernommen",
     "view_list": "Liste",
     "view_grid": "Raster",
     "view_column": "Spalten"
@@ -52,6 +53,13 @@
   },
   "download_dialog": {
     "loading_info": "Videoinformationen werden abgerufen...",
+    "manual_stream_title": "Manuelle Stream-URL",
+    "manual_stream_url": "Stream-URL",
+    "manual_stream_url_placeholder": "z.B. https://example.com/master.m3u8",
+    "manual_stream_referer": "Referer (Quellseiten-URL)",
+    "manual_stream_hint": "Wenn Videoinfos fehlschlagen, geben Sie eine direkte URL wie m3u8 ein, um den Download zu starten.",
+    "custom_title": "Titel (optional, wird als Dateiname verwendet)",
+    "custom_title_placeholder": "Verwendet den abgerufenen Titel, wenn leer",
     "format": "Format",
     "quality": "Qualität",
     "video_mp4": "Video (MP4)",
@@ -307,6 +315,11 @@
     "retries": "Wiederholungsanzahl",
     "proxy": "Proxy",
     "proxy_placeholder": "z.B. http://proxy:8080",
+    "auto_detect_media": "HLS-/eingebettete Video-URLs in Seiten automatisch erkennen",
+    "http_referer": "Referer",
+    "http_referer_placeholder": "Quellseiten-URL automatisch verwenden, wenn leer",
+    "http_user_agent": "User-Agent",
+    "http_user_agent_placeholder": "Standard, wenn leer",
     "extra_args": "Zusätzliche yt-dlp Argumente",
     "extra_args_placeholder": "z.B. --no-playlist"
   },

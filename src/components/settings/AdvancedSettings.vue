@@ -181,6 +181,30 @@ onMounted(() => { void loadInfo() })
                class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono"
                :placeholder="t('advanced.proxy_placeholder')" />
       </div>
+
+      <label class="flex items-center gap-3 text-sm">
+        <input type="checkbox" :checked="settingsStore.settings.auto_detect_media"
+               @change="settingsStore.updateSetting('auto_detect_media', ($event.target as HTMLInputElement).checked)"
+               class="rounded" />
+        {{ t('advanced.auto_detect_media') }}
+      </label>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">{{ t('advanced.http_referer') }} <span class="text-neutral-400">--referer</span></label>
+          <input :value="settingsStore.settings.http_referer"
+                 @input="settingsStore.updateSetting('http_referer', ($event.target as HTMLInputElement).value)"
+                 class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono"
+                 :placeholder="t('advanced.http_referer_placeholder')" />
+        </div>
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">{{ t('advanced.http_user_agent') }} <span class="text-neutral-400">--user-agent</span></label>
+          <input :value="settingsStore.settings.http_user_agent"
+                 @input="settingsStore.updateSetting('http_user_agent', ($event.target as HTMLInputElement).value)"
+                 class="w-full h-8 px-2 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono"
+                 :placeholder="t('advanced.http_user_agent_placeholder')" />
+        </div>
+      </div>
     </div>
 
     <!-- Extra args -->

@@ -25,6 +25,7 @@
     "download": "下載",
     "batch": "批次",
     "fetch_browser_url": "從瀏覽器取得",
+    "fetched_from": "已從 {browser} 取得 URL",
     "view_list": "清單",
     "view_grid": "格狀",
     "view_column": "欄位"
@@ -52,6 +53,13 @@
   },
   "download_dialog": {
     "loading_info": "取得影片資訊中...",
+    "manual_stream_title": "手動串流 URL",
+    "manual_stream_url": "串流 URL",
+    "manual_stream_url_placeholder": "例: https://example.com/master.m3u8",
+    "manual_stream_referer": "Referer（來源頁面 URL）",
+    "manual_stream_hint": "即使影片資訊取得失敗，也可以輸入 m3u8 等直接 URL 開始下載。",
+    "custom_title": "標題（選填，作為檔名）",
+    "custom_title_placeholder": "留空時使用取得的標題",
     "format": "格式",
     "quality": "品質",
     "video_mp4": "影片 (MP4)",
@@ -307,6 +315,11 @@
     "retries": "重試次數",
     "proxy": "代理伺服器",
     "proxy_placeholder": "例: http://proxy:8080",
+    "auto_detect_media": "自動偵測頁面中的 HLS/嵌入影片 URL",
+    "http_referer": "Referer",
+    "http_referer_placeholder": "留空時自動使用來源頁面 URL",
+    "http_user_agent": "User-Agent",
+    "http_user_agent_placeholder": "留空時使用預設值",
     "extra_args": "額外 yt-dlp 參數",
     "extra_args_placeholder": "例: --no-playlist"
   },

@@ -25,15 +25,157 @@ pub async fn fetch_formats(
         .ok()
         .flatten()
         .filter(|v| !v.is_empty());
+    let auto_detect_media = crate::db::queries::get_setting(&db, "auto_detect_media")
+        .ok()
+        .flatten()
+        .map(|v| v == "true")
+        .unwrap_or(true);
+    let user_agent = crate::db::queries::get_setting(&db, "http_user_agent")
+        .ok()
+        .flatten()
+        .filter(|v| !v.trim().is_empty());
     drop(db);
 
-    process::fetch_info(
+    // probeは特殊サイト向け。YouTubeはyt-dlpのネイティブ抽出に任せる
+    let resolved_media = if auto_detect_media && !super::download::is_youtube_url(&url) {
+        crate::media_probe::resolve_embedded_media(&url, user_agent.as_deref())
+            .await
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+    let info_url = resolved_media
+        .as_ref()
+        .map(|media| media.media_url.as_str())
+        .unwrap_or(&url);
+    let referer = resolved_media
+        .as_ref()
+        .and_then(|media| media.referer.as_deref());
+
+    let result = process::fetch_info(
         &binary.path.to_string_lossy(),
-        &url,
+        info_url,
         cookie_browser.as_deref(),
         cookie_file.as_deref(),
+        referer,
+        user_agent.as_deref(),
+        false,
     )
-    .await
+    .await;
+
+    let result = match result {
+        Err(err) if process::is_cloudflare_impersonate_error(&err) => {
+            process::fetch_info(
+                &binary.path.to_string_lossy(),
+                info_url,
+                cookie_browser.as_deref(),
+                cookie_file.as_deref(),
+                referer,
+                user_agent.as_deref(),
+                true,
+            )
+            .await
+        }
+        other => other,
+    };
+
+    match result {
+        // yt-dlp成功時: probeのog:title/og:imageで弱いメタデータ（"master"等）を補完
+        Ok(mut info) => {
+            if let Some(media) = resolved_media.as_ref() {
+                apply_probe_metadata(&mut info, media, &url);
+            }
+            Ok(info)
+        }
+        // yt-dlp失敗時: probeがページからメタデータを掴んでいれば、それだけで
+        // タイトル/サムネイルを表示してダウンロード可能にする（.htmlページで403になる特殊サイト向け）。
+        // 素の直接m3u8（メタなし）は従来どおりエラー→手動ストリーム欄に委ねる
+        Err(err) => {
+            match resolved_media
+                .as_ref()
+                .filter(|m| m.title.is_some() || m.thumbnail.is_some())
+            {
+                Some(media) => Ok(video_info_from_probe(media, &url)),
+                None => Err(err),
+            }
+        }
+    }
+}
+
+/// probeのメタデータだけから最小限のVideoInfoを組み立てる（yt-dlpが情報取得に失敗した場合の表示用）
+fn video_info_from_probe(
+    media: &crate::media_probe::MediaProbeResult,
+    original_url: &str,
+) -> crate::ytdlp::parser::VideoInfo {
+    let host = url::Url::parse(original_url)
+        .ok()
+        .and_then(|u| u.host_str().map(|h| h.to_string()))
+        .unwrap_or_default();
+    let title = media
+        .title
+        .clone()
+        .filter(|t| !t.trim().is_empty())
+        .unwrap_or_else(|| if host.is_empty() { "動画".to_string() } else { host.clone() });
+
+    crate::ytdlp::parser::VideoInfo {
+        title,
+        channel: String::new(),
+        channel_id: None,
+        channel_url: None,
+        site: host,
+        thumbnail_url: media.thumbnail.clone(),
+        channel_avatar_url: None,
+        duration: None,
+        upload_date: None,
+        view_count: None,
+        chapters: Vec::new(),
+        subtitle_languages: Vec::new(),
+        auto_subtitle_languages: Vec::new(),
+        formats: Vec::new(),
+    }
+}
+
+/// probeのタイトル/サムネイルを、yt-dlp結果が貧弱なときだけ上書きする
+fn apply_probe_metadata(
+    info: &mut crate::ytdlp::parser::VideoInfo,
+    media: &crate::media_probe::MediaProbeResult,
+    original_url: &str,
+) {
+    if let Some(title) = media.title.as_ref().filter(|t| !t.trim().is_empty()) {
+        if is_weak_title(&info.title, original_url) {
+            info.title = title.clone();
+        }
+    }
+    if info.thumbnail_url.is_none() {
+        if let Some(thumb) = media.thumbnail.as_ref().filter(|t| !t.trim().is_empty()) {
+            info.thumbnail_url = Some(thumb.clone());
+        }
+    }
+}
+
+/// yt-dlpのタイトルが「ファイル名そのまま」等の無意味な値かを判定する
+fn is_weak_title(title: &str, original_url: &str) -> bool {
+    let trimmed = title.trim();
+    if trimmed.is_empty() {
+        return true;
+    }
+    // m3u8のファイル名由来（master / video / index / playlist 等）は無意味とみなす
+    const GENERIC: &[&str] = &["master", "video", "index", "playlist", "manifest", "chunklist"];
+    if GENERIC.contains(&trimmed.to_ascii_lowercase().as_str()) {
+        return true;
+    }
+    // URL末尾のファイル名（拡張子なし）と一致するならファイル名流用
+    if let Some(stem) = original_url
+        .rsplit('/')
+        .next()
+        .and_then(|seg| seg.split(['.', '?']).next())
+    {
+        if !stem.is_empty() && stem.eq_ignore_ascii_case(trimmed) {
+            return true;
+        }
+    }
+    false
 }
 
 #[tauri::command]

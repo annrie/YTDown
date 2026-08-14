@@ -6493,6 +6493,8 @@ name = "ytdown"
 version = "0.6.3"
 dependencies = [
  "chrono",
+ "core-foundation 0.10.1",
+ "core-graphics",
  "cron",
  "dirs 5.0.1",
  "image",

@@ -25,6 +25,7 @@
     "download": "다운로드",
     "batch": "일괄",
     "fetch_browser_url": "브라우저에서 가져오기",
+    "fetched_from": "{browser}에서 URL을 가져왔습니다",
     "view_list": "목록",
     "view_grid": "그리드",
     "view_column": "열"
@@ -52,6 +53,13 @@
   },
   "download_dialog": {
     "loading_info": "동영상 정보 가져오는 중...",
+    "manual_stream_title": "수동 스트림 URL",
+    "manual_stream_url": "스트림 URL",
+    "manual_stream_url_placeholder": "예: https://example.com/master.m3u8",
+    "manual_stream_referer": "Referer(원본 페이지 URL)",
+    "manual_stream_hint": "동영상 정보 가져오기에 실패해도 m3u8 같은 직접 URL을 입력하면 다운로드를 시작할 수 있습니다.",
+    "custom_title": "제목 (선택, 파일 이름으로 사용)",
+    "custom_title_placeholder": "비어 있으면 가져온 제목 사용",
     "format": "형식",
     "quality": "화질",
     "video_mp4": "동영상 (MP4)",
@@ -307,6 +315,11 @@
     "retries": "재시도 횟수",
     "proxy": "프록시",
     "proxy_placeholder": "예: http://proxy:8080",
+    "auto_detect_media": "페이지의 HLS/임베드 동영상 URL 자동 감지",
+    "http_referer": "Referer",
+    "http_referer_placeholder": "비어 있으면 원본 페이지 URL 자동 사용",
+    "http_user_agent": "User-Agent",
+    "http_user_agent_placeholder": "비어 있으면 기본값",
     "extra_args": "추가 yt-dlp 인수",
     "extra_args_placeholder": "예: --no-playlist"
   },
