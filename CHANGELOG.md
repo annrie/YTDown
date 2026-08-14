@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.6.5
+
+[compare changes](https://github.com/annrie/YTDown/compare/v0.6.4...v0.6.5)
+
+### 🚀 新機能
+
+- **download:** 🎬 保護サイト・HLSストリーミング対応を追加 ([a0b019e](https://github.com/annrie/YTDown/commit/a0b019e))
+
+### ❤️ Contributors
+
+- Annrie ([@annrie](https://github.com/annrie))
+
 ## v0.6.4
 
 [compare changes](https://github.com/annrie/YTDown/compare/v0.6.3...v0.6.4)
