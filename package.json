@@ -4,6 +4,9 @@
   "version": "0.6.5",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
@@ -21,7 +24,7 @@
     "croner": "^10.0.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.41",
-    "vue-i18n": "^10.0.8"
+    "vue-i18n": "^11.4.8"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
