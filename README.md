@@ -139,7 +139,7 @@ Download the latest release from the [Releases](../../releases) page.
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+
+- [Node.js](https://nodejs.org/) 22.12+
 - [pnpm](https://pnpm.io/)
 - [Rust](https://rustup.rs/) toolchain
 - [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/)
@@ -165,7 +165,7 @@ pnpm tauri build
 | Backend | Rust, Tauri v2, SQLite (rusqlite) |
 | Frontend | Vue 3 (Composition API), TypeScript, Pinia |
 | Styling | Tailwind CSS v4 |
-| Internationalization | vue-i18n v10 (8 locales) |
+| Internationalization | vue-i18n v11 (8 locales) |
 | Video engine | yt-dlp |
 | Image processing | Rust image crate (scraping, WebP conversion) |
 
