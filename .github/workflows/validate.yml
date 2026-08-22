@@ -1,0 +1,21 @@
+name: Validate
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # build = vue-tsc --noEmit && vite build（型チェック+バンドルが実在する唯一の検証系script）
+      - run: pnpm build
