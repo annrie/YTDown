@@ -21,8 +21,9 @@
     "@tauri-apps/plugin-dialog": "^2.7.2",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-opener": "^2.5.4",
+    "@vue/devtools-api": "^8.2.1",
     "croner": "^10.0.1",
-    "pinia": "^3.0.4",
+    "pinia": "^4.0.3",
     "vue": "^3.5.41",
     "vue-i18n": "^11.4.8"
   },
