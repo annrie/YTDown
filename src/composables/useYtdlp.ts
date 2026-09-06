@@ -15,6 +15,7 @@ export function useYtdlp() {
     try {
       info.value = await invoke<YtdlpInfo>('get_ytdlp_info')
     } catch (e) {
+      info.value = null
       error.value = String(e)
     } finally {
       loading.value = false

@@ -159,8 +159,10 @@ async function handleInstallYtdlp() {
   }
 }
 
+// Only the auto-detect failure is fixable by installing the bundled binary.
+// Errors about a configured manual path have to be fixed in Settings instead.
 const isYtdlpMissing = computed(() =>
-  !!error.value && (error.value.includes('not found') || error.value.includes('見つかりません'))
+  !!error.value && error.value.startsWith('yt-dlp not found')
 )
 
 const mediaType = ref<'video' | 'audio'>('video')

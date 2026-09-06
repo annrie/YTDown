@@ -13,6 +13,12 @@ const videoFormats = ['', 'mp4', 'mkv', 'webm', 'flv', 'avi']
 const { info: ytdlpInfo, loading, checking, updating, error: ytdlpError, loadInfo, checkUpdate, performUpdate } = useYtdlp()
 
 onMounted(() => { void loadInfo() })
+
+async function onYtdlpPathChange(event: Event) {
+  const value = (event.target as HTMLInputElement).value
+  await settingsStore.updateSetting('ytdlp_path', value)
+  await loadInfo()
+}
 </script>
 
 <template>
@@ -73,14 +79,18 @@ onMounted(() => { void loadInfo() })
         </p>
       </template>
 
-      <div v-else class="text-xs text-red-400">{{ t('general.ytdlp_not_found') }}</div>
+      <div v-else class="text-xs text-red-400">
+        {{ t('general.ytdlp_not_found') }}
+        <span v-if="ytdlpError" class="block font-mono mt-1 break-all">{{ ytdlpError }}</span>
+      </div>
     </div>
 
     <!-- yt-dlp path override -->
     <div>
       <label class="block text-sm font-medium mb-1">{{ t('general.ytdlp_path_override') }}</label>
       <input :value="settingsStore.settings.ytdlp_path"
-             @input="settingsStore.updateSetting('ytdlp_path', ($event.target as HTMLInputElement).value)"
+             data-testid="ytdlp-path"
+             @change="onYtdlpPathChange"
              class="w-full h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
              :placeholder="t('general.ytdlp_path_placeholder')" />
       <p class="text-xs text-neutral-400 mt-1">{{ t('general.ytdlp_path_hint') }}</p>
