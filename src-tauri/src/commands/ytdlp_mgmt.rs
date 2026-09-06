@@ -12,27 +12,25 @@ pub struct YtdlpInfo {
     pub managed_by: String,
 }
 
-/// Get current yt-dlp binary info (fast, no network call)
-#[tauri::command]
-pub async fn get_ytdlp_info(state: State<'_, AppState>) -> Result<YtdlpInfo, String> {
-    let ytdlp_path = state.ytdlp_path.lock().await;
-    let manual_path = ytdlp_path.as_deref();
-
-    let bin = binary::detect_binary(manual_path)?;
-
-    let managed_by = match bin.managed_by {
+fn managed_by_label(managed_by: &binary::ManagedBy) -> &'static str {
+    match managed_by {
         binary::ManagedBy::Homebrew => "homebrew",
         binary::ManagedBy::Bundled => "bundled",
         binary::ManagedBy::PackageManager => "package_manager",
         binary::ManagedBy::Manual => "manual",
-    };
+    }
+}
 
+/// Get current yt-dlp binary info (fast, no network call)
+#[tauri::command]
+pub async fn get_ytdlp_info(state: State<'_, AppState>) -> Result<YtdlpInfo, String> {
+    let bin = state.resolve_ytdlp_binary().await?;
     Ok(YtdlpInfo {
         path: bin.path.to_string_lossy().to_string(),
         version: bin.version,
         update_available: false,
         latest_version: None,
-        managed_by: managed_by.to_string(),
+        managed_by: managed_by_label(&bin.managed_by).to_string(),
     })
 }
 
@@ -40,13 +38,8 @@ pub async fn get_ytdlp_info(state: State<'_, AppState>) -> Result<YtdlpInfo, Str
 /// Returns Some(latest_version) if update available, None if up to date
 #[tauri::command]
 pub async fn check_ytdlp_update(state: State<'_, AppState>) -> Result<Option<String>, String> {
-    let ytdlp_path = state.ytdlp_path.lock().await;
-    let manual_path = ytdlp_path.as_deref().map(|s| s.to_string());
-    drop(ytdlp_path);
-
+    let current = state.resolve_ytdlp_binary().await?.version;
     tokio::task::spawn_blocking(move || {
-        let bin = binary::detect_binary(manual_path.as_deref())?;
-        let current = bin.version;
         let latest = binary::fetch_latest_github_version()?;
         if latest != current {
             Ok(Some(latest))
@@ -64,9 +57,10 @@ pub async fn install_ytdlp(state: State<'_, AppState>) -> Result<YtdlpInfo, Stri
         .await
         .map_err(|e| format!("Task failed: {}", e))??;
 
-    // Re-detect to get full info
-    let ytdlp_path = state.ytdlp_path.lock().await;
-    let bin = binary::detect_binary(ytdlp_path.as_deref())
+    // Re-detect to get full info (a configured manual path still wins, so report the truth)
+    let bin = state
+        .resolve_ytdlp_binary()
+        .await
         .map_err(|_| format!("Installed but failed to detect at: {}", path.display()))?;
 
     Ok(YtdlpInfo {
@@ -74,16 +68,14 @@ pub async fn install_ytdlp(state: State<'_, AppState>) -> Result<YtdlpInfo, Stri
         version: bin.version,
         update_available: false,
         latest_version: None,
-        managed_by: "bundled".to_string(),
+        managed_by: managed_by_label(&bin.managed_by).to_string(),
     })
 }
 
 /// Update yt-dlp. For bundled: auto-downloads latest. For others: returns helpful message as Err.
 #[tauri::command]
 pub async fn update_ytdlp(state: State<'_, AppState>) -> Result<String, String> {
-    let ytdlp_path = state.ytdlp_path.lock().await;
-    let bin = binary::detect_binary(ytdlp_path.as_deref())?;
-    drop(ytdlp_path);
+    let bin = state.resolve_ytdlp_binary().await?;
 
     match bin.managed_by {
         binary::ManagedBy::Homebrew => Err(
