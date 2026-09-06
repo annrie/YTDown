@@ -773,14 +773,15 @@ pub async fn resume_download(
     download_id: i64,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Phase 1: inspect under the lock; the live-process case is handled right here.
-    {
+    // Phase 1: inspect under the lock. A live process is resumed right here; a dead one is
+    // claimed for restart (paused = false) so a concurrent resume cannot spawn a second yt-dlp.
+    let dead_pid = {
         let mut downloads = state.active_downloads.lock().await;
         let dl = downloads
             .get_mut(&download_id)
             .ok_or_else(|| "Download not found".to_string())?;
         if !dl.paused {
-            return Ok(());
+            return Ok(()); // already running, or being restarted by another call
         }
         if is_process_alive(dl.pid) {
             // Process still alive, send resume signal
@@ -788,10 +789,55 @@ pub async fn resume_download(
             dl.paused = false;
             return Ok(());
         }
-    } // active_downloads released: restarting is slow (DB reads, yt-dlp probe, spawn)
+        dl.paused = false;
+        dl.pid
+    }; // active_downloads released: restarting is slow (DB reads, yt-dlp probe, spawn)
 
     // Phase 2: process dead — re-download using --continue (yt-dlp resumes partial files).
     // Runs without holding active_downloads so cancel/pause of other downloads are not blocked.
+    let new_pid = match spawn_continuation(app, download_id, &state).await {
+        Ok(pid) => pid,
+        Err(e) => {
+            // Hand the entry back so the user can retry.
+            let mut downloads = state.active_downloads.lock().await;
+            if let Some(dl) = downloads.get_mut(&download_id) {
+                if dl.pid == dead_pid {
+                    dl.paused = true;
+                }
+            }
+            return Err(e);
+        }
+    };
+
+    // Phase 3: publish the new pid, but only if the entry is still the one we claimed. If it
+    // was cancelled (gone) or replaced meanwhile, the fresh process must not run untracked.
+    {
+        let mut downloads = state.active_downloads.lock().await;
+        match downloads.get_mut(&download_id) {
+            Some(dl) if dl.pid == dead_pid => {
+                dl.pid = new_pid;
+                dl.paused = false;
+            }
+            _ => {
+                let _ = kill_process(new_pid);
+                return Err("Download was cancelled or replaced while resuming".to_string());
+            }
+        }
+    }
+
+    let db = state.db.lock().await;
+    let _ = crate::db::queries::update_download_pid(&db, download_id, Some(new_pid as i64));
+    let _ = crate::db::queries::update_download_status(&db, download_id, "downloading");
+    Ok(())
+}
+
+/// Restart a paused download whose yt-dlp process is gone, using the persisted record and the
+/// current settings. Returns the new pid. Must be called without `active_downloads` held.
+async fn spawn_continuation(
+    app: AppHandle,
+    download_id: i64,
+    state: &AppState,
+) -> Result<u32, String> {
     let download = {
         let db = state.db.lock().await;
         crate::db::queries::get_download(&db, download_id)
@@ -882,28 +928,7 @@ pub async fn resume_download(
         extra_args: Vec::new(),
     };
 
-    let new_pid = crate::ytdlp::process::start_download(app, download_id, config).await?;
-
-    // Phase 3: publish the new pid. If the download was cancelled meanwhile the entry is gone,
-    // and the fresh process must not be left running as an orphan.
-    {
-        let mut downloads = state.active_downloads.lock().await;
-        match downloads.get_mut(&download_id) {
-            Some(dl) => {
-                dl.pid = new_pid;
-                dl.paused = false;
-            }
-            None => {
-                let _ = kill_process(new_pid);
-                return Err("Download was cancelled while resuming".to_string());
-            }
-        }
-    }
-
-    let db = state.db.lock().await;
-    let _ = crate::db::queries::update_download_pid(&db, download_id, Some(new_pid as i64));
-    let _ = crate::db::queries::update_download_status(&db, download_id, "downloading");
-    Ok(())
+    crate::ytdlp::process::start_download(app, download_id, config).await
 }
 
 /// Internal download runner for scheduled downloads.
