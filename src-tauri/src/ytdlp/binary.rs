@@ -1,6 +1,7 @@
 use std::io::Read;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
+use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
 
 #[derive(Debug)]
@@ -175,32 +176,44 @@ const MAX_STDERR_DETAIL_CHARS: usize = 300;
 /// wrapper that blocks must not hang every command that resolves the binary.
 const VERSION_PROBE_TIMEOUT: Duration = Duration::from_secs(15);
 
+/// After the direct child has exited, how long descendants may keep the pipes open before
+/// the whole group is taken down. A real yt-dlp never leaves background jobs behind, so
+/// this only matters for sloppy wrapper scripts.
+const PIPE_GRACE_AFTER_EXIT: Duration = Duration::from_secs(1);
+
 fn get_version(path: &PathBuf) -> Result<String, String> {
     get_version_with_timeout(path, VERSION_PROBE_TIMEOUT)
 }
 
 fn get_version_with_timeout(path: &PathBuf, timeout: Duration) -> Result<String, String> {
-    let mut child = Command::new(path)
-        .arg("--version")
+    let mut cmd = Command::new(path);
+    cmd.arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    // Give the probe its own process group so a wrapper script's descendants can be taken
+    // down with it (they would otherwise keep our pipes open indefinitely).
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0);
+    }
+    let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to run yt-dlp at {}: {}", path.display(), e))?;
+    let deadline = Instant::now() + timeout;
 
     // Drain both pipes on helper threads so a chatty child can't stall on a full pipe
     // while we poll for exit.
-    let stdout_reader = spawn_pipe_reader(child.stdout.take());
-    let stderr_reader = spawn_pipe_reader(child.stderr.take());
+    let stdout_rx = spawn_pipe_reader(child.stdout.take());
+    let stderr_rx = spawn_pipe_reader(child.stderr.take());
 
-    let deadline = Instant::now() + timeout;
     let status = loop {
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(20)),
             Ok(None) => {
-                let _ = child.kill();
-                let _ = child.wait();
+                kill_process_tree(&mut child);
                 return Err(format!(
                     "yt-dlp at {} did not answer --version within {:?}",
                     path.display(),
@@ -208,16 +221,17 @@ fn get_version_with_timeout(path: &PathBuf, timeout: Duration) -> Result<String,
                 ));
             }
             Err(e) => {
+                kill_process_tree(&mut child);
                 return Err(format!(
                     "Failed to wait for yt-dlp at {}: {}",
                     path.display(),
                     e
-                ))
+                ));
             }
         }
     };
-    let stdout = stdout_reader.join().unwrap_or_default();
-    let stderr = stderr_reader.join().unwrap_or_default();
+    let stdout = collect_pipe(&stdout_rx, &mut child, path)?;
+    let stderr = collect_pipe(&stderr_rx, &mut child, path)?;
 
     if !status.success() {
         // Keep the message short: the last non-empty stderr line is usually the real cause
@@ -241,16 +255,51 @@ fn get_version_with_timeout(path: &PathBuf, timeout: Duration) -> Result<String,
     Ok(version)
 }
 
-fn spawn_pipe_reader<R: Read + Send + 'static>(
-    pipe: Option<R>,
-) -> std::thread::JoinHandle<String> {
+fn spawn_pipe_reader<R: Read + Send + 'static>(pipe: Option<R>) -> Receiver<String> {
+    let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         let mut buf = Vec::new();
         if let Some(mut pipe) = pipe {
             let _ = pipe.read_to_end(&mut buf);
         }
-        String::from_utf8_lossy(&buf).into_owned()
+        let _ = tx.send(String::from_utf8_lossy(&buf).into_owned());
+    });
+    rx
+}
+
+/// Collect a pipe reader's output once the direct child has exited. If a descendant the
+/// wrapper left behind still holds the pipe open, kill the whole group and drain what
+/// was written before that.
+fn collect_pipe(
+    rx: &Receiver<String>,
+    child: &mut Child,
+    path: &PathBuf,
+) -> Result<String, String> {
+    if let Ok(output) = rx.recv_timeout(PIPE_GRACE_AFTER_EXIT) {
+        return Ok(output);
+    }
+    kill_process_tree(child);
+    rx.recv_timeout(PIPE_GRACE_AFTER_EXIT).map_err(|_| {
+        format!(
+            "yt-dlp at {} left its --version output open beyond {:?} after exiting",
+            path.display(),
+            PIPE_GRACE_AFTER_EXIT
+        )
     })
+}
+
+/// Kill the probe and, on unix, everything in its process group. Also reaps the child so
+/// no zombie is left behind. (On Windows only the direct child is killed.)
+fn kill_process_tree(child: &mut Child) {
+    #[cfg(unix)]
+    {
+        // `process_group(0)` made the child the group leader, so -pid addresses the group.
+        unsafe {
+            libc::kill(-(child.id() as i32), libc::SIGKILL);
+        }
+    }
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
 /// Download URL for the current platform
@@ -414,6 +463,19 @@ mod tests {
         let err = get_version_with_timeout(&script.0, Duration::from_millis(300)).unwrap_err();
         assert!(err.contains("did not answer"), "unexpected error: {err}");
         assert!(started.elapsed() < Duration::from_secs(5), "timeout was not enforced");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn get_version_is_bounded_when_a_descendant_keeps_the_pipe_open() {
+        // The wrapper exits at once but leaves a background job holding stdout/stderr.
+        // The direct child's budget is the production one (its first exec can take seconds
+        // on a loaded macOS); the point is that we never wait for the 30s background job.
+        let script = write_script("bg.sh", "#!/bin/sh\nsleep 30 &\necho 2026.01.01\nexit 0\n");
+        let started = Instant::now();
+        let version = get_version_with_timeout(&script.0, VERSION_PROBE_TIMEOUT).unwrap();
+        assert_eq!(version, "2026.01.01");
+        assert!(started.elapsed() < Duration::from_secs(20), "pipe wait was not bounded");
     }
 
     #[cfg(unix)]
