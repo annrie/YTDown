@@ -1,5 +1,7 @@
+use std::io::Read;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
 #[derive(Debug)]
 pub enum ManagedBy {
@@ -169,15 +171,57 @@ fn bundled_binary_path() -> PathBuf {
 /// Upper bound for the stderr excerpt included in `get_version` errors (shown in the UI).
 const MAX_STDERR_DETAIL_CHARS: usize = 300;
 
+/// How long `yt-dlp --version` may take before the probe is abandoned. A user-configured
+/// wrapper that blocks must not hang every command that resolves the binary.
+const VERSION_PROBE_TIMEOUT: Duration = Duration::from_secs(15);
+
 fn get_version(path: &PathBuf) -> Result<String, String> {
-    let output = Command::new(path)
+    get_version_with_timeout(path, VERSION_PROBE_TIMEOUT)
+}
+
+fn get_version_with_timeout(path: &PathBuf, timeout: Duration) -> Result<String, String> {
+    let mut child = Command::new(path)
         .arg("--version")
-        .output()
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .map_err(|e| format!("Failed to run yt-dlp at {}: {}", path.display(), e))?;
-    if !output.status.success() {
+
+    // Drain both pipes on helper threads so a chatty child can't stall on a full pipe
+    // while we poll for exit.
+    let stdout_reader = spawn_pipe_reader(child.stdout.take());
+    let stderr_reader = spawn_pipe_reader(child.stderr.take());
+
+    let deadline = Instant::now() + timeout;
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(20)),
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!(
+                    "yt-dlp at {} did not answer --version within {:?}",
+                    path.display(),
+                    timeout
+                ));
+            }
+            Err(e) => {
+                return Err(format!(
+                    "Failed to wait for yt-dlp at {}: {}",
+                    path.display(),
+                    e
+                ))
+            }
+        }
+    };
+    let stdout = stdout_reader.join().unwrap_or_default();
+    let stderr = stderr_reader.join().unwrap_or_default();
+
+    if !status.success() {
         // Keep the message short: the last non-empty stderr line is usually the real cause
         // (Python tracebacks end with the exception), capped so it stays readable in the UI.
-        let stderr = String::from_utf8_lossy(&output.stderr);
         let detail: String = stderr
             .lines()
             .rev()
@@ -185,21 +229,28 @@ fn get_version(path: &PathBuf) -> Result<String, String> {
             .map(|line| line.trim().chars().take(MAX_STDERR_DETAIL_CHARS).collect())
             .unwrap_or_default();
         return Err(if detail.is_empty() {
-            format!("yt-dlp at {} failed ({})", path.display(), output.status)
+            format!("yt-dlp at {} failed ({})", path.display(), status)
         } else {
-            format!(
-                "yt-dlp at {} failed ({}): {}",
-                path.display(),
-                output.status,
-                detail
-            )
+            format!("yt-dlp at {} failed ({}): {}", path.display(), status, detail)
         });
     }
-    let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let version = stdout.trim().to_string();
     if version.is_empty() {
         return Err(format!("yt-dlp at {} returned an empty version", path.display()));
     }
     Ok(version)
+}
+
+fn spawn_pipe_reader<R: Read + Send + 'static>(
+    pipe: Option<R>,
+) -> std::thread::JoinHandle<String> {
+    std::thread::spawn(move || {
+        let mut buf = Vec::new();
+        if let Some(mut pipe) = pipe {
+            let _ = pipe.read_to_end(&mut buf);
+        }
+        String::from_utf8_lossy(&buf).into_owned()
+    })
 }
 
 /// Download URL for the current platform
@@ -353,6 +404,16 @@ mod tests {
         let err = get_version(&script.0).unwrap_err();
         assert!(err.contains("failed ("), "unexpected error: {err}");
         assert!(err.ends_with(')'), "should not end with a dangling separator: {err}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn get_version_times_out_on_hanging_binary() {
+        let script = write_script("hang.sh", "#!/bin/sh\nexec sleep 30\n");
+        let started = Instant::now();
+        let err = get_version_with_timeout(&script.0, Duration::from_millis(300)).unwrap_err();
+        assert!(err.contains("did not answer"), "unexpected error: {err}");
+        assert!(started.elapsed() < Duration::from_secs(5), "timeout was not enforced");
     }
 
     #[cfg(unix)]
