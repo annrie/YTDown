@@ -1,8 +1,5 @@
 use crate::state::{ActiveDownload, AppState};
-use crate::ytdlp::{
-    binary,
-    process::{self, DownloadConfig},
-};
+use crate::ytdlp::process::{self, DownloadConfig};
 use chrono::Local;
 use serde::Deserialize;
 use serde_json::Value;
@@ -629,10 +626,7 @@ pub async fn start_download(
     options: DownloadOptions,
     state: State<'_, AppState>,
 ) -> Result<i64, String> {
-    let bin = {
-        let ytdlp_path_lock = state.ytdlp_path.lock().await;
-        binary::detect_binary(ytdlp_path_lock.as_deref())?
-    }; // ytdlp_path_lock dropped here
+    let bin = state.resolve_ytdlp_binary().await?;
 
     // Insert download record to DB
     let custom_title = non_empty(options.custom_title.clone());
@@ -793,8 +787,7 @@ pub async fn resume_download(
                     .map_err(|e| format!("DB read failed: {}", e))?;
                 drop(db);
 
-                let ytdlp_path_lock = state.ytdlp_path.lock().await;
-                let bin = crate::ytdlp::binary::detect_binary(ytdlp_path_lock.as_deref())?;
+                let bin = state.resolve_ytdlp_binary().await?;
 
                 let config = DownloadConfig {
                     ytdlp_path: bin.path.to_string_lossy().to_string(),
@@ -910,10 +903,7 @@ pub async fn run_download_internal(
     let state = app.state::<AppState>();
     let normalized_url = normalize_channel_download_url(&url, is_channel);
 
-    let bin = {
-        let ytdlp_path_lock = state.ytdlp_path.lock().await;
-        crate::ytdlp::binary::detect_binary(ytdlp_path_lock.as_deref())?
-    };
+    let bin = state.resolve_ytdlp_binary().await?;
     let ytdlp_path = bin.path.to_string_lossy().to_string();
 
     // Expand ~ in output_dir
@@ -1274,10 +1264,8 @@ pub async fn fetch_playlist_items(
     url: String,
     state: State<'_, AppState>,
 ) -> Result<Vec<crate::ytdlp::process::PlaylistItemInfo>, String> {
-    let ytdlp_path_lock = state.ytdlp_path.lock().await;
-    let bin = binary::detect_binary(ytdlp_path_lock.as_deref())?;
+    let bin = state.resolve_ytdlp_binary().await?;
     let ytdlp_path = bin.path.to_string_lossy().to_string();
-    drop(ytdlp_path_lock);
 
     let (cookie_browser, cookie_file) = get_cookie_settings(&state).await;
     let items = crate::ytdlp::process::fetch_playlist_items(

@@ -1,5 +1,5 @@
 use crate::state::AppState;
-use crate::ytdlp::{binary, process};
+use crate::ytdlp::process;
 use tauri::State;
 
 #[tauri::command]
@@ -7,13 +7,7 @@ pub async fn fetch_formats(
     url: String,
     state: State<'_, AppState>,
 ) -> Result<crate::ytdlp::parser::VideoInfo, String> {
-    let ytdlp_path = state.ytdlp_path.lock().await;
-    let path_clone = ytdlp_path.clone();
-    drop(ytdlp_path);
-
-    let binary = tokio::task::spawn_blocking(move || binary::detect_binary(path_clone.as_deref()))
-        .await
-        .map_err(|e| format!("Task error: {}", e))??;
+    let binary = state.resolve_ytdlp_binary().await?;
 
     // Read cookie settings from DB
     let db = state.db.lock().await;
@@ -183,13 +177,7 @@ pub async fn fetch_channel_info(
     url: String,
     state: State<'_, AppState>,
 ) -> Result<crate::ytdlp::parser::VideoInfo, String> {
-    let ytdlp_path = state.ytdlp_path.lock().await;
-    let path_clone = ytdlp_path.clone();
-    drop(ytdlp_path);
-
-    let binary = tokio::task::spawn_blocking(move || binary::detect_binary(path_clone.as_deref()))
-        .await
-        .map_err(|e| format!("Task error: {}", e))??;
+    let binary = state.resolve_ytdlp_binary().await?;
 
     let db = state.db.lock().await;
     let cookie_browser = crate::db::queries::get_setting(&db, "cookie_browser")
