@@ -286,7 +286,8 @@ mod tests {
         assert_eq!(manual_path_from_setting(Some("~/.local/bin/yt-dlp")), Some(expected));
     }
 
-    /// Executable shell script in the temp dir, removed on drop so test runs leave nothing behind.
+    /// Executable shell script in its own temp dir, removed on drop so test runs leave nothing
+    /// behind. One dir per script keeps parallel tests from racing on a shared directory.
     #[cfg(unix)]
     struct TempScript(PathBuf);
 
@@ -294,7 +295,6 @@ mod tests {
     impl Drop for TempScript {
         fn drop(&mut self) {
             let _ = std::fs::remove_file(&self.0);
-            // Last script out removes the per-process dir (fails harmlessly while others remain).
             if let Some(dir) = self.0.parent() {
                 let _ = std::fs::remove_dir(dir);
             }
@@ -304,7 +304,11 @@ mod tests {
     #[cfg(unix)]
     fn write_script(name: &str, body: &str) -> TempScript {
         use std::os::unix::fs::PermissionsExt;
-        let dir = std::env::temp_dir().join(format!("ytdown-binary-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "ytdown-binary-test-{}-{}",
+            std::process::id(),
+            name
+        ));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join(name);
         std::fs::write(&path, body).unwrap();
