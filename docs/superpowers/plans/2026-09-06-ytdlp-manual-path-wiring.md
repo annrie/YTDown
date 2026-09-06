@@ -27,16 +27,19 @@
 - **`AppState` の構築は `lib.rs:41` の1箇所だけ**。フィールド削除でテストや他モジュールは壊れない。
 - **CI（`.github/workflows/validate.yml`）は `pnpm build` のみ**。`cargo test` と `vitest` はローカルが唯一の関門。新規テストファイルは `tsconfig` の `include` に入るため `vue-tsc --noEmit` で型検査される。
 - 新しい依存は追加しない（`dirs` は既存依存、`@vue/test-utils` / `happy-dom` / `vitest` は導入済み）。
+- **設計レビュー（Plan エージェント）での追加決定**: (1) 解決ヘルパーは `commands` 間依存を避けて `AppState::resolve_ytdlp_binary` にする。(2) `useYtdlp.loadInfo` は失敗時に `info` を `null` にしないと古い検出結果が表示され続ける。(3) `DownloadDialog` の「yt-dlp をインストール」ボタンは自動検出失敗のときだけ出す。手動パス起因のエラーで同梱版を入れても手動パスが優先されるため解決せず、今回の配線で初めて到達可能になる罠だった。(4) `install_ytdlp` の戻り値 `managed_by` を「bundled」固定にしない。
 
 ## File Map
 
 | Action | File | 役割 |
 |--------|------|------|
 | Modify | `src-tauri/src/ytdlp/binary.rs` | 設定値の正規化 `manual_path_from_setting`、`get_version` の失敗検知、PATH 段の寛容化、単体テスト |
-| Modify | `src-tauri/src/commands/ytdlp_mgmt.rs` | DB を読んで検出する `resolve_binary` ヘルパー、4コマンドの切り替え |
-| Modify | `src-tauri/src/commands/download.rs` | 4箇所の呼び出しを `resolve_binary` に差し替え |
-| Modify | `src-tauri/src/commands/formats.rs` | 2箇所の呼び出しを `resolve_binary` に差し替え |
-| Modify | `src-tauri/src/state.rs` | `ytdlp_path` フィールド撤去 |
+| Modify | `src-tauri/src/state.rs` | DB を読んで検出する `AppState::resolve_ytdlp_binary` 追加、後で `ytdlp_path` フィールド撤去 |
+| Modify | `src-tauri/src/commands/ytdlp_mgmt.rs` | `managed_by_label` ヘルパー、4コマンドの切り替え |
+| Modify | `src-tauri/src/commands/download.rs` | 4箇所の呼び出しを `resolve_ytdlp_binary` に差し替え |
+| Modify | `src-tauri/src/commands/formats.rs` | 2箇所の呼び出しを `resolve_ytdlp_binary` に差し替え |
+| Modify | `src/composables/useYtdlp.ts` | 検出失敗時に `info` を捨てる |
+| Modify | `src/components/download/DownloadDialog.vue` | インストールボタンは自動検出失敗のときだけ |
 | Modify | `src-tauri/src/commands/settings.rs` | `set_ytdlp_path` 撤去 |
 | Modify | `src-tauri/src/lib.rs` | `set_ytdlp_path` のハンドラ登録を撤去 |
 | Modify | `src-tauri/build.rs` | `app_manifest` の一覧から `set_ytdlp_path` を撤去 |
@@ -223,51 +226,73 @@ git commit -m "fix(ytdlp): 🐛 手動パス設定の正規化とバージョン
 
 ---
 
-## Task 2: ytdlp_mgmt.rs — `resolve_binary` ヘルパーと4コマンドの切り替え
+## Task 2: state.rs / ytdlp_mgmt.rs — `AppState::resolve_ytdlp_binary` と4コマンドの切り替え
 
 **Files:**
+- Modify: `src-tauri/src/state.rs`
 - Modify: `src-tauri/src/commands/ytdlp_mgmt.rs`
 
-- [ ] **Step 1: import とヘルパーを追加**（ファイル先頭）
+- [ ] **Step 1: `state.rs` にメソッドを追加**（`commands` 同士の依存を避けるため `AppState` のメソッドにする）
 
+先頭の `use` 群に追加:
 ```rust
 use crate::db::queries;
-use crate::state::AppState;
 use crate::ytdlp::binary::{self, YtdlpBinary};
-use serde::Serialize;
-use tauri::State;
-
-/// Settings-table key holding the user's manual yt-dlp path ("auto" = auto-detect).
-pub const YTDLP_PATH_SETTING_KEY: &str = "ytdlp_path";
-
-/// Resolve the yt-dlp binary for a command: read the manual path from the settings DB
-/// under a scoped lock, then run detection (manual > PATH > well-known > bundled)
-/// off the async runtime because it spawns `yt-dlp --version`.
-pub async fn resolve_binary(state: &AppState) -> Result<YtdlpBinary, String> {
-    let raw = {
-        let db = state.db.lock().await;
-        queries::get_setting(&db, YTDLP_PATH_SETTING_KEY).ok().flatten()
-    }; // db lock dropped here
-    let manual = binary::manual_path_from_setting(raw.as_deref());
-    tokio::task::spawn_blocking(move || binary::detect_binary(manual.as_deref()))
-        .await
-        .map_err(|e| format!("Task error: {}", e))?
-}
 ```
 
-- [ ] **Step 2: 4コマンドを切り替え**
+`impl AppState` ブロック内、`new()` の後に追加:
+```rust
+    /// Settings-table key holding the user's manual yt-dlp path ("auto" = auto-detect).
+    pub const YTDLP_PATH_SETTING_KEY: &'static str = "ytdlp_path";
+
+    /// Resolve the yt-dlp binary for a command: read the manual path from the settings DB
+    /// under a scoped lock, then run detection (manual > PATH > well-known > bundled)
+    /// off the async runtime because it spawns `yt-dlp --version`.
+    /// Callers must not hold `self.db` while awaiting this.
+    pub async fn resolve_ytdlp_binary(&self) -> Result<YtdlpBinary, String> {
+        let raw = {
+            let db = self.db.lock().await;
+            queries::get_setting(&db, Self::YTDLP_PATH_SETTING_KEY).ok().flatten()
+        }; // db lock dropped here
+        let manual = binary::manual_path_from_setting(raw.as_deref());
+        tokio::task::spawn_blocking(move || binary::detect_binary(manual.as_deref()))
+            .await
+            .map_err(|e| format!("Task error: {}", e))?
+    }
+```
+
+- [ ] **Step 2: `ytdlp_mgmt.rs` に表示名ヘルパーを追加し、4コマンドを切り替え**
+
+`YtdlpInfo` 構造体の直後に追加（`get_ytdlp_info` にあった inline の match を移す。`install_ytdlp` が「bundled」固定で返していたのも、手動パスが有効なら嘘になるのでこれに統一）:
+```rust
+fn managed_by_label(managed_by: &binary::ManagedBy) -> &'static str {
+    match managed_by {
+        binary::ManagedBy::Homebrew => "homebrew",
+        binary::ManagedBy::Bundled => "bundled",
+        binary::ManagedBy::PackageManager => "package_manager",
+        binary::ManagedBy::Manual => "manual",
+    }
+}
+```
 
 `get_ytdlp_info`:
 ```rust
 pub async fn get_ytdlp_info(state: State<'_, AppState>) -> Result<YtdlpInfo, String> {
-    let bin = resolve_binary(&state).await?;
-    // 以下 managed_by の match と Ok(YtdlpInfo{..}) は従来どおり
+    let bin = state.resolve_ytdlp_binary().await?;
+    Ok(YtdlpInfo {
+        path: bin.path.to_string_lossy().to_string(),
+        version: bin.version,
+        update_available: false,
+        latest_version: None,
+        managed_by: managed_by_label(&bin.managed_by).to_string(),
+    })
+}
 ```
 
 `check_ytdlp_update`:
 ```rust
 pub async fn check_ytdlp_update(state: State<'_, AppState>) -> Result<Option<String>, String> {
-    let current = resolve_binary(&state).await?.version;
+    let current = state.resolve_ytdlp_binary().await?.version;
     tokio::task::spawn_blocking(move || {
         let latest = binary::fetch_latest_github_version()?;
         if latest != current {
@@ -281,21 +306,30 @@ pub async fn check_ytdlp_update(state: State<'_, AppState>) -> Result<Option<Str
 }
 ```
 
-`install_ytdlp` の再検出部分:
+`install_ytdlp` の再検出以降:
 ```rust
-    // Re-detect to get full info
-    let bin = resolve_binary(&state)
+    // Re-detect to get full info (a configured manual path still wins, so report the truth)
+    let bin = state
+        .resolve_ytdlp_binary()
         .await
         .map_err(|_| format!("Installed but failed to detect at: {}", path.display()))?;
+
+    Ok(YtdlpInfo {
+        path: bin.path.to_string_lossy().to_string(),
+        version: bin.version,
+        update_available: false,
+        latest_version: None,
+        managed_by: managed_by_label(&bin.managed_by).to_string(),
+    })
 ```
 
 `update_ytdlp` の先頭:
 ```rust
 pub async fn update_ytdlp(state: State<'_, AppState>) -> Result<String, String> {
-    let bin = resolve_binary(&state).await?;
+    let bin = state.resolve_ytdlp_binary().await?;
     match bin.managed_by {
 ```
-（`let ytdlp_path = state.ytdlp_path.lock().await;` と `drop(ytdlp_path);` は削除。Bundled 分岐の `binary::detect_binary(None)` はそのまま）
+（`let ytdlp_path = state.ytdlp_path.lock().await;` と `drop(ytdlp_path);` は削除。Bundled 分岐の `binary::detect_binary(None)` は同梱版を更新した直後の再検出なのでそのまま）
 
 - [ ] **Step 3: 型検査**
 
@@ -305,8 +339,8 @@ Expected: 成功（`state.ytdlp_path` はまだ存在するので他ファイル
 - [ ] **Step 4: コミット**
 
 ```bash
-git add src-tauri/src/commands/ytdlp_mgmt.rs
-git commit -m "refactor(ytdlp): ♻️ 設定DBから手動パスを読むresolve_binaryを追加しyt-dlp管理コマンドを切り替え"
+git add src-tauri/src/state.rs src-tauri/src/commands/ytdlp_mgmt.rs
+git commit -m "refactor(ytdlp): ♻️ 設定DBから手動パスを読むAppState::resolve_ytdlp_binaryを追加しyt-dlp管理コマンドを切り替え"
 ```
 
 ---
@@ -321,24 +355,24 @@ git commit -m "refactor(ytdlp): ♻️ 設定DBから手動パスを読むresolv
 
 `start_download`:
 ```rust
-    let bin = crate::commands::ytdlp_mgmt::resolve_binary(&state).await?;
+    let bin = state.resolve_ytdlp_binary().await?;
 ```
 （`state.ytdlp_path.lock()` を含むブロックごと置換）
 
 `resume_download` の「Process dead」分岐:
 ```rust
-                let bin = crate::commands::ytdlp_mgmt::resolve_binary(&state).await?;
+                let bin = state.resolve_ytdlp_binary().await?;
 ```
 
 スケジューラ用関数（`let state = app.state::<AppState>();` の直後）:
 ```rust
-    let bin = crate::commands::ytdlp_mgmt::resolve_binary(&state).await?;
+    let bin = state.resolve_ytdlp_binary().await?;
     let ytdlp_path = bin.path.to_string_lossy().to_string();
 ```
 
 `fetch_playlist_items`:
 ```rust
-    let bin = crate::commands::ytdlp_mgmt::resolve_binary(&state).await?;
+    let bin = state.resolve_ytdlp_binary().await?;
     let ytdlp_path = bin.path.to_string_lossy().to_string();
 ```
 （`drop(ytdlp_path_lock);` を削除）
@@ -346,7 +380,7 @@ git commit -m "refactor(ytdlp): ♻️ 設定DBから手動パスを読むresolv
 - [ ] **Step 2: formats.rs の2箇所**（どちらも同じ形）
 
 ```rust
-    let binary = crate::commands::ytdlp_mgmt::resolve_binary(&state).await?;
+    let binary = state.resolve_ytdlp_binary().await?;
 ```
 （`state.ytdlp_path.lock()` / `path_clone` / `spawn_blocking(detect_binary)` の3〜6行を置換。先頭の `use crate::ytdlp::{binary, process};` は `binary` が未使用になれば `use crate::ytdlp::process;` に）
 
@@ -402,6 +436,8 @@ git commit -m "refactor(ytdlp): 🔥 未配線だったset_ytdlp_pathとメモ�
 **Files:**
 - Create: `src/components/settings/AdvancedSettings.test.ts`
 - Modify: `src/components/settings/AdvancedSettings.vue`
+- Modify: `src/composables/useYtdlp.ts`（失敗時に古い検出結果を捨てる）
+- Modify: `src/components/download/DownloadDialog.vue`（インストールボタンの表示条件）
 
 - [ ] **Step 1: 失敗するテストを作成**
 
@@ -463,17 +499,64 @@ describe('AdvancedSettings — yt-dlp path', () => {
 
     expect(wrapper.text()).toContain('Manual yt-dlp path not found: /nope/yt-dlp')
   })
+
+  it('drops stale info and shows the error when a changed path cannot be resolved', async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === 'get_ytdlp_info') return ytdlpInfo('/usr/local/bin/yt-dlp')
+      return undefined
+    })
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(wrapper.text()).toContain('/usr/local/bin/yt-dlp')
+
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === 'get_ytdlp_info') throw 'Manual yt-dlp path not found: /nope/yt-dlp'
+      return undefined
+    })
+    const input = wrapper.get('input[data-testid="ytdlp-path"]')
+    ;(input.element as HTMLInputElement).value = '/nope/yt-dlp'
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('/usr/local/bin/yt-dlp')
+    expect(wrapper.text()).toContain('Manual yt-dlp path not found: /nope/yt-dlp')
+  })
 })
 ```
 
 - [ ] **Step 2: 失敗を確認**
 
 Run: `npx vitest run src/components/settings/AdvancedSettings.test.ts`
-Expected: 2件とも FAIL（`data-testid` が無い / エラー文が描画されない）
+Expected: 3件とも FAIL（`data-testid` が無い / エラー文が描画されない / 古いパスが残る）
 
 - [ ] **Step 3: 実装**
 
-`<script setup>` に追加:
+`src/composables/useYtdlp.ts` の `loadInfo` — 失敗時に古い情報を捨てる（これが無いと初回成功後に不正なパスへ変えても古いパスが表示され続け、未検出ブロックに到達しない。同じ composable を使う `AppStatusBar.vue` も恩恵を受ける）:
+```ts
+  async function loadInfo() {
+    loading.value = true
+    error.value = null
+    try {
+      info.value = await invoke<YtdlpInfo>('get_ytdlp_info')
+    } catch (e) {
+      info.value = null
+      error.value = String(e)
+    } finally {
+      loading.value = false
+    }
+  }
+```
+
+`src/components/download/DownloadDialog.vue` の `isYtdlpMissing` — 手動パス起因のエラー（`Manual yt-dlp path not found: …` や `yt-dlp at … exited with …`）でも `not found` を含み得るため、同梱版のインストールで解決する自動検出失敗（`binary.rs` の `"yt-dlp not found. Use the install button…"`）のときだけボタンを出す。`error.value` は `useDownload` が `String(e)` で入れたバックエンド文字列そのもの。従来の `'見つかりません'` 判定はどこからも生成されない文字列なので落とす:
+```ts
+// Only the auto-detect failure is fixable by installing the bundled binary.
+// Errors about a configured manual path have to be fixed in Settings instead.
+const isYtdlpMissing = computed(() =>
+  !!error.value && error.value.startsWith('yt-dlp not found')
+)
+```
+
+`AdvancedSettings.vue` の `<script setup>` に追加:
 ```ts
 async function onYtdlpPathChange(event: Event) {
   const value = (event.target as HTMLInputElement).value
@@ -502,12 +585,12 @@ async function onYtdlpPathChange(event: Event) {
 - [ ] **Step 4: テストと型検査**
 
 Run: `npx vitest run && npx vue-tsc --noEmit`
-Expected: `2 passed`、型エラーなし
+Expected: `3 passed`、型エラーなし
 
 - [ ] **Step 5: コミット**
 
 ```bash
-git add src/components/settings/AdvancedSettings.vue src/components/settings/AdvancedSettings.test.ts
+git add src/components/settings/AdvancedSettings.vue src/components/settings/AdvancedSettings.test.ts src/composables/useYtdlp.ts src/components/download/DownloadDialog.vue
 git commit -m "fix(settings): 🐛 yt-dlpパス変更時に再検出しエラー内容を表示"
 ```
 
@@ -561,3 +644,11 @@ git commit -m "docs: 📝 READMEにyt-dlpパス設定の説明を追記（英日
 1. pyenv の yt-dlp を更新: `~/.anyenv/envs/pyenv/versions/3.12.1/bin/python -m pip install -U yt-dlp`
 2. 修正版アプリで yt-dlp パスに上記の実体パスを設定し、情報パネルで反映を確認
 3. その後で `brew uninstall yt-dlp`（deno / ffmpeg は on-request なので残る）
+
+## 実装時の変更点（計画との差分）
+
+- Task 1 の品質レビューを受け、`get_version` のエラー文言を `yt-dlp at {path} failed ({status})[: {detail}]` に変更。`detail` は stderr の最後の非空行を 300 文字まで（Python の traceback は末尾行が原因）。空なら区切りを付けない。
+- `detect_binary` の PATH 段は壊れたバイナリを黙って読み飛ばさず `eprintln!("[YTDown] yt-dlp on PATH is unusable, falling back: …")` を残す。
+- テストの一時スクリプトは `TempScript` ガード（`Drop` で `remove_file` と空ディレクトリの `remove_dir`）で後始末。テスト名 `detect_binary_prefers_manual_path` → `detect_binary_uses_manual_path`。
+- `YtdlpBinary` に `#[derive(Debug)]`（テストの `unwrap_err()` に必要）。
+- Task 1 の実装エージェントはバックグラウンド `cargo test` の完了待ちで停止したため、コントローラが直接引き取った。以降のエージェントには「cargo / vitest はフォアグラウンドで実行」を明示。
