@@ -16,7 +16,13 @@ onMounted(() => { void loadInfo() })
 
 async function onYtdlpPathChange(event: Event) {
   const value = (event.target as HTMLInputElement).value
-  await settingsStore.updateSetting('ytdlp_path', value)
+  const saved = await settingsStore.updateSetting('ytdlp_path', value)
+  if (!saved) {
+    // Do not re-resolve: the DB still holds the previous path, so the info panel would
+    // silently describe the binary the user just tried to replace.
+    ytdlpError.value = t('general.ytdlp_path_save_failed')
+    return
+  }
   await loadInfo()
 }
 </script>

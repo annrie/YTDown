@@ -258,6 +258,7 @@
     "ytdlp_path_override": "yt-dlp 경로",
     "ytdlp_path_placeholder": "auto (자동 감지)",
     "ytdlp_path_hint": "자동 감지는 \"auto\", 또는 전체 경로 입력",
+    "ytdlp_path_save_failed": "yt-dlp 경로를 저장하지 못했습니다",
     "backup_title": "백업 / 복원",
     "backup_description": "설정, 프리셋, 자동 분류 규칙, 예약을 JSON 파일로 저장하거나 복원합니다. 가져오기 시 기존 데이터가 덮어씌워집니다.",
     "export": "내보내기",

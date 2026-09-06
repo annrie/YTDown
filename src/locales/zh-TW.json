@@ -258,6 +258,7 @@
     "ytdlp_path_override": "yt-dlp 路徑",
     "ytdlp_path_placeholder": "auto（自動偵測）",
     "ytdlp_path_hint": "使用「auto」自動偵測，或輸入完整路徑",
+    "ytdlp_path_save_failed": "無法儲存 yt-dlp 路徑",
     "backup_title": "備份 / 還原",
     "backup_description": "將設定、預設集、自動分類規則和排程儲存為 JSON 檔案或從中還原。匯入時將覆蓋現有資料。",
     "export": "匯出",

@@ -258,6 +258,7 @@
     "ytdlp_path_override": "yt-dlp Pfad",
     "ytdlp_path_placeholder": "auto (automatische Erkennung)",
     "ytdlp_path_hint": "Verwende \"auto\" zur automatischen Erkennung oder gib den vollständigen Pfad ein",
+    "ytdlp_path_save_failed": "yt-dlp-Pfad konnte nicht gespeichert werden",
     "backup_title": "Sicherung / Wiederherstellung",
     "backup_description": "Sichert und stellt Einstellungen, Voreinstellungen, Regeln und Zeitpläne als JSON-Datei wieder her. Vorhandene Daten werden beim Import überschrieben.",
     "export": "Exportieren",

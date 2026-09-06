@@ -258,6 +258,7 @@
     "ytdlp_path_override": "yt-dlp パス",
     "ytdlp_path_placeholder": "auto（自動検出）",
     "ytdlp_path_hint": "「auto」で自動検出、またはフルパスを入力",
+    "ytdlp_path_save_failed": "yt-dlp パスの保存に失敗しました",
     "backup_title": "バックアップ / リストア",
     "backup_description": "設定・プリセット・自動分類ルール・スケジュールをJSONファイルに保存・復元します。インポート時は既存データが上書きされます。",
     "export": "エクスポート",

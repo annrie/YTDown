@@ -258,6 +258,7 @@
     "ytdlp_path_override": "Chemin yt-dlp",
     "ytdlp_path_placeholder": "auto (détection automatique)",
     "ytdlp_path_hint": "Utilisez \"auto\" pour la détection automatique, ou entrez le chemin complet",
+    "ytdlp_path_save_failed": "Échec de l'enregistrement du chemin yt-dlp",
     "backup_title": "Sauvegarde / Restauration",
     "backup_description": "Sauvegardez et restaurez les paramètres, préréglages, règles et planifications au format JSON. Les données existantes seront écrasées à l'importation.",
     "export": "Exporter",

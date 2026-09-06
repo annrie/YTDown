@@ -258,6 +258,7 @@
     "ytdlp_path_override": "Ruta de yt-dlp",
     "ytdlp_path_placeholder": "auto (detección automática)",
     "ytdlp_path_hint": "Use \"auto\" para detección automática, o introduzca la ruta completa",
+    "ytdlp_path_save_failed": "No se pudo guardar la ruta de yt-dlp",
     "backup_title": "Copia de seguridad / Restauración",
     "backup_description": "Guarda y restaura ajustes, preajustes, reglas y programaciones como archivo JSON. Los datos existentes se sobrescribirán al importar.",
     "export": "Exportar",

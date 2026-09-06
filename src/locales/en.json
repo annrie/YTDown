@@ -258,6 +258,7 @@
     "ytdlp_path_override": "yt-dlp path",
     "ytdlp_path_placeholder": "auto (auto-detect)",
     "ytdlp_path_hint": "Use \"auto\" for auto-detection, or enter full path",
+    "ytdlp_path_save_failed": "Failed to save the yt-dlp path",
     "backup_title": "Backup / Restore",
     "backup_description": "Save and restore settings, presets, auto-classify rules, and schedules as a JSON file. Existing data will be overwritten on import.",
     "export": "Export",

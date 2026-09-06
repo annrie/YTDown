@@ -81,4 +81,26 @@ describe('AdvancedSettings — yt-dlp path', () => {
     expect(wrapper.find('[data-testid="ytdlp-info-path"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Manual yt-dlp path not found: /nope/yt-dlp')
   })
+
+  it('does not re-resolve and shows a save error when persisting the path fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === 'set_setting') throw 'DB error: disk I/O error'
+      if (cmd === 'get_ytdlp_info') return ytdlpInfo('/usr/local/bin/yt-dlp')
+      return undefined
+    })
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    const input = wrapper.get('input[data-testid="ytdlp-path"]')
+    ;(input.element as HTMLInputElement).value = '/new/yt-dlp'
+    await input.trigger('change')
+    await flushPromises()
+
+    const infoCalls = invokeMock.mock.calls.filter((c) => c[0] === 'get_ytdlp_info').length
+    expect(infoCalls).toBe(1)
+    expect(wrapper.text()).toContain(i18n.global.t('general.ytdlp_path_save_failed'))
+    expect(wrapper.get('[data-testid="ytdlp-info-path"]').text()).toBe('/usr/local/bin/yt-dlp')
+    consoleError.mockRestore()
+  })
 })

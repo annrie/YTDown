@@ -77,12 +77,18 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
+  /** Persist one setting. Returns false (after logging) when the backend write failed. */
+  async function updateSetting<K extends keyof AppSettings>(
+    key: K,
+    value: AppSettings[K],
+  ): Promise<boolean> {
     settings.value[key] = value
     try {
       await invoke('set_setting', { key, value: String(value) })
+      return true
     } catch (e) {
       console.error('Failed to save setting:', e)
+      return false
     }
   }
 
