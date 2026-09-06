@@ -42,6 +42,7 @@ impl AppState {
     /// Resolve the yt-dlp binary for a command: read the manual path from the settings DB
     /// under a scoped lock, then run detection (manual > PATH > well-known > bundled)
     /// off the async runtime because it spawns `yt-dlp --version`.
+    /// A missing or unreadable setting is treated as "auto" (same policy as cookie settings).
     /// Callers must not hold `self.db` while awaiting this.
     pub async fn resolve_ytdlp_binary(&self) -> Result<YtdlpBinary, String> {
         let raw = {

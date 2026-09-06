@@ -61,7 +61,7 @@ pub async fn install_ytdlp(state: State<'_, AppState>) -> Result<YtdlpInfo, Stri
     let bin = state
         .resolve_ytdlp_binary()
         .await
-        .map_err(|_| format!("Installed but failed to detect at: {}", path.display()))?;
+        .map_err(|e| format!("Installed to {} but detection failed: {}", path.display(), e))?;
 
     Ok(YtdlpInfo {
         path: bin.path.to_string_lossy().to_string(),
