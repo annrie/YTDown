@@ -773,119 +773,137 @@ pub async fn resume_download(
     download_id: i64,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let mut downloads = state.active_downloads.lock().await;
-    if let Some(dl) = downloads.get_mut(&download_id) {
-        if dl.paused {
-            if is_process_alive(dl.pid) {
-                // Process still alive, send resume signal
-                resume_process(dl.pid)?;
-                dl.paused = false;
+    // Phase 1: inspect under the lock; the live-process case is handled right here.
+    {
+        let mut downloads = state.active_downloads.lock().await;
+        let dl = downloads
+            .get_mut(&download_id)
+            .ok_or_else(|| "Download not found".to_string())?;
+        if !dl.paused {
+            return Ok(());
+        }
+        if is_process_alive(dl.pid) {
+            // Process still alive, send resume signal
+            resume_process(dl.pid)?;
+            dl.paused = false;
+            return Ok(());
+        }
+    } // active_downloads released: restarting is slow (DB reads, yt-dlp probe, spawn)
+
+    // Phase 2: process dead — re-download using --continue (yt-dlp resumes partial files).
+    // Runs without holding active_downloads so cancel/pause of other downloads are not blocked.
+    let download = {
+        let db = state.db.lock().await;
+        crate::db::queries::get_download(&db, download_id)
+            .map_err(|e| format!("DB read failed: {}", e))?
+    };
+
+    let bin = state.resolve_ytdlp_binary().await?;
+
+    let config = DownloadConfig {
+        ytdlp_path: bin.path.to_string_lossy().to_string(),
+        url: download.url.clone(),
+        format: download.format.unwrap_or("best".to_string()),
+        quality: download.quality.unwrap_or("best".to_string()),
+        output_dir: {
+            let db2 = state.db.lock().await;
+            let dir = crate::db::queries::get_setting(&db2, "download_dir")
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| "~/Downloads/YTDown/".to_string());
+            drop(db2);
+            if dir.starts_with("~/") {
+                let home = dirs::home_dir().unwrap_or_default();
+                home.join(&dir[2..]).to_string_lossy().to_string()
             } else {
-                // Process dead — re-download using --continue (yt-dlp resumes partial files)
-                let db = state.db.lock().await;
-                let download = crate::db::queries::get_download(&db, download_id)
-                    .map_err(|e| format!("DB read failed: {}", e))?;
-                drop(db);
+                dir
+            }
+        },
+        output_template: output_template_for(&download.url),
+        embed_thumbnail: {
+            let db_t = state.db.lock().await;
+            let v = crate::db::queries::get_setting(&db_t, "embed_thumbnail")
+                .ok()
+                .flatten()
+                .map(|v| v == "true")
+                .unwrap_or(true);
+            drop(db_t);
+            v
+        },
+        embed_metadata: {
+            let db_t = state.db.lock().await;
+            let v = crate::db::queries::get_setting(&db_t, "embed_metadata")
+                .ok()
+                .flatten()
+                .map(|v| v == "true")
+                .unwrap_or(true);
+            drop(db_t);
+            v
+        },
+        write_subs: false,
+        embed_subs: false,
+        embed_chapters: false,
+        sponsorblock: false,
+        custom_format: None,
+        cookie_browser: {
+            let db3 = state.db.lock().await;
+            let v = crate::db::queries::get_setting(&db3, "cookie_browser")
+                .ok()
+                .flatten()
+                .filter(|v| v != "none" && !v.is_empty());
+            drop(db3);
+            v
+        },
+        cookie_file: {
+            let db4 = state.db.lock().await;
+            let v = crate::db::queries::get_setting(&db4, "cookie_file")
+                .ok()
+                .flatten()
+                .filter(|v| !v.is_empty());
+            drop(db4);
+            v
+        },
+        playlist_mode: "single".to_string(),
+        restrict_filenames: false,
+        no_overwrites: false,
+        geo_bypass: false,
+        rate_limit: None,
+        sub_lang: None,
+        convert_subs: None,
+        recode_video: None,
+        retries: 10,
+        proxy: None,
+        // 既知の制限: probe由来のreferer/User-Agent/impersonateは永続化して
+        // いないため、referer必須ストリームの再開は403になり得る
+        referer: None,
+        user_agent: None,
+        generic_impersonate: false,
+        custom_title: None,
+        extra_args: Vec::new(),
+    };
 
-                let bin = state.resolve_ytdlp_binary().await?;
+    let new_pid = crate::ytdlp::process::start_download(app, download_id, config).await?;
 
-                let config = DownloadConfig {
-                    ytdlp_path: bin.path.to_string_lossy().to_string(),
-                    url: download.url.clone(),
-                    format: download.format.unwrap_or("best".to_string()),
-                    quality: download.quality.unwrap_or("best".to_string()),
-                    output_dir: {
-                        let db2 = state.db.lock().await;
-                        let dir = crate::db::queries::get_setting(&db2, "download_dir")
-                            .ok()
-                            .flatten()
-                            .unwrap_or_else(|| "~/Downloads/YTDown/".to_string());
-                        drop(db2);
-                        if dir.starts_with("~/") {
-                            let home = dirs::home_dir().unwrap_or_default();
-                            home.join(&dir[2..]).to_string_lossy().to_string()
-                        } else {
-                            dir
-                        }
-                    },
-                    output_template: output_template_for(&download.url),
-                    embed_thumbnail: {
-                        let db_t = state.db.lock().await;
-                        let v = crate::db::queries::get_setting(&db_t, "embed_thumbnail")
-                            .ok()
-                            .flatten()
-                            .map(|v| v == "true")
-                            .unwrap_or(true);
-                        drop(db_t);
-                        v
-                    },
-                    embed_metadata: {
-                        let db_t = state.db.lock().await;
-                        let v = crate::db::queries::get_setting(&db_t, "embed_metadata")
-                            .ok()
-                            .flatten()
-                            .map(|v| v == "true")
-                            .unwrap_or(true);
-                        drop(db_t);
-                        v
-                    },
-                    write_subs: false,
-                    embed_subs: false,
-                    embed_chapters: false,
-                    sponsorblock: false,
-                    custom_format: None,
-                    cookie_browser: {
-                        let db3 = state.db.lock().await;
-                        let v = crate::db::queries::get_setting(&db3, "cookie_browser")
-                            .ok()
-                            .flatten()
-                            .filter(|v| v != "none" && !v.is_empty());
-                        drop(db3);
-                        v
-                    },
-                    cookie_file: {
-                        let db4 = state.db.lock().await;
-                        let v = crate::db::queries::get_setting(&db4, "cookie_file")
-                            .ok()
-                            .flatten()
-                            .filter(|v| !v.is_empty());
-                        drop(db4);
-                        v
-                    },
-                    playlist_mode: "single".to_string(),
-                    restrict_filenames: false,
-                    no_overwrites: false,
-                    geo_bypass: false,
-                    rate_limit: None,
-                    sub_lang: None,
-                    convert_subs: None,
-                    recode_video: None,
-                    retries: 10,
-                    proxy: None,
-                    // 既知の制限: probe由来のreferer/User-Agent/impersonateは永続化して
-                    // いないため、referer必須ストリームの再開は403になり得る
-                    referer: None,
-                    user_agent: None,
-                    generic_impersonate: false,
-                    custom_title: None,
-                    extra_args: Vec::new(),
-                };
-
-                let new_pid =
-                    crate::ytdlp::process::start_download(app, download_id, config).await?;
+    // Phase 3: publish the new pid. If the download was cancelled meanwhile the entry is gone,
+    // and the fresh process must not be left running as an orphan.
+    {
+        let mut downloads = state.active_downloads.lock().await;
+        match downloads.get_mut(&download_id) {
+            Some(dl) => {
                 dl.pid = new_pid;
                 dl.paused = false;
-
-                let db = state.db.lock().await;
-                let _ =
-                    crate::db::queries::update_download_pid(&db, download_id, Some(new_pid as i64));
-                let _ = crate::db::queries::update_download_status(&db, download_id, "downloading");
+            }
+            None => {
+                let _ = kill_process(new_pid);
+                return Err("Download was cancelled while resuming".to_string());
             }
         }
-        Ok(())
-    } else {
-        Err("Download not found".to_string())
     }
+
+    let db = state.db.lock().await;
+    let _ = crate::db::queries::update_download_pid(&db, download_id, Some(new_pid as i64));
+    let _ = crate::db::queries::update_download_status(&db, download_id, "downloading");
+    Ok(())
 }
 
 /// Internal download runner for scheduled downloads.
