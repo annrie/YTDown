@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
+    "test": "vitest run",
     "preview": "vite preview",
     "tauri": "tauri",
     "release:patch": "changelogen --release --patch",

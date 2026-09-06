@@ -118,6 +118,8 @@ pub fn detect_binary(manual_path: Option<&str>) -> Result<YtdlpBinary, String> {
         });
     }
 
+    // Contract: the frontend (DownloadDialog `isYtdlpMissing`) matches the "yt-dlp not found"
+    // prefix to offer the bundled install. Keep the prefix stable.
     Err("yt-dlp not found. Use the install button or install manually.".to_string())
 }
 

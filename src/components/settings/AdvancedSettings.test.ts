@@ -24,14 +24,18 @@ describe('AdvancedSettings — yt-dlp path', () => {
     const newPath = '/Users/me/.anyenv/envs/pyenv/versions/3.12.1/bin/yt-dlp'
     let currentPath = '/usr/local/bin/yt-dlp'
     invokeMock.mockImplementation(async (cmd: string, args?: Record<string, unknown>) => {
-      if (cmd === 'set_setting' && args?.key === 'ytdlp_path') currentPath = String(args.value)
+      if (cmd === 'set_setting' && args?.key === 'ytdlp_path') {
+        // Real IPC takes a tick; a missing `await` before re-resolving would read the old value
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        currentPath = String(args.value)
+      }
       if (cmd === 'get_ytdlp_info') return ytdlpInfo(currentPath)
       return undefined
     })
 
     const wrapper = mountComponent()
     await flushPromises()
-    expect(wrapper.text()).toContain('/usr/local/bin/yt-dlp')
+    expect(wrapper.get('[data-testid="ytdlp-info-path"]').text()).toBe('/usr/local/bin/yt-dlp')
 
     const input = wrapper.get('input[data-testid="ytdlp-path"]')
     ;(input.element as HTMLInputElement).value = newPath
@@ -41,7 +45,7 @@ describe('AdvancedSettings — yt-dlp path', () => {
     expect(invokeMock).toHaveBeenCalledWith('set_setting', { key: 'ytdlp_path', value: newPath })
     const order = invokeMock.mock.calls.map((c) => c[0])
     expect(order.lastIndexOf('set_setting')).toBeLessThan(order.lastIndexOf('get_ytdlp_info'))
-    expect(wrapper.text()).toContain(newPath)
+    expect(wrapper.get('[data-testid="ytdlp-info-path"]').text()).toBe(newPath)
   })
 
   it('shows the backend error when yt-dlp cannot be resolved', async () => {
@@ -63,7 +67,7 @@ describe('AdvancedSettings — yt-dlp path', () => {
     })
     const wrapper = mountComponent()
     await flushPromises()
-    expect(wrapper.text()).toContain('/usr/local/bin/yt-dlp')
+    expect(wrapper.get('[data-testid="ytdlp-info-path"]').text()).toBe('/usr/local/bin/yt-dlp')
 
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === 'get_ytdlp_info') throw 'Manual yt-dlp path not found: /nope/yt-dlp'
@@ -74,7 +78,7 @@ describe('AdvancedSettings — yt-dlp path', () => {
     await input.trigger('change')
     await flushPromises()
 
-    expect(wrapper.text()).not.toContain('/usr/local/bin/yt-dlp')
+    expect(wrapper.find('[data-testid="ytdlp-info-path"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Manual yt-dlp path not found: /nope/yt-dlp')
   })
 })

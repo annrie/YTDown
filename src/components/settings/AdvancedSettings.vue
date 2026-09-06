@@ -36,7 +36,7 @@ async function onYtdlpPathChange(event: Event) {
           <span class="text-neutral-500">{{ t('general.ytdlp_version') }}</span>
           <span class="font-mono">{{ ytdlpInfo.version }}</span>
           <span class="text-neutral-500">{{ t('general.ytdlp_path_label') }}</span>
-          <span class="font-mono truncate" :title="ytdlpInfo.path">{{ ytdlpInfo.path }}</span>
+          <span class="font-mono truncate" data-testid="ytdlp-info-path" :title="ytdlpInfo.path">{{ ytdlpInfo.path }}</span>
           <span class="text-neutral-500">{{ t('general.ytdlp_managed') }}</span>
           <span>{{ ytdlpInfo.managed_by === 'homebrew' ? t('general.ytdlp_homebrew') : ytdlpInfo.managed_by === 'bundled' ? t('general.ytdlp_bundled') : t('general.ytdlp_manual') }}</span>
           <template v-if="ytdlpInfo.latest_version">
@@ -88,6 +88,8 @@ async function onYtdlpPathChange(event: Event) {
     <!-- yt-dlp path override -->
     <div>
       <label class="block text-sm font-medium mb-1">{{ t('general.ytdlp_path_override') }}</label>
+      <!-- Saved on change (blur/Enter), unlike the other text fields: every save re-resolves
+           yt-dlp (spawns a process) and a half-typed path must never be persisted. -->
       <input :value="settingsStore.settings.ytdlp_path"
              data-testid="ytdlp-path"
              @change="onYtdlpPathChange"

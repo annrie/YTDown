@@ -19,3 +19,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # build = vue-tsc --noEmit && vite build（型チェック+バンドルが実在する唯一の検証系script）
       - run: pnpm build
+      # test = vitest run（フロントの単体テスト。Rust側は各自ローカルで cargo test）
+      - run: pnpm test
