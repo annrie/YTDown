@@ -42,7 +42,8 @@ fn classify_managed_by(path_str: &str) -> ManagedBy {
 }
 
 /// Normalize the raw `ytdlp_path` setting value.
-/// `None`, "auto", empty, or whitespace-only mean auto-detect. A leading "~/" is expanded.
+/// `None`, "auto", empty, or whitespace-only mean auto-detect. Only a leading "~/" is
+/// expanded (`~` alone or `~user/...` are passed through untouched).
 pub fn manual_path_from_setting(raw: Option<&str>) -> Option<String> {
     let trimmed = raw?.trim();
     if trimmed.is_empty() || trimmed == "auto" {
@@ -77,14 +78,17 @@ pub fn detect_binary(manual_path: Option<&str>) -> Result<YtdlpBinary, String> {
     // 2. System PATH (using `which` crate for cross-platform support).
     // A broken binary on PATH falls through to well-known paths / bundled.
     if let Ok(path) = which::which("yt-dlp") {
-        if let Ok(version) = get_version(&path) {
-            let path_str = path.to_string_lossy().to_string();
-            let managed_by = classify_managed_by(&path_str);
-            return Ok(YtdlpBinary {
-                path,
-                version,
-                managed_by,
-            });
+        match get_version(&path) {
+            Ok(version) => {
+                let path_str = path.to_string_lossy().to_string();
+                let managed_by = classify_managed_by(&path_str);
+                return Ok(YtdlpBinary {
+                    path,
+                    version,
+                    managed_by,
+                });
+            }
+            Err(e) => eprintln!("[YTDown] yt-dlp on PATH is unusable, falling back: {e}"),
         }
     }
 
@@ -160,19 +164,34 @@ fn bundled_binary_path() -> PathBuf {
         .join(binary_name())
 }
 
+/// Upper bound for the stderr excerpt included in `get_version` errors (shown in the UI).
+const MAX_STDERR_DETAIL_CHARS: usize = 300;
+
 fn get_version(path: &PathBuf) -> Result<String, String> {
     let output = Command::new(path)
         .arg("--version")
         .output()
         .map_err(|e| format!("Failed to run yt-dlp at {}: {}", path.display(), e))?;
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!(
-            "yt-dlp at {} exited with {}: {}",
-            path.display(),
-            output.status,
-            stderr
-        ));
+        // Keep the message short: the last non-empty stderr line is usually the real cause
+        // (Python tracebacks end with the exception), capped so it stays readable in the UI.
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail: String = stderr
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .map(|line| line.trim().chars().take(MAX_STDERR_DETAIL_CHARS).collect())
+            .unwrap_or_default();
+        return Err(if detail.is_empty() {
+            format!("yt-dlp at {} failed ({})", path.display(), output.status)
+        } else {
+            format!(
+                "yt-dlp at {} failed ({}): {}",
+                path.display(),
+                output.status,
+                detail
+            )
+        });
     }
     let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if version.is_empty() {
@@ -267,47 +286,83 @@ mod tests {
         assert_eq!(manual_path_from_setting(Some("~/.local/bin/yt-dlp")), Some(expected));
     }
 
+    /// Executable shell script in the temp dir, removed on drop so test runs leave nothing behind.
     #[cfg(unix)]
-    fn write_script(name: &str, body: &str) -> PathBuf {
+    struct TempScript(PathBuf);
+
+    #[cfg(unix)]
+    impl Drop for TempScript {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+            // Last script out removes the per-process dir (fails harmlessly while others remain).
+            if let Some(dir) = self.0.parent() {
+                let _ = std::fs::remove_dir(dir);
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    fn write_script(name: &str, body: &str) -> TempScript {
         use std::os::unix::fs::PermissionsExt;
         let dir = std::env::temp_dir().join(format!("ytdown-binary-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join(name);
         std::fs::write(&path, body).unwrap();
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
-        path
+        TempScript(path)
     }
 
     #[cfg(unix)]
     #[test]
     fn get_version_returns_trimmed_stdout_on_success() {
         let script = write_script("ok.sh", "#!/bin/sh\necho 2026.01.01\n");
-        assert_eq!(get_version(&script).unwrap(), "2026.01.01");
+        assert_eq!(get_version(&script.0).unwrap(), "2026.01.01");
     }
 
     #[cfg(unix)]
     #[test]
     fn get_version_errors_on_nonzero_exit_and_includes_stderr() {
         let script = write_script("fail.sh", "#!/bin/sh\necho 'command not found' >&2\nexit 127\n");
-        let err = get_version(&script).unwrap_err();
-        assert!(err.contains("exited"), "unexpected error: {err}");
+        let err = get_version(&script.0).unwrap_err();
+        assert!(err.contains("failed ("), "unexpected error: {err}");
         assert!(err.contains("command not found"), "stderr missing: {err}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn get_version_error_keeps_only_last_stderr_line() {
+        let script = write_script(
+            "traceback.sh",
+            "#!/bin/sh\necho 'Traceback (most recent call last):' >&2\necho '  File x' >&2\necho \"ModuleNotFoundError: No module named 'yt_dlp'\" >&2\nexit 1\n",
+        );
+        let err = get_version(&script.0).unwrap_err();
+        assert!(err.contains("ModuleNotFoundError"), "last line missing: {err}");
+        assert!(!err.contains("Traceback"), "earlier lines should be dropped: {err}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn get_version_error_omits_detail_when_stderr_is_empty() {
+        let script = write_script("silent-fail.sh", "#!/bin/sh\nexit 3\n");
+        let err = get_version(&script.0).unwrap_err();
+        assert!(err.contains("failed ("), "unexpected error: {err}");
+        assert!(err.ends_with(')'), "should not end with a dangling separator: {err}");
     }
 
     #[cfg(unix)]
     #[test]
     fn get_version_errors_on_empty_output() {
         let script = write_script("empty.sh", "#!/bin/sh\nexit 0\n");
-        let err = get_version(&script).unwrap_err();
+        let err = get_version(&script.0).unwrap_err();
         assert!(err.contains("empty version"), "unexpected error: {err}");
     }
 
     #[cfg(unix)]
     #[test]
-    fn detect_binary_prefers_manual_path() {
+    fn detect_binary_uses_manual_path() {
         let script = write_script("manual.sh", "#!/bin/sh\necho manual-1.0\n");
-        let bin = detect_binary(Some(script.to_str().unwrap())).unwrap();
-        assert_eq!(bin.path, script);
+        let bin = detect_binary(Some(script.0.to_str().unwrap())).unwrap();
+        assert_eq!(bin.path, script.0);
         assert_eq!(bin.version, "manual-1.0");
         assert!(matches!(bin.managed_by, ManagedBy::Manual));
     }
