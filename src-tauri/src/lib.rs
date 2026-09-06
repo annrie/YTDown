@@ -95,7 +95,6 @@ pub fn run() {
             commands::library::toggle_favorite,
             commands::library::get_download,
             // Settings
-            commands::settings::set_ytdlp_path,
             commands::settings::get_all_settings,
             commands::settings::get_setting,
             commands::settings::set_setting,
