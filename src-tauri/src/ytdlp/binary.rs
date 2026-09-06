@@ -1,5 +1,5 @@
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
@@ -273,7 +273,7 @@ fn spawn_pipe_reader<R: Read + Send + 'static>(pipe: Option<R>) -> Receiver<Stri
 fn collect_pipe(
     rx: &Receiver<String>,
     child: &mut Child,
-    path: &PathBuf,
+    path: &Path,
 ) -> Result<String, String> {
     if let Ok(output) = rx.recv_timeout(PIPE_GRACE_AFTER_EXIT) {
         return Ok(output);
