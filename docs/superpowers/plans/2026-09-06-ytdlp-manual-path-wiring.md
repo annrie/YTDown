@@ -652,3 +652,10 @@ git commit -m "docs: 📝 READMEにyt-dlpパス設定の説明を追記（英日
 - テストの一時スクリプトは `TempScript` ガード（`Drop` で `remove_file` と空ディレクトリの `remove_dir`）で後始末。テスト名 `detect_binary_prefers_manual_path` → `detect_binary_uses_manual_path`。
 - `YtdlpBinary` に `#[derive(Debug)]`（テストの `unwrap_err()` に必要）。
 - Task 1 の実装エージェントはバックグラウンド `cargo test` の完了待ちで停止したため、コントローラが直接引き取った。以降のエージェントには「cargo / vitest はフォアグラウンドで実行」を明示。
+
+## codex-rescue の経緯（PR 前、3巡で収束）
+
+- 1巡目: `get_version` にタイムアウトが無い／`resume_download` が `active_downloads` を await 越しに保持／`updateSetting` が保存失敗を握りつぶす／`resolve_ytdlp_binary` の統合テストが無い → すべて対応。
+- 2巡目: ラッパーの子孫が pipe を握ると `join` が期限を超える・読み取りスレッドが漏れる／`resume_download` の同時呼び出しで二重 spawn → プロセスグループ kill と終了後の pipe 猶予（1 秒）、再起動権のクレームと pid 検証で対応。
+- 3巡目: 残課題なし。Windows ではプロセスグループ kill が無いため子孫が残り得る（呼び出し側はブロックしない）ことのみ注記。
+- テストで判明した環境特性: macOS では新規に書き出したスクリプトの初回実行が負荷下で数秒かかることがある。テストは本番と同じ 15 秒の予算にし、子終了後の pipe 待ちは予算と独立の 1 秒にした。
