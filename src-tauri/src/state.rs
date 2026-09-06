@@ -55,3 +55,61 @@ impl AppState {
             .map_err(|e| format!("Task error: {}", e))?
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// Fresh AppState backed by a real SQLite file under `dir` (schema applied by `init_db`).
+    async fn test_state(dir: &PathBuf) -> AppState {
+        let conn = crate::db::init_db(dir).expect("init_db");
+        let sched = JobScheduler::new().await.expect("scheduler");
+        AppState::new(conn, sched)
+    }
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("ytdown-state-test-{}-{}", std::process::id(), name));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    async fn set_ytdlp_path(state: &AppState, value: &str) {
+        let db = state.db.lock().await;
+        queries::set_setting(&db, AppState::YTDLP_PATH_SETTING_KEY, value).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn resolve_uses_manual_path_stored_in_settings_db() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp_dir("manual");
+        let script = dir.join("yt-dlp-fake");
+        std::fs::write(&script, "#!/bin/sh\necho db-1.0\n").unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let state = test_state(&dir).await;
+        set_ytdlp_path(&state, script.to_str().unwrap()).await;
+
+        let bin = state.resolve_ytdlp_binary().await.unwrap();
+        assert_eq!(bin.path, script);
+        assert_eq!(bin.version, "db-1.0");
+        assert!(matches!(bin.managed_by, binary::ManagedBy::Manual));
+
+        drop(state);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn resolve_reports_missing_manual_path_stored_in_settings_db() {
+        let dir = temp_dir("missing");
+        let state = test_state(&dir).await;
+        set_ytdlp_path(&state, "/nonexistent/ytdown/yt-dlp").await;
+
+        let err = state.resolve_ytdlp_binary().await.unwrap_err();
+        assert!(err.contains("Manual yt-dlp path not found"), "unexpected error: {err}");
+
+        drop(state);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
