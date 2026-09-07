@@ -432,7 +432,7 @@
   "channel_monitor": {
     "title": "채널 모니터 추가",
     "url": "채널 URL",
-    "url_placeholder": "https://www.youtube.com/@channel",
+    "url_placeholder": "https://www.youtube.com/{'@'}channel",
     "name": "이름",
     "cron": "확인 간격 (cron)",
     "next_run": "다음: {time}",

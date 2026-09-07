@@ -432,7 +432,7 @@
   "channel_monitor": {
     "title": "新增頻道監控",
     "url": "頻道 URL",
-    "url_placeholder": "https://www.youtube.com/@channel",
+    "url_placeholder": "https://www.youtube.com/{'@'}channel",
     "name": "排程名稱",
     "cron": "檢查間隔 (cron 表達式)",
     "next_run": "下次執行: {time}",
