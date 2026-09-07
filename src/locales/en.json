@@ -432,7 +432,7 @@
   "channel_monitor": {
     "title": "Add Channel Monitor",
     "url": "Channel URL",
-    "url_placeholder": "https://www.youtube.com/@channel",
+    "url_placeholder": "https://www.youtube.com/{'@'}channel",
     "name": "Schedule name",
     "cron": "Check interval (cron expression)",
     "next_run": "Next run: {time}",

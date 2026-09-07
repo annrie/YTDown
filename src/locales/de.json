@@ -432,7 +432,7 @@
   "channel_monitor": {
     "title": "Kanalüberwachung hinzufügen",
     "url": "Kanal-URL",
-    "url_placeholder": "https://www.youtube.com/@channel",
+    "url_placeholder": "https://www.youtube.com/{'@'}channel",
     "name": "Name",
     "cron": "Intervall (Cron)",
     "next_run": "Nächster: {time}",
