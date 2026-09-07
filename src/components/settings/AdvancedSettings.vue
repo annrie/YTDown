@@ -13,6 +13,18 @@ const videoFormats = ['', 'mp4', 'mkv', 'webm', 'flv', 'avi']
 const { info: ytdlpInfo, loading, checking, updating, error: ytdlpError, loadInfo, checkUpdate, performUpdate } = useYtdlp()
 
 onMounted(() => { void loadInfo() })
+
+async function onYtdlpPathChange(event: Event) {
+  const value = (event.target as HTMLInputElement).value
+  const saved = await settingsStore.updateSetting('ytdlp_path', value)
+  if (!saved) {
+    // Do not re-resolve: the DB still holds the previous path, so the info panel would
+    // silently describe the binary the user just tried to replace.
+    ytdlpError.value = t('general.ytdlp_path_save_failed')
+    return
+  }
+  await loadInfo()
+}
 </script>
 
 <template>
@@ -30,7 +42,7 @@ onMounted(() => { void loadInfo() })
           <span class="text-neutral-500">{{ t('general.ytdlp_version') }}</span>
           <span class="font-mono">{{ ytdlpInfo.version }}</span>
           <span class="text-neutral-500">{{ t('general.ytdlp_path_label') }}</span>
-          <span class="font-mono truncate" :title="ytdlpInfo.path">{{ ytdlpInfo.path }}</span>
+          <span class="font-mono truncate" data-testid="ytdlp-info-path" :title="ytdlpInfo.path">{{ ytdlpInfo.path }}</span>
           <span class="text-neutral-500">{{ t('general.ytdlp_managed') }}</span>
           <span>{{ ytdlpInfo.managed_by === 'homebrew' ? t('general.ytdlp_homebrew') : ytdlpInfo.managed_by === 'bundled' ? t('general.ytdlp_bundled') : t('general.ytdlp_manual') }}</span>
           <template v-if="ytdlpInfo.latest_version">
@@ -73,14 +85,20 @@ onMounted(() => { void loadInfo() })
         </p>
       </template>
 
-      <div v-else class="text-xs text-red-400">{{ t('general.ytdlp_not_found') }}</div>
+      <div v-else class="text-xs text-red-400">
+        {{ t('general.ytdlp_not_found') }}
+        <span v-if="ytdlpError" class="block font-mono mt-1 break-all">{{ ytdlpError }}</span>
+      </div>
     </div>
 
     <!-- yt-dlp path override -->
     <div>
       <label class="block text-sm font-medium mb-1">{{ t('general.ytdlp_path_override') }}</label>
+      <!-- Saved on change (blur/Enter), unlike the other text fields: every save re-resolves
+           yt-dlp (spawns a process) and a half-typed path must never be persisted. -->
       <input :value="settingsStore.settings.ytdlp_path"
-             @input="settingsStore.updateSetting('ytdlp_path', ($event.target as HTMLInputElement).value)"
+             data-testid="ytdlp-path"
+             @change="onYtdlpPathChange"
              class="w-full h-8 px-3 rounded-md bg-neutral-100 dark:bg-neutral-800 text-sm font-mono outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
              :placeholder="t('general.ytdlp_path_placeholder')" />
       <p class="text-xs text-neutral-400 mt-1">{{ t('general.ytdlp_path_hint') }}</p>

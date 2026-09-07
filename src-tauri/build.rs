@@ -27,7 +27,6 @@ fn main() {
             "create_url_list",
             "add_url_to_list",
             "import_url_list",
-            "set_ytdlp_path",
             "get_all_settings",
             "get_setting",
             "set_setting",

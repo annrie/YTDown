@@ -123,6 +123,7 @@ Click the **globe icon** ( <img src="https://api.iconify.design/mdi/web.svg?colo
   - macOS: `brew install yt-dlp`
   - Windows: `winget install yt-dlp` or `scoop install yt-dlp`
   - Linux: `sudo apt install yt-dlp` or download from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases)
+  - Using yt-dlp from pyenv / pipx / pip instead of Homebrew? Enter its full path in **Settings → Advanced → yt-dlp path** (`~/` is expanded). Leave `auto` for auto-detection.
 
 ### Download
 
@@ -275,6 +276,7 @@ URL 入力欄の横にある **地球アイコン**（ <img src="https://api.ico
   - macOS: `brew install yt-dlp`
   - Windows: `winget install yt-dlp` または `scoop install yt-dlp`
   - Linux: `sudo apt install yt-dlp` または [yt-dlp リリースページ](https://github.com/yt-dlp/yt-dlp/releases)からダウンロード
+  - Homebrew 以外（pyenv / pipx / pip）の yt-dlp を使う場合は、**設定 → 詳細設定 → yt-dlp パス** にフルパスを入力してください（`~/` 展開可）。`auto` のままなら自動検出です。
 
 [Releases](../../releases) ページから最新版をダウンロードしてください。
 
