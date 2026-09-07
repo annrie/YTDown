@@ -1,6 +1,6 @@
 [package]
 name = "ytdown"
-version = "0.6.6"
+version = "0.6.7"
 description = "macOS desktop app for downloading YouTube/media videos using yt-dlp"
 authors = ["annrie"]
 license = "MIT"

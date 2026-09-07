@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.6.7
+
+[compare changes](https://github.com/annrie/YTDown/compare/v0.6.6...v0.6.7)
+
+### 🐛 バグ修正
+
+- 🐛 設定の yt-dlp パスが検出に使われない問題を修正 / Wire the manual yt-dlp path setting into detection ([#3](https://github.com/annrie/YTDown/pull/3))
+- 🐛 チャンネル監視追加ダイアログが開かない問題を修正 / Escape @ in the channel URL placeholder so the dialog renders ([#4](https://github.com/annrie/YTDown/pull/4))
+
+### ❤️ Contributors
+
+- Annrie ([@annrie](https://github.com/annrie))
+
 ## v0.6.6
 
 [compare changes](https://github.com/annrie/YTDown/compare/v0.6.5...v0.6.6)
