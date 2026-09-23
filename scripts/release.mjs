@@ -12,6 +12,7 @@ if (!['patch', 'minor', 'major'].includes(level)) throw new Error('Usage: node s
 const root = process.cwd()
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
 if (git('status', '--porcelain')) throw new Error('先に作業内容をコミットしてください。')
+const startHead = git('rev-parse', 'HEAD')
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 if (pkg.name !== PACKAGE_NAME) throw new Error(`${PACKAGE_NAME} リポジトリで実行してください。`)
 const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(pkg.version)
@@ -42,8 +43,8 @@ const packageVersion = (content) => {
 const targets = [
   ['src-tauri/tauri.conf.json', matchValues(/^(\s*"version": ")([^"]+)"/gm)],
   ['src-tauri/Cargo.toml', packageVersion],
-  // Cargo.lock is machine-written, so its layout is fixed.
-  ['src-tauri/Cargo.lock', matchValues(new RegExp(`^(\\[\\[package\\]\\]\\nname = "${CRATE_NAME}"\\nversion = ")([^"]+)"`, 'gm'))],
+  // Cargo.lock is machine-written, so its layout is fixed apart from line endings.
+  ['src-tauri/Cargo.lock', matchValues(new RegExp(`^(\\[\\[package\\]\\]\\r?\\nname = "${CRATE_NAME}"\\r?\\nversion = ")([^"]+)"`, 'gm'))],
 ]
 // Validate all files before changelogen updates package.json.
 const updates = targets.map(([file, locate]) => {
@@ -66,14 +67,14 @@ try {
   git('add', '--', ...files)
   const message = (pkg.changelog?.templates?.commitMessage || 'chore(release): v{{newVersion}}').replaceAll('{{newVersion}}', version)
   git('commit', '-m', message)
+  git('tag', '-a', `v${version}`, '-m', `v${version}`)
 } catch (error) {
-  // The tree was clean at start, so restoring these paths undoes only this run.
+  // The tree was clean at start, so returning to the starting commit undoes only this run.
   try {
-    git('checkout', 'HEAD', '--', ...files)
+    git('reset', '-q', '--hard', startHead)
   } catch (rollbackError) {
-    throw new AggregateError([error, rollbackError], `リリースに失敗し、巻き戻しもできませんでした。git status で ${files.join(' ')} を確認してください。`)
+    throw new AggregateError([error, rollbackError], `リリースに失敗し、巻き戻しもできませんでした。git status と git log で ${startHead.slice(0, 7)} からの変化を確認してください。`)
   }
   throw error
 }
-git('tag', '-a', `v${version}`, '-m', `v${version}`)
 console.log(`${PACKAGE_NAME} v${version}: changelog、各バージョン、ローカルのコミットとタグを更新しました。`)
