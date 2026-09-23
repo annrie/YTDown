@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url'
 // Repository-specific settings. Every other line is shared with the sibling Tauri apps.
 const PACKAGE_NAME = 'ytdown'
 const CRATE_NAME = 'ytdown'
+// Other committed version fields: [file, pattern capturing (prefix)(version), expected match count].
+const EXTRA_TARGETS = []
 
 const level = process.argv[2]
 if (!['patch', 'minor', 'major'].includes(level)) throw new Error('Usage: node scripts/release.mjs patch|minor|major')
@@ -22,7 +24,7 @@ const [major, minor, patch] = match.slice(1).map(Number)
 const version = level === 'major' ? `${major + 1}.0.0` : level === 'minor' ? `${major}.${minor + 1}.0` : `${major}.${minor}.${patch + 1}`
 if (git('tag', '--list', `v${version}`)) throw new Error(`タグ v${version} は既に存在します。`)
 
-// Each locator returns the [start, end) offsets of the version values it finds; exactly one is required.
+// Each locator returns the [start, end) offsets of the version values it finds.
 const matchValues = (pattern) => (content) => [...content.matchAll(pattern)].map((m) => [m.index + m[1].length, m.index + m[1].length + m[2].length])
 // Walk Cargo.toml table by table so a version key in any other table can never be picked up.
 const packageVersion = (content) => {
@@ -45,14 +47,16 @@ const targets = [
   ['src-tauri/Cargo.toml', packageVersion],
   // Cargo.lock is machine-written, so its layout is fixed apart from line endings.
   ['src-tauri/Cargo.lock', matchValues(new RegExp(`^(\\[\\[package\\]\\]\\r?\\nname = "${CRATE_NAME}"\\r?\\nversion = ")([^"]+)"`, 'gm'))],
+  ...EXTRA_TARGETS.map(([file, pattern, expected]) => [file, matchValues(pattern), expected]),
 ]
 // Validate all files before changelogen updates package.json.
-const updates = targets.map(([file, locate]) => {
+const updates = targets.map(([file, locate, expected = 1]) => {
   const content = readFileSync(join(root, file), 'utf8')
   const found = locate(content)
-  if (found.length !== 1) throw new Error(`${file} のバージョン欄を確認してください（${found.length} 箇所に一致）。`)
-  const [[from, to]] = found
-  return [file, content.slice(0, from) + version + content.slice(to)]
+  if (found.length !== expected) throw new Error(`${file} のバージョン欄を確認してください（${expected} 箇所のはずが ${found.length} 箇所に一致）。`)
+  // Replace from the end so earlier offsets stay valid.
+  const next = found.toSorted(([a], [b]) => b - a).reduce((text, [from, to]) => text.slice(0, from) + version + text.slice(to), content)
+  return [file, next]
 })
 const heading = new RegExp(`^## v${version.replaceAll('.', '\\.')}(\\s|$)`, 'm')
 if (heading.test(readFileSync(join(root, 'CHANGELOG.md'), 'utf8'))) throw new Error(`CHANGELOG.md に v${version} の見出しが既にあります。`)
