@@ -13,9 +13,9 @@
     "test": "vitest run",
     "preview": "vite preview",
     "tauri": "tauri",
-    "release:patch": "changelogen --release --patch",
-    "release:minor": "changelogen --release --minor",
-    "release:major": "changelogen --release --major"
+    "release:patch": "node scripts/release.mjs patch",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
