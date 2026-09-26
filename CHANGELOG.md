@@ -1,6 +1,24 @@
 # Changelog
 
 
+## v0.6.8
+
+[compare changes](https://github.com/annrie/YTDown/compare/v0.6.7...v0.6.8)
+
+### 📦 ビルド
+
+- **macos:** 🔧 リリースバンドルをアドホック署名する / Ad-hoc sign macOS bundles at build time ([#5](https://github.com/annrie/YTDown/pull/5))
+- 🔧 リリーススクリプトで版数を一括同期 / Add release script that syncs every version field ([#6](https://github.com/annrie/YTDown/pull/6))
+- **deps:** ⬆️ tauri 2.11.6(セキュリティ修正)・vite 8.3.1・vue 3.5.43 ほか minor/patch 一括更新 / Bump tauri to 2.11.6 (security fix), vite, vue and other minor/patch deps ([de23000](https://github.com/annrie/YTDown/commit/de23000))
+
+### 🧹 ビルドプロセスまたは補助ツールの変更
+
+- 🔧 Codex 用の設定・指示書・スキルを追跡 / Track Codex settings, AGENTS.md and agent skills ([d72ebb3](https://github.com/annrie/YTDown/commit/d72ebb3))
+
+### ❤️ Contributors
+
+- Annrie ([@annrie](https://github.com/annrie))
+
 ## v0.6.7
 
 [compare changes](https://github.com/annrie/YTDown/compare/v0.6.6...v0.6.7)
