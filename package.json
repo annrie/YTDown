@@ -19,27 +19,27 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
-    "@tauri-apps/plugin-dialog": "^2.7.2",
-    "@tauri-apps/plugin-notification": "^2.3.3",
-    "@tauri-apps/plugin-opener": "^2.5.4",
+    "@tauri-apps/plugin-dialog": "^2.7.3",
+    "@tauri-apps/plugin-notification": "^2.4.0",
+    "@tauri-apps/plugin-opener": "^2.5.5",
     "@vue/devtools-api": "^8.2.1",
     "croner": "^10.0.1",
     "pinia": "^4.0.3",
-    "vue": "^3.5.41",
-    "vue-i18n": "^11.4.8"
+    "vue": "^3.5.43",
+    "vue-i18n": "^11.4.12"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@tauri-apps/cli": "^2.11.4",
-    "@vitejs/plugin-vue": "^6.0.8",
-    "@vue/test-utils": "^2.4.11",
+    "@tauri-apps/cli": "^2.11.5",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/test-utils": "^2.5.1",
     "changelogen": "^0.6.2",
-    "happy-dom": "^20.11.2",
+    "happy-dom": "^20.14.5",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
-    "vite": "^8.2.1",
+    "vite": "^8.3.1",
     "vitest": "^4.1.11",
-    "vue-tsc": "^3.3.10"
+    "vue-tsc": "^3.3.11"
   },
   "changelog": {
     "types": {
