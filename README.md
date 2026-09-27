@@ -36,6 +36,10 @@
   <a href="#features">Features</a> · <a href="#installation">Installation</a> · <a href="#build-from-source">Build</a> · <a href="#日本語">日本語</a>
 </p>
 
+<p align="center">
+  <img src="docs/images/main.png" alt="YTDown settings screen" width="760" />
+</p>
+
 ---
 
 ## Features
