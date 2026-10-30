@@ -1,0 +1,5 @@
+minimumReleaseAgeExclude:
+  # vue-tsc 3.3.14 と依存先。2026-10-29 公開で24h未満。vuejs/language-tools の
+  # GitHub Actions による provenance 付き公開を確認して個別許可(2026-10-30)
+  - '@vue/language-core@3.3.14'
+  - vue-tsc@3.3.14
