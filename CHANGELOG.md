@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.6.9
+
+[compare changes](https://github.com/annrie/YTDown/compare/v0.6.8...v0.6.9)
+
+### 📖 ドキュメント
+
+- 📸 READMEに設定画面のスクリーンショットを追加 / Add settings screen screenshot to README ([ce270ab](https://github.com/annrie/YTDown/commit/ce270ab))
+
+### 📦 ビルド
+
+- **deps:** ⬆️ tauri 2.12.5(セキュリティ修正)・vite 8.3.5・vue 3.5.44 ほか minor/patch 一括更新 / Bump tauri to 2.12.5 (security fix), vite, vue and other minor/patch deps ([f5584e4](https://github.com/annrie/YTDown/commit/f5584e4))
+
+### ❤️ Contributors
+
+- Annrie ([@annrie](https://github.com/annrie))
+
 ## v0.6.8
 
 [compare changes](https://github.com/annrie/YTDown/compare/v0.6.7...v0.6.8)
