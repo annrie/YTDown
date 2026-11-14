@@ -376,6 +376,7 @@ async fn fetch_video_publish_info(
         args.extend(["--cookies".to_string(), file.to_string()]);
     }
     args.push(video_url.to_string());
+    crate::ytdlp::js_runtime::prepend_js_runtime_args(ytdlp_path, &mut args).await;
 
     let output = tokio::time::timeout(
         std::time::Duration::from_secs(120),
@@ -433,6 +434,7 @@ async fn find_recent_channel_video_urls(
         args.extend(["--cookies".to_string(), file.to_string()]);
     }
     args.push(channel_url.to_string());
+    crate::ytdlp::js_runtime::prepend_js_runtime_args(ytdlp_path, &mut args).await;
 
     let output = tokio::time::timeout(
         std::time::Duration::from_secs(180),
@@ -1225,6 +1227,7 @@ pub async fn run_download_internal(
 
     // Cloudflareアンチボット失敗時は generic:impersonate 付きで一度だけ再試行する
     let mut attempt_args = args;
+    crate::ytdlp::js_runtime::prepend_js_runtime_args(&ytdlp_path, &mut attempt_args).await;
     let mut impersonate_retried = attempt_args
         .iter()
         .any(|arg| arg == "generic:impersonate");
