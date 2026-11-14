@@ -88,6 +88,7 @@ pub async fn fetch_info(
         append_generic_impersonate_args(&mut args);
     }
     args.push(url.to_string());
+    super::js_runtime::prepend_js_runtime_args(&mut args);
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(30),
@@ -179,6 +180,10 @@ async fn try_fetch_playlist(
     };
     args.extend(cookie_args.iter().cloned());
     args.push(url.to_string());
+    if !flat {
+        // 動画ごとの完全な情報取得は、YouTube の JS チャレンジを解く必要がある
+        super::js_runtime::prepend_js_runtime_args(&mut args);
+    }
 
     let timeout_secs = if flat { 60 } else { 120 };
     let result = tokio::time::timeout(
@@ -366,6 +371,7 @@ pub async fn start_download(
     args.extend(config.extra_args.iter().cloned());
 
     args.push(config.url);
+    super::js_runtime::prepend_js_runtime_args(&mut args);
 
     let mut child = Command::new(&config.ytdlp_path)
         .args(&args)
