@@ -1,6 +1,23 @@
 # Changelog
 
 
+## v0.6.10
+
+[compare changes](https://github.com/annrie/YTDown/compare/v0.6.9...v0.6.10)
+
+### 🐛 バグ修正
+
+- **ytdlp:** 🐛 JSランタイムを自動検出して --js-runtimes を渡す / Auto-detect a JS runtime and pass --js-runtimes to yt-dlp ([75b77b9](https://github.com/annrie/YTDown/commit/75b77b9))
+- **ytdlp:** 🐛 JSランタイムの最低版と yt-dlp の対応を確かめてから渡す / Verify runtime versions and yt-dlp support before passing --js-runtimes ([37fecff](https://github.com/annrie/YTDown/commit/37fecff))
+
+### 📦 ビルド
+
+- **deps:** ⬆️ happy-dom 21.0.4 で pnpm audit の High 2件を解消 / Bump happy-dom to 21.0.4 to fix 2 High pnpm audit findings ([8566377](https://github.com/annrie/YTDown/commit/8566377))
+
+### ❤️ Contributors
+
+- Annrie ([@annrie](https://github.com/annrie))
+
 ## v0.6.9
 
 [compare changes](https://github.com/annrie/YTDown/compare/v0.6.8...v0.6.9)
