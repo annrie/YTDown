@@ -3,3 +3,8 @@ minimumReleaseAgeExclude:
   # GitHub Actions による provenance 付き公開を確認して個別許可(2026-10-30)
   - '@vue/language-core@3.3.14'
   - vue-tsc@3.3.14
+  - '@intlify/core-base@11.4.22'
+  - '@intlify/devtools-types@11.4.22'
+  - '@intlify/message-compiler@11.4.22'
+  - '@intlify/shared@11.4.22'
+  - vue-i18n@11.4.22
