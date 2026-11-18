@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.6.11
+
+[compare changes](https://github.com/annrie/YTDown/compare/v0.6.10...v0.6.11)
+
 ## v0.6.10
 
 [compare changes](https://github.com/annrie/YTDown/compare/v0.6.9...v0.6.10)
